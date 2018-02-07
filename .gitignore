@@ -99,3 +99,8 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+/firmware/ise/*
+!/firmware/ise/*.xise
+
+.project

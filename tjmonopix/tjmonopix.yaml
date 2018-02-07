@@ -1,0 +1,327 @@
+
+---
+name    : tjmonopix-daq
+version : 0.1.0
+
+transfer_layer:
+    - name  : intf
+      type  : SiUsb
+      init : 
+        timeout  : 600
+        bit_file : tjmonopix_mio.bit
+        avoid_download : True
+
+hw_drivers:
+  - name      : GPAC
+    type      : GPAC
+    interface : intf
+    base_addr : 0x00000
+    init :
+        no_calibration : False
+        
+  - name      : fifo
+    type      : sram_fifo
+    interface : intf
+    base_addr : 0x18000
+    base_data_addr: 0x1000000000000  
+    
+  - name      : gpio
+    type      : gpio
+    interface : intf
+    base_addr : 0x10000
+    size      : 16
+    
+  - name      : spi
+    type      : spi
+    interface : intf
+    base_addr : 0x11000
+    
+  - name      : inj
+    type      : pulse_gen
+    interface : intf
+    base_addr : 0x10100
+       
+  - name      : data_rx
+    type      : tjmonopix.tjmono_data_rx
+    interface : intf
+    base_addr : 0x10500
+    
+  - name        : NTC
+    type        : NTCRegister
+    NTC_type    : TDK_NTCG16H
+    hw_driver   : GPAC
+    arg_names   : [ value ]
+    arg_add     : { 'channel': 'ISRC0'}
+    
+registers:
+  - name        : CONF
+    type        : StdRegister
+    hw_driver   : gpio
+    size        : 16
+    fields :
+      - name    : DEF_CONF_N
+        size    : 1
+        offset  : 4
+      - name    : EN_OUT_CLK
+        size    : 1
+        offset  : 3
+      - name    : EN_BX_CLK
+        size    : 1
+        offset  : 2
+      - name    : RESET_BCID
+        size    : 1
+        offset  : 1
+      - name    : RESET
+        size    : 1
+        offset  : 0
+
+  - name        : VDDP
+    type        : FunctionalRegister
+    hw_driver   : GPAC
+    arg_names   : [value]
+    arg_add     : {'channel': 'PWR0'}
+
+  - name        : VDDD
+    type        : FunctionalRegister
+    hw_driver   : GPAC
+    arg_names   : [value]
+    arg_add     : {'channel': 'PWR1'}
+    init        : 
+        value : 1.8
+
+  - name        : VDDA
+    type        : FunctionalRegister
+    hw_driver   : GPAC
+    arg_names   : [value]
+    arg_add     : {'channel': 'PWR2'}
+    
+  - name        : VDDA_DAC
+    type        : FunctionalRegister
+    hw_driver   : GPAC
+    arg_names   : [value]
+    arg_add     : {'channel': 'PWR3'}
+   
+  - name        : VPC
+    type        : FunctionalRegister
+    hw_driver   : GPAC
+    arg_names   : [ value ]
+    arg_add     : { 'channel': 'VSRC0'}
+    
+  - name        : VPCSWSF 
+    type        : FunctionalRegister
+    hw_driver   : GPAC
+    arg_names   : [ value ]
+    arg_add     : { 'channel': 'VSRC2'}
+    
+  - name        : FAST_ADC_B0 
+    type        : FunctionalRegister
+    hw_driver   : GPAC
+    arg_names   : [ value ]
+    arg_add     : { 'channel': 'VSRC1'}
+        
+  - name        : INJ_LO
+    type        : FunctionalRegister
+    hw_driver   : GPAC
+    arg_names   : [ value ]
+    arg_add     : { 'channel': 'INJ1'}
+    
+  - name        : INJ_HI
+    type        : FunctionalRegister
+    hw_driver   : GPAC
+    arg_names   : [ value ]
+    arg_add     : { 'channel': 'INJ0'}
+
+  - name        : BiasSF 
+    type        : FunctionalRegister
+    hw_driver   : GPAC
+    arg_names   : [ value ]
+    arg_add     : { 'channel': 'ISRC1'}
+    
+  - name        : DACMON_ICASN
+    type        : FunctionalRegister
+    hw_driver   : GPAC
+    arg_names   : [ value ]
+    arg_add     : { 'channel': 'ISRC2'}
+
+  - name        : DACMON_IRESET 
+    type        : FunctionalRegister
+    hw_driver   : GPAC
+    arg_names   : [ value ]
+    arg_add     : { 'channel': 'ISRC3'}
+    
+  - name        : DACMON_IDB
+    type        : FunctionalRegister
+    hw_driver   : GPAC
+    arg_names   : [ value ]
+    arg_add     : { 'channel': 'ISRC4'}
+
+  - name        : DACMON_ITHR 
+    type        : FunctionalRegister
+    hw_driver   : GPAC
+    arg_names   : [ value ]
+    arg_add     : { 'channel': 'ISRC5'}
+    
+  - name        : DACMON_IBIAS
+    type        : FunctionalRegister
+    hw_driver   : GPAC
+    arg_names   : [ value ]
+    arg_add     : { 'channel': 'ISRC6'}
+    
+    
+  - name        : CONF_SR
+    type        : StdRegister
+    hw_driver   : spi
+    size        : 3924
+    auto_start  : True 
+    init        :
+        nEN_HITOR_OUT_N     : 0b1111
+    fields:
+        - name     : nEN_HITOR_OUT_N
+          size     : 4
+          offset   : 3
+        - name     : EN_HITOR_OUT_N
+          size     : 4
+          offset   : 7
+        - name     : nEN_OUT_N
+          size     : 4
+          offset   : 11
+        - name     : EN_OUT_N
+          size     : 4
+          offset   : 15
+        - name     : EN_HV
+          size     : 56
+          offset   : 71
+        - name     : EN_COMP
+          size     : 56
+          offset   : 127
+        - name     : EN_PMOS
+          size     : 56
+          offset   : 183
+        - name     : EN_PMOS_NOSF
+          size     : 56
+          offset   : 239
+        - name     : EN_TEST_PATTERN
+          size     : 4
+          offset   : 243
+    
+        - name     : SWCNTL_DACMONI
+          size     : 1
+          offset   : 244
+        - name     : SWCNTL_DACMONV
+          size     : 1
+          offset   : 245
+        - name     : SWCNTL_IBIAS
+          size     : 1
+          offset   : 246
+        - name     : SWCNTL_ICASN
+          size     : 1
+          offset   : 247
+        - name     : SWCNTL_IDB
+          size     : 1
+          offset   : 248
+        - name     : SWCNTL_IREF
+          size     : 1
+          offset   : 249
+        - name     : SWCNTL_IRESET
+          size     : 1
+          offset   : 250
+        - name     : SWCNTL_ITHR
+          size     : 1
+          offset   : 251
+        - name     : SWCNTL_VCASN
+          size     : 1
+          offset   : 252
+        - name     : SWCNTL_VCLIP
+          size     : 1
+          offset   : 253
+        - name     : SWCNTL_VH
+          size     : 1
+          offset   : 254
+        - name     : SWCNTL_VL
+          size     : 1
+          offset   : 255
+        - name     : SWCNTL_VRESET_D
+          size     : 1
+          offset   : 256
+        - name     : SWCNTL_VRESET_P
+          size     : 1
+          offset   : 257
+
+        - name     : SET_IBUFN_R
+          size     : 4
+          offset   : 273
+        - name     : SET_IBUFP_R
+          size     : 4
+          offset   : 269
+        - name     : SET_IBUFP_L
+          size     : 4
+          offset   : 265
+        - name     : SET_IBUFN_L
+          size     : 4
+          offset   : 261
+        - name     : SET_IRESET_BIT
+          size     : 1
+          offset   : 274
+
+        - name     : SET_VCLIP
+          size     : 128
+          offset   : 402
+        - name     : SET_VRESET_D
+          size     : 128
+          offset   : 530
+        - name     : SET_VCASN
+          size     : 128
+          offset   : 658
+        - name     : SET_VL
+          size     : 128
+          offset   : 756
+        - name     : SET_VH
+          size     : 128
+          offset   : 914
+        - name     : SET_VRESET_P
+          size     : 128
+          offset   : 1042
+        - name     : SET_ICASN
+          size     : 128
+          offset   : 1170
+        - name     : SET_IRESET
+          size     : 128
+          offset   : 1298
+        - name     : SET_ITHR
+          size     : 128
+          offset   : 1426
+        - name     : SET_IDB
+          size     : 128
+          offset   : 1554
+        - name     : SET_IBIAS
+          size     : 128
+          offset   : 1682
+          
+        - name     : DIG_MON_SEL
+          size     : 447
+          offset   : 2129
+        - name     : MASKD
+          size     : 448
+          offset   : 2577
+        - name     : MASKH
+          size     : 224
+          offset   : 2801
+        - name     : MASKV
+          size     : 448
+          offset   : 3249
+        - name     : INJ_ROW
+          size     : 224
+          offset   : 3473
+          
+        - name     : INJ_IN_MON_R
+          size     : 1
+          offset   : 3474
+        - name     : INJ_IN_MON_L
+          size     : 1
+          offset   : 3475
+        - name     : COL_PULSE_SEL
+          size     : 448
+          offset   : 3923
+          
+        
+       
