@@ -20,6 +20,9 @@ class TestSim(unittest.TestCase):
     
         extra_defines = []
         #if os.environ['SIM']=='icarus':
+        os.environ['SIM']='questa'
+	#os.environ['WAVES']='1'
+	#os.environ['GUI']='1'
         extra_defines = ['TEST_DC=8']
             
         root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) #../
@@ -29,8 +32,7 @@ class TestSim(unittest.TestCase):
             extra_defines = extra_defines,
             sim_bus = 'basil.utils.sim.SiLibUsbBusDriver',
             include_dirs = (root_dir, root_dir + "/firmware/src", root_dir + "/tests/hdl"),
-            extra = '\nVSIM_ARGS += -wlf /tmp/tjmonopix.wlf  \n'
-        
+            extra = 'VSIM_ARGS += -wlf /tmp/tjmonopix.wlf'
         )
        
         with open(root_dir + '/tjmonopix/tjmonopix.yaml', 'r') as f:
@@ -64,8 +66,8 @@ class TestSim(unittest.TestCase):
         
         #self.dut['CONF_SR']['EN_TEST_PATTERN'][0] = 1
         
-        self.dut['CONF_SR']['COL_PULSE_SEL'][7] = 1
         self.dut['CONF_SR']['COL_PULSE_SEL'][6] = 1
+        self.dut['CONF_SR']['COL_PULSE_SEL'][5] = 1
         #self.dut['CONF_SR']['INJ_ROW'][0] = 1
         self.dut['CONF_SR']['INJ_ROW'][100] = 1
         self.dut['CONF_SR']['INJ_ROW'][200] = 1
@@ -107,7 +109,7 @@ class TestSim(unittest.TestCase):
         print ix
 
         self.assertEqual(ix['col'].tolist(), [2,2,3,3,2,2,3,3])
-        self.assertEqual(ix['row'].tolist(), [199,399,198,398,199,399,198,398])
+        self.assertEqual(ix['row'].tolist(), [356,456,100,200,356,456,100,200])
         
         
     def tearDown(self):

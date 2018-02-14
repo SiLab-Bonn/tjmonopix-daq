@@ -316,7 +316,8 @@ assign posssible_noise = (state == WAIT_NEXT);
 wire [5:0] col;
 wire [8:0] row;
 wire [5:0] te_gray, le_gray, te, le;
-assign {col, row, le_gray, te_gray} = data_out;
+assign {col, te_gray, le_gray, row} = data_out;
+//assign {col, row, le_gray, te_gray} = data_out;
     
 bin_to_gray6 bin_to_gray_te(.gray_input(te_gray), .bin_out(te) );
 bin_to_gray6 bin_to_gray_le(.gray_input(le_gray), .bin_out(le) );
