@@ -1,3 +1,10 @@
+# Gedit Backups
+*~
+# Work
+work/
+#setup
+setup
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

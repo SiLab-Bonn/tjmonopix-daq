@@ -32,7 +32,7 @@ logging.getLogger('basil.HL.RegisterHardwareLayer').setLevel(logging.WARNING)
 
 logging.basicConfig(format="%(asctime)s - [%(name)-15s] - %(levelname)-7s %(message)s")
     
-logger = logging.getLogger('RD53A')
+logger = logging.getLogger('TJMONOPIX')
 logger.setLevel(loglevel)
 
 
@@ -76,7 +76,7 @@ class TJMonoPix(Dut):
         if self.fw_version != VERSION[:3]:     #Compare only the first two digits
             raise Exception("Firmware version %s does not satisfy version requirements %s!)" % ( self.fw_version, VERSION))
 
-        self['CONF_SR'].set_size(3924)
+        self['CONF_SR'].set_size(3925)
         
 
     def write_conf(self):
@@ -98,9 +98,16 @@ class TJMonoPix(Dut):
         hit_data_sel = ((raw_data & 0xf0000000) == 0)
         hit_data = raw_data[hit_data_sel]
 
+#        hit_dtype = np.dtype([("col","<u1"),("te","<u1"),("le","<u1"),("row","<u2"),("noise","<u1")])
         hit_dtype = np.dtype([("col","<u1"),("row","<u2"),("le","<u1"),("te","<u1"),("noise","<u1")])
         ret = np.empty(hit_data.shape[0], dtype = hit_dtype)
         
+#        ret['col'] = hit_data & 0x3F
+#        ret['te'] = (hit_data & 0xFC0) >> 6
+#        ret['le'] = (hit_data & 0x3F000) >> 12
+#        ret['row'] = (hit_data & 0x7FC0000) >> 18
+#        ret['noise'] = (hit_data & 0x8000000) >> 27
+
         ret['col'] = hit_data & 0x3f
         ret['row'] = (hit_data & 0x7FC0) >> 6
         ret['te'] = (hit_data & 0x1F8000) >> 15

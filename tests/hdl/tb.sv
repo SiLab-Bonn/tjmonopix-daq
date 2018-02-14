@@ -100,7 +100,7 @@ always@(negedge SRAM_WE_B)
 wire INJ_PULSE;
 assign INJ_PULSE = INJECTION;
 
-logic [224:0][447:0] ana_hit;
+logic [223:0][447:0] ana_hit;
 assign dut.MONOPIX_TOP.ANA_HIT = ana_hit;
 assign ana_hit = 0;
 

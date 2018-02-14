@@ -171,7 +171,7 @@ registers:
   - name        : CONF_SR
     type        : StdRegister
     hw_driver   : spi
-    size        : 3924
+    size        : 3925
     auto_start  : True 
     init        :
         nEN_HITOR_OUT_N     : 0b1111
@@ -247,18 +247,18 @@ registers:
           size     : 1
           offset   : 257
 
-        - name     : SET_IBUFN_R
-          size     : 4
-          offset   : 273
-        - name     : SET_IBUFP_R
-          size     : 4
-          offset   : 269
-        - name     : SET_IBUFP_L
-          size     : 4
-          offset   : 265
         - name     : SET_IBUFN_L
           size     : 4
           offset   : 261
+        - name     : SET_IBUFP_L
+          size     : 4
+          offset   : 265
+        - name     : SET_IBUFP_R
+          size     : 4
+          offset   : 269
+        - name     : SET_IBUFN_R
+          size     : 4
+          offset   : 273
         - name     : SET_IRESET_BIT
           size     : 1
           offset   : 274
@@ -298,30 +298,30 @@ registers:
           offset   : 1682
           
         - name     : DIG_MON_SEL
-          size     : 447
-          offset   : 2129
+          size     : 448
+          offset   : 2130
         - name     : MASKD
           size     : 448
-          offset   : 2577
+          offset   : 2578
         - name     : MASKH
           size     : 224
-          offset   : 2801
+          offset   : 2802
         - name     : MASKV
           size     : 448
-          offset   : 3249
+          offset   : 3250
         - name     : INJ_ROW
           size     : 224
-          offset   : 3473
+          offset   : 3474
           
         - name     : INJ_IN_MON_R
           size     : 1
-          offset   : 3474
+          offset   : 3475
         - name     : INJ_IN_MON_L
           size     : 1
-          offset   : 3475
+          offset   : 3476
         - name     : COL_PULSE_SEL
           size     : 448
-          offset   : 3923
+          offset   : 3924
           
         
        

@@ -249,7 +249,7 @@ module MONOPIX(
         default_conf.SET_VCLIP = 128'h00000000000000000000000000000000; //(LINE #0 default=0V)
 
         //SET CURRENT DAC - THERMOMETER ENCODING, START FROM THE MIDDLE
-        //Value = 128/(#lines active)*max current
+        //Value = (#lines active)*max current/128
         default_conf.SET_IBIAS = {{41{1'b0}},{46{1'b1}},{41{1'b0}}}; // (1.4uA max, 10.9nA LSB, default = 500nA)
         default_conf.SET_IDB = {{49{1'b0}},{29{1'b1}},{50{1'b0}}}; // (2.24uA max, 17.5nA LSB, default = 500nA)
         default_conf.SET_ITHR = {{60{1'b0}},{8{1'b1}},{60{1'b0}}}; // (17.5nA max, 137pA LSB, default = 1.1nA)
