@@ -5,7 +5,7 @@
 # ------------------------------------------------------------
 #
 
-import zlib  # workaround
+import zlib # workaround
 import yaml
 import logging
 import os
@@ -30,10 +30,7 @@ for handler in logging.root.handlers[:]:
     logging.root.removeHandler(handler)
 logging.getLogger('basil.HL.RegisterHardwareLayer').setLevel(logging.WARNING)
 
-logger = logging.getLogger('RD53A')
-
-logging.basicConfig(
-    format="%(asctime)s - [%(name)-15s] - %(levelname)-7s %(message)s")
+logging.basicConfig(format="%(asctime)s - [%(name)-15s] - %(levelname)-7s %(message)s")
 
 logger = logging.getLogger('TJMONOPIX')
 logger.setLevel(loglevel)
@@ -49,12 +46,10 @@ class TJMonoPix(Dut):
 
     def __init__(self, conf=None, **kwargs):
 
-        self.proj_dir = os.path.dirname(
-            os.path.dirname(os.path.abspath(__file__)))
+        self.proj_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
         if not conf:
-            conf = os.path.join(self.proj_dir, 'tjmonopix' +
-                                os.sep + 'tjmonopix.yaml')
+            conf = os.path.join(self.proj_dir, 'tjmonopix' + os.sep + 'tjmonopix.yaml')
 
         logger.debug("Loading configuration file from {:s}".format(conf))
 
@@ -89,7 +84,7 @@ class TJMonoPix(Dut):
 
     def power_on(self, **kwargs):
         # Set power
-        # TODO: Is a current limit necessary?
+        # TODO: Is a current limit necessary? // Current limit: VDDP:0,5A, VDDD: 0,3A, VDDA: 0,15A, VDDA_DAC: 0,3A (the power consumption is much less, just to have a safe limit and not fry the chip)
         self['VDDP'].set_voltage(1.8, unit='V')
         self['VDDP'].set_enable(True)
         self['VDDD'].set_voltage(1.8, unit='V')
@@ -116,17 +111,9 @@ class TJMonoPix(Dut):
     def interparete_raw_data(self, raw_data):
         hit_data_sel = ((raw_data & 0xf0000000) == 0)
         hit_data = raw_data[hit_data_sel]
-
-#        hit_dtype = np.dtype([("col","<u1"),("te","<u1"),("le","<u1"),("row","<u2"),("noise","<u1")])
         hit_dtype = np.dtype([("col","<u1"),("row","<u2"),("le","<u1"),("te","<u1"),("noise","<u1")])
         ret = np.empty(hit_data.shape[0], dtype = hit_dtype)
         
-#        ret['col'] = hit_data & 0x3F
-#        ret['te'] = (hit_data & 0xFC0) >> 6
-#        ret['le'] = (hit_data & 0x3F000) >> 12
-#        ret['row'] = (hit_data & 0x7FC0000) >> 18
-#        ret['noise'] = (hit_data & 0x8000000) >> 27
-
         ret['col'] = hit_data & 0x3f
         ret['row'] = (hit_data & 0x7FC0) >> 6
         ret['te'] = (hit_data & 0x1F8000) >> 15
