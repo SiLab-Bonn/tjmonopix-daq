@@ -1,7 +1,7 @@
 # tjmonopix-daq
 TJ-MonoPix DAQ
 
-## Important information -  we need to generate a new bitstream with the changes in the firmware (data order - serializer count) before doing the first test
+### Important information - /tjmonopix/tjmonopix_mio_v2.bit is a new bitstream that contains the changes in data order - serializer count. However more changes must be made to the firmware e.g. use both A and B I/O and read back configuration from SO_CONF
 
 ## TODO - PENDING LIST
 1) Default configuration is not sent to the chip. Only the registers we want to change and define at test_Sim.py are sent. The rest are 0. 
