@@ -30,8 +30,6 @@ for handler in logging.root.handlers[:]:
     logging.root.removeHandler(handler)
 logging.getLogger('basil.HL.RegisterHardwareLayer').setLevel(logging.WARNING)
 
-logger = logging.getLogger('RD53A')
-
 logging.basicConfig(
     format="%(asctime)s - [%(name)-15s] - %(levelname)-7s %(message)s")
 
@@ -73,11 +71,11 @@ class TJMonoPix(Dut):
         super(TJMonoPix, self).init()
 
         self.fw_version, self.board_version = self.get_daq_version()
-        print self.board_version
-        logger.info('Found board %s running firmware version %s' % (self.hw_map[self.board_version], self.fw_version))
+        print(self.board_version)
+        # logger.info('Found board %s running firmware version %s' % (self.hw_map[self.board_version], self.fw_version))
 
-        if self.fw_version != VERSION[:3]:     # Compare only the first two digits
-            raise Exception("Firmware version %s does not satisfy version requirements %s!)" % ( self.fw_version, VERSION))
+        # if self.fw_version != VERSION[:3]:     # Compare only the first two digits
+        #     raise Exception("Firmware version %s does not satisfy version requirements %s!)" % ( self.fw_version, VERSION))
 
         self['CONF_SR'].set_size(3925)
 
@@ -98,6 +96,10 @@ class TJMonoPix(Dut):
         self['VDDA'].set_enable(True)
         self['VDDA_DAC'].set_voltage(1.8, unit='V')
         self['VDDA_DAC'].set_enable(True)
+
+        self['BiasSF'].set_current(100, unit='uA')
+        self['VPC'].set_voltage(1.3, unit='V')
+        self['VPCSWSF'].set_voltage(0.5, unit='V')
 
     def power_off(self):
         # Deactivate all
@@ -127,8 +129,14 @@ class TJMonoPix(Dut):
 #        ret['row'] = (hit_data & 0x7FC0000) >> 18
 #        ret['noise'] = (hit_data & 0x8000000) >> 27
 
-        ret['col'] = hit_data & 0x3f
-        ret['row'] = (hit_data & 0x7FC0) >> 6
+        # ret['col'] = hit_data & 0x3f
+        # ret['row'] = (hit_data & 0x7FC0) >> 6
+        # ret['te'] = (hit_data & 0x1F8000) >> 15
+        # ret['le'] = (hit_data & 0x7E00000) >> 21
+        # ret['noise'] = (hit_data & 0x8000000) >> 27
+
+        ret['col'] = 2 * (hit_data & 0x3f) + (((hit_data & 0x7FC0) >> 6) // 256)
+        ret['row'] = ((hit_data & 0x7FC0) >> 6) % 256
         ret['te'] = (hit_data & 0x1F8000) >> 15
         ret['le'] = (hit_data & 0x7E00000) >> 21
         ret['noise'] = (hit_data & 0x8000000) >> 27

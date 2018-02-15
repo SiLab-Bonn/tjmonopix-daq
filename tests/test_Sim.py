@@ -19,14 +19,13 @@ class TestSim(unittest.TestCase):
     def setUp(self):
     
         extra_defines = []
-        #if os.environ['SIM']=='icarus':
-        os.environ['SIM']='questa'
-	#os.environ['WAVES']='1'
-	#os.environ['GUI']='1'
+        # if os.environ['SIM']=='icarus':
+        # os.environ['SIM'] = 'questa'
+        # os.environ['WAVES'] = '1'
+        # os.environ['GUI'] = '1'
         extra_defines = ['TEST_DC=8']
             
-        root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) #../
-        print root_dir
+        root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # ../
         cocotb_compile_and_run(
             sim_files = [root_dir + '/tests/hdl/tb.sv'],
             extra_defines = extra_defines,
@@ -77,7 +76,8 @@ class TestSim(unittest.TestCase):
         self.dut['CONF_SR']['MASKD'].setall(True)
         
         self.dut.write_conf()
-        
+        self.dut.write_conf()
+
         self.dut['CONF']['DEF_CONF_N'] = 1
         self.dut['CONF'].write()
         
@@ -106,10 +106,10 @@ class TestSim(unittest.TestCase):
         x = self.dut['fifo'].get_data()
         ix = self.dut.interparete_raw_data(x)
         
-        print ix
+        print(ix)
 
-        self.assertEqual(ix['col'].tolist(), [2,2,3,3,2,2,3,3])
-        self.assertEqual(ix['row'].tolist(), [356,456,100,200,356,456,100,200])
+        self.assertEqual(ix['col'].tolist(), [5,5,6,6,5,5,6,6])
+        self.assertEqual(ix['row'].tolist(), [100,200,100,200,100,200,100,200])
         
         
     def tearDown(self):
