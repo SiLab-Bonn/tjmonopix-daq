@@ -1,5 +1,4 @@
 `default_nettype wire
-
 `include "DIGITAL/defines.sv"
 `include "DIGITAL/readout.sv"
 `include "DIGITAL/cnfg_reg.v"
@@ -137,8 +136,8 @@ module MONOPIX(
     Pulldown_pol_IO_lowcap_EN PAD_TOKEN_COMP ( .CIN(), .AVDD(VDDD), .AVSS(GNDD), .DVDD(VDDP), .DVSS(GNDP), .PAD(TOKEN_COMP_PAD), .SUB(PSUB), .DOUT(TokenCOMP), .OEN(conf.EN_OUT[2]) ); //TRANSMITTER (Default=enabled=0)
     Pulldown_pol_IO_lowcap_EN PAD_OUT_COMP ( .CIN(), .AVDD(VDDD), .AVSS(GNDD), .DVDD(VDDP), .DVSS(GNDP), .PAD(OUT_COMP_PAD), .SUB(PSUB), .DOUT(OutCOMP), .OEN(conf.EN_OUT[2]) ); //TRANSMITTER (Default=enabled=0)
 //Diff PADS
-    Pulldown_pol_IO_lowcap_EN PAD_nTOKEN_COMP ( .CIN(), .AVDD(VDDD), .AVSS(GNDD), .DVDD(VDDP), .DVSS(GNDP), .PAD(TOKEN_COMP_N_PAD), .SUB(PSUB), .DOUT(~TokenCOMP), .OEN(conf.EN_OUT[2]) ); //TRANSMITTER (Default=disabled=1)
-    Pulldown_pol_IO_lowcap_EN PAD_nOUT_COMP ( .CIN(), .AVDD(VDDD), .AVSS(GNDD), .DVDD(VDDP), .DVSS(GNDP), .PAD(OUT_COMP_N_PAD), .SUB(PSUB), .DOUT(~OutCOMP), .OEN(conf.EN_OUT[2]) ); //TRANSMITTER (Default=disabled=1)
+    Pulldown_pol_IO_lowcap_EN PAD_nTOKEN_COMP ( .CIN(), .AVDD(VDDD), .AVSS(GNDD), .DVDD(VDDP), .DVSS(GNDP), .PAD(TOKEN_COMP_N_PAD), .SUB(PSUB), .DOUT(~TokenCOMP), .OEN(conf.nEN_OUT[2]) ); //TRANSMITTER (Default=disabled=1)
+    Pulldown_pol_IO_lowcap_EN PAD_nOUT_COMP ( .CIN(), .AVDD(VDDD), .AVSS(GNDD), .DVDD(VDDP), .DVSS(GNDP), .PAD(OUT_COMP_N_PAD), .SUB(PSUB), .DOUT(~OutCOMP), .OEN(conf.nEN_OUT[2]) ); //TRANSMITTER (Default=disabled=1)
 
 // FLAVOR 4 (HV) I/O   
     Pulldown_pol_IO_lowcap_EN PAD_READ_HV ( .CIN(ReadHV), .AVDD(VDDD), .AVSS(GNDD), .DVDD(VDDP), .DVSS(GNDP), .PAD(READ_HV_PAD), .SUB(PSUB), .DOUT(), .OEN(1'b1) ); //RECEIVER (OEN=1 in the new PAD)
@@ -199,16 +198,16 @@ module MONOPIX(
     //
     
     t_conf default_conf;
-    always@(*) begin
+    always_comb begin
 
         //****DEFAULT CONFIGURATION****//
         //----------TEST PATTERN-------//
-        default_conf.EN_TEST_PATTERN = '1;
+        default_conf.EN_TEST_PATTERN = '0;
         //----------READOUT ENABLE-----//
-        default_conf.EN_PMOS_NOSF = '0;
-        default_conf.EN_PMOS = '0;
-        default_conf.EN_COMP = '0;
-        default_conf.EN_HV = '0;
+        default_conf.EN_PMOS_NOSF = '1;
+        default_conf.EN_PMOS = '1;
+        default_conf.EN_COMP = '1;
+        default_conf.EN_HV = '1;
         default_conf.EN_OUT = '0;
         default_conf.nEN_OUT = '1;
         //--------HITOR OUT ENABLE-----//
@@ -474,7 +473,7 @@ module MONOPIX(
 	.nRST ( nRST ));
 
 
-    always@(*) begin
+    always_comb begin
         //DAC
         SET_VRESET_P = conf.SET_VRESET_P;
         SET_VH  = conf.SET_VH;
@@ -529,13 +528,13 @@ module MONOPIX(
     //   READOUT
     //    
     logic reset_ff;
-    always@(posedge ClkBx)
+    always_ff@(posedge ClkBx)
         reset_ff <= ResetBcid;
     
     
     logic [5:0] bcid_bin;
     logic [5:0] bcid_gray;
-    always@(posedge ClkBx)
+    always_ff@(posedge ClkBx)
         if(reset_ff)
             bcid_bin <= 0;
         else
@@ -544,7 +543,7 @@ module MONOPIX(
 
     wire [3:0][335:0] bcid_matrix_type;
     
-    always@(posedge ClkBx)
+    always_ff@(posedge ClkBx)
         BcidMtx <= bcid_matrix_type;
         
     readout readout_PMOS_NOSF
@@ -621,7 +620,7 @@ module MONOPIX(
     
     
     
-    always@(*) begin
+    always_comb begin
         HitOr[0] = |DIG_MON_PMOS_NOSF;
         HitOr[1] = |DIG_MON_PMOS;
         HitOr[2] = |DIG_MON_COMP;

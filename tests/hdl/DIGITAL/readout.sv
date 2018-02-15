@@ -40,7 +40,7 @@ module readout
         for (col_i=0; col_i<56; col_i=col_i+1) begin: col_gen
 
             logic [5:0] local_bcid;
-            always@(posedge ClkBx)
+            always_ff@(posedge ClkBx)
                 local_bcid <= Bcid;
                 
              
