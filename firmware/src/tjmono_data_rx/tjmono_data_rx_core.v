@@ -280,7 +280,7 @@ always@(posedge RX_CLK)
     ser <= {ser[25:0], RX_DATA};
 
 wire store_data;
-assign store_data = (cnt == 26);
+assign store_data = (cnt == 27);
 
 reg [26:0] data_out;
 wire [111:0] data_to_cdc;   // [82:0] data_to_cdc;
