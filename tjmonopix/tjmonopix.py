@@ -87,13 +87,19 @@ class TJMonoPix(Dut):
 
     def power_on(self, **kwargs):
         # Set power
-        # TODO: Is a current limit necessary?
+        self['VDDP'].set_current_limit(500, unit='mA')
         self['VDDP'].set_voltage(1.8, unit='V')
         self['VDDP'].set_enable(True)
+
+        self['VDDD'].set_current_limit(300, unit='mA')
         self['VDDD'].set_voltage(1.8, unit='V')
         self['VDDD'].set_enable(True)
+
+        self['VDDA'].set_current_limit(150, unit='mA')
         self['VDDA'].set_voltage(1.8, unit='V')
         self['VDDA'].set_enable(True)
+
+        self['VDDA_DAC'].set_current_limit(300, unit='mA')
         self['VDDA_DAC'].set_voltage(1.8, unit='V')
         self['VDDA_DAC'].set_enable(True)
 
@@ -122,18 +128,6 @@ class TJMonoPix(Dut):
 #        hit_dtype = np.dtype([("col","<u1"),("te","<u1"),("le","<u1"),("row","<u2"),("noise","<u1")])
         hit_dtype = np.dtype([("col","<u1"),("row","<u2"),("le","<u1"),("te","<u1"),("noise","<u1")])
         ret = np.empty(hit_data.shape[0], dtype = hit_dtype)
-        
-#        ret['col'] = hit_data & 0x3F
-#        ret['te'] = (hit_data & 0xFC0) >> 6
-#        ret['le'] = (hit_data & 0x3F000) >> 12
-#        ret['row'] = (hit_data & 0x7FC0000) >> 18
-#        ret['noise'] = (hit_data & 0x8000000) >> 27
-
-        # ret['col'] = hit_data & 0x3f
-        # ret['row'] = (hit_data & 0x7FC0) >> 6
-        # ret['te'] = (hit_data & 0x1F8000) >> 15
-        # ret['le'] = (hit_data & 0x7E00000) >> 21
-        # ret['noise'] = (hit_data & 0x8000000) >> 27
 
         ret['col'] = 2 * (hit_data & 0x3f) + (((hit_data & 0x7FC0) >> 6) // 256)
         ret['row'] = ((hit_data & 0x7FC0) >> 6) % 256
