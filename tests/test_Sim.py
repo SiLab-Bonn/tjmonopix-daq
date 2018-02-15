@@ -20,7 +20,7 @@ class TestSim(unittest.TestCase):
     
         extra_defines = []
         # if os.environ['SIM']=='icarus':
-        # os.environ['SIM'] = 'questa'
+        os.environ['SIM'] = 'questa'
         # os.environ['WAVES'] = '1'
         # os.environ['GUI'] = '1'
         extra_defines = ['TEST_DC=8']
@@ -75,7 +75,6 @@ class TestSim(unittest.TestCase):
         self.dut['CONF_SR']['MASKH'].setall(True)
         self.dut['CONF_SR']['MASKD'].setall(True)
         
-        self.dut.write_conf()
         self.dut.write_conf()
 
         self.dut['CONF']['DEF_CONF_N'] = 1

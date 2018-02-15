@@ -124,8 +124,6 @@ class TJMonoPix(Dut):
     def interparete_raw_data(self, raw_data):
         hit_data_sel = ((raw_data & 0xf0000000) == 0)
         hit_data = raw_data[hit_data_sel]
-
-#        hit_dtype = np.dtype([("col","<u1"),("te","<u1"),("le","<u1"),("row","<u2"),("noise","<u1")])
         hit_dtype = np.dtype([("col","<u1"),("row","<u2"),("le","<u1"),("te","<u1"),("noise","<u1")])
         ret = np.empty(hit_data.shape[0], dtype = hit_dtype)
 

@@ -14,7 +14,7 @@ module Pulldown_pol_IO_lowcap_EN ( CIN, AVDD, AVSS, DVDD, DVSS, PAD, SUB, DOUT, 
   inout AVDD;
     
   //synopsys translate_off
-  assign CIN = ~OEN ? 1'b0 : PAD; 
+  assign CIN = OEN ? PAD  : 1'b0; 
   assign PAD = OEN ? 1'bz : DOUT;  
   //synopsys translate_on
   
