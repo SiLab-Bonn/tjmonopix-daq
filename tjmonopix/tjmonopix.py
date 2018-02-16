@@ -87,11 +87,11 @@ class TJMonoPix(Dut):
 
     def power_on(self, **kwargs):
         # Set power
-        self['VDDP'].set_current_limit(500, unit='mA')
+        self['VDDP'].set_current_limit(200, unit='mA')
         self['VDDP'].set_voltage(1.8, unit='V')
         self['VDDP'].set_enable(True)
 
-        self['VDDD'].set_current_limit(300, unit='mA')
+        self['VDDD'].set_current_limit(200, unit='mA')
         self['VDDD'].set_voltage(1.8, unit='V')
         self['VDDD'].set_enable(True)
 
@@ -99,7 +99,7 @@ class TJMonoPix(Dut):
         self['VDDA'].set_voltage(1.8, unit='V')
         self['VDDA'].set_enable(True)
 
-        self['VDDA_DAC'].set_current_limit(300, unit='mA')
+        self['VDDA_DAC'].set_current_limit(200, unit='mA')
         self['VDDA_DAC'].set_voltage(1.8, unit='V')
         self['VDDA_DAC'].set_enable(True)
 
