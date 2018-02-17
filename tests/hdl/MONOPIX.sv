@@ -239,7 +239,7 @@ module MONOPIX(
         //Source follower buffer for VRESETx, VH,VL. VRESET level shift=555mV, VL,VH level shift=385mV
         //VRESETxx max = #88 (1.25V + 0.55V), VH,VL max = #100 (1.415V+0.385V), VH,VL min = #36 (0.515V + 0.385V), VH>VL
         //Value = 1.8/127 * (#SET LINE (0 to 127) + S.F level shift), MAX=1.8V, LSB=14.17mV, MIN=S.F level shift
-        default_conf.SET_VRESET_P = 128'h00000000000000000000000000010000; //(LINE #17 default=800mV (245mV+555mV))
+        default_conf.SET_VRESET_P = 128'h00000000000000000000000000010000; //(LINE #16 default=780mV (225mV+555mV))
         default_conf.SET_VH = 128'h00000000000080000000000000000000; //(LINE #79 default=1.5V (1.1V+385mV)
         default_conf.SET_VL = 128'h00000000000000000000100000000000; //(LINE #44 default=1V (620mV+385mV))
         default_conf.SET_VCASN = 128'h00000000000000000000010000000000; //(LINE #40 default=570mV)

@@ -56,25 +56,14 @@ class TestSim(unittest.TestCase):
         self.dut['CONF']['RESET_BCID'] = 0
         self.dut['CONF']['RESET'] = 0
         self.dut['CONF'].write()
-        
-        self.dut['CONF_SR']['SET_IBUFP_L'] = 0x5
-        self.dut['CONF_SR']['EN_PMOS_NOSF'][0] = 1
-        self.dut['CONF_SR']['EN_PMOS_NOSF'][1] = 1
-        self.dut['CONF_SR']['EN_PMOS_NOSF'][2] = 1
-        self.dut['CONF_SR']['EN_PMOS_NOSF'][3] = 1
-        
-        #self.dut['CONF_SR']['EN_TEST_PATTERN'][0] = 1
-        
+	
+	self.dut.default_conf()        
+       
         self.dut['CONF_SR']['COL_PULSE_SEL'][6] = 1
         self.dut['CONF_SR']['COL_PULSE_SEL'][5] = 1
-        #self.dut['CONF_SR']['INJ_ROW'][0] = 1
         self.dut['CONF_SR']['INJ_ROW'][100] = 1
         self.dut['CONF_SR']['INJ_ROW'][200] = 1
-        
-        self.dut['CONF_SR']['MASKV'].setall(True)
-        self.dut['CONF_SR']['MASKH'].setall(True)
-        self.dut['CONF_SR']['MASKD'].setall(True)
-        
+
         self.dut.write_conf()
 
         self.dut['CONF']['DEF_CONF_N'] = 1

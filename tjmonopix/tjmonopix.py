@@ -15,7 +15,7 @@ import numpy as np
 import tables as tb
 
 import basil
-
+#from bitarray import bitarray
 from basil.dut import Dut
 from basil.utils.BitLogic import BitLogic
 
@@ -78,6 +78,76 @@ class TJMonoPix(Dut):
         #     raise Exception("Firmware version %s does not satisfy version requirements %s!)" % ( self.fw_version, VERSION))
 
         self['CONF_SR'].set_size(3925)
+
+    def default_conf(self):
+
+	self['CONF_SR']['nEN_HITOR_OUT'].setall(True)
+	self['CONF_SR']['EN_HITOR_OUT'].setall(True)
+	self['CONF_SR']['nEN_OUT'].setall(True)
+	self['CONF_SR']['EN_OUT'].setall(False)
+	self['CONF_SR']['EN_HV'].setall(True)
+	self['CONF_SR']['EN_COMP'].setall(True)
+	self['CONF_SR']['EN_PMOS'].setall(True)	
+	self['CONF_SR']['EN_PMOS_NOSF'].setall(True)
+	self['CONF_SR']['EN_TEST_PATTERN'].setall(False)
+
+	self['CONF_SR']['SWCNTL_VRESET_P'] = 0
+	self['CONF_SR']['SWCNTL_VRESET_D'] = 0
+	self['CONF_SR']['SWCNTL_VL'] = 0
+	self['CONF_SR']['SWCNTL_VH'] = 0
+	self['CONF_SR']['SWCNTL_VCLIP'] = 0
+	self['CONF_SR']['SWCNTL_VCASN'] = 0
+	self['CONF_SR']['SWCNTL_ITHR'] = 0
+	self['CONF_SR']['SWCNTL_IRESET'] = 0
+	self['CONF_SR']['SWCNTL_IREF'] = 0
+	self['CONF_SR']['SWCNTL_IDB'] = 0
+	self['CONF_SR']['SWCNTL_ICASN'] = 0
+	self['CONF_SR']['SWCNTL_IBIAS'] = 0
+	self['CONF_SR']['SWCNTL_DACMONV'] = 0
+	self['CONF_SR']['SWCNTL_DACMONI'] = 0
+
+	self['CONF_SR']['SET_IBUFN_L'] = 0b1001
+	self['CONF_SR']['SET_IBUFP_L'] = 0b0101
+	self['CONF_SR']['SET_IBUFP_R'] = 0b0101
+	self['CONF_SR']['SET_IBUFN_R'] = 0b1001
+
+	self['CONF_SR']['SET_IRESET_BIT'] = 1
+
+	self['CONF_SR']['SET_VCLIP'].setall(False)
+	self['CONF_SR']['SET_VRESET_D'].setall(False)
+	self['CONF_SR']['SET_VRESET_D'][45] = 1
+	self['CONF_SR']['SET_VCASN'].setall(False)
+	self['CONF_SR']['SET_VCASN'][40] = 1
+	self['CONF_SR']['SET_VL'].setall(False)
+	self['CONF_SR']['SET_VL'][44] = 1
+	self['CONF_SR']['SET_VH'].setall(False)
+	self['CONF_SR']['SET_VH'][79] = 1
+	self['CONF_SR']['SET_VRESET_P'].setall(False)
+	self['CONF_SR']['SET_VRESET_P'][16] = 1
+
+	#Be carefull!!! because the type is BitLogic, the slicing is verilog type not python, this means the limits are inclusive. Also MSB must be first in the slice
+	self['CONF_SR']['SET_ICASN'].setall(False)
+	self['CONF_SR']['SET_ICASN'][82:45] = True
+	self['CONF_SR']['SET_IRESET'].setall(False)
+	self['CONF_SR']['SET_IRESET'][71:57] = True
+	self['CONF_SR']['SET_ITHR'].setall(False)
+	self['CONF_SR']['SET_ITHR'][67:60] = True
+	self['CONF_SR']['SET_IDB'].setall(False)
+	self['CONF_SR']['SET_IDB'][78:50] = True
+	self['CONF_SR']['SET_IBIAS'].setall(False)
+	self['CONF_SR']['SET_IBIAS'][86:41] = True
+
+	self['CONF_SR']['DIG_MON_SEL'].setall(False)
+
+	self['CONF_SR']['MASKD'].setall(True)
+	self['CONF_SR']['MASKH'].setall(True)
+	self['CONF_SR']['MASKV'].setall(True)
+
+	self['CONF_SR']['INJ_ROW'].setall(False)
+	self['CONF_SR']['INJ_IN_MON_R'] = 0
+	self['CONF_SR']['INJ_IN_MON_L'] = 0
+	self['CONF_SR']['COL_PULSE_SEL'].setall(False)
+
 
     def write_conf(self):
 

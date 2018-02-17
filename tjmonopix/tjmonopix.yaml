@@ -176,16 +176,16 @@ registers:
     init        :
 
     fields:
-        - name     : nEN_HITOR_OUT_N
+        - name     : nEN_HITOR_OUT
           size     : 4
           offset   : 3
-        - name     : EN_HITOR_OUT_N
+        - name     : EN_HITOR_OUT
           size     : 4
           offset   : 7
-        - name     : nEN_OUT_N
+        - name     : nEN_OUT
           size     : 4
           offset   : 11
-        - name     : EN_OUT_N
+        - name     : EN_OUT
           size     : 4
           offset   : 15
         - name     : EN_HV
