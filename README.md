@@ -21,7 +21,14 @@ TJ-MonoPix DAQ
 
 2) Power-on test of the chip (no power shorts - normal electrical behavior)
 ```bash
-ATTENTION: Because of the modified process and HR, latchups can occur during power-on if not done correctly. First, a good connection to PWELL and PSUB is required. Put a very small resistance also to PSUB. Second, the current limit on the presision power supply should not be very small because during power up, the potential of the wells inside the chip can fluctuate and latchup can occur. So give a current limit to e.g. 100mA. the actual steady current will be in the order of μA. It is safer to first power on VDDA and then the other power domains. Correct procedure: A) program the mio, power on the gpac, set DEF_CONF_N to 0. B) Power on VDDA, VDDP, VDDA_DAC, VDDD C) reset the matrix logic and bcid and provide the clocks from the mio.
+ATTENTION: Because of the modified process and HR, latchups can occur during power-on if not done correctly. 
+First, a good connection to PWELL and PSUB is required. Put a very small resistance also to PSUB. 
+Second, the current limit on the presision power supply should not be very small because during power up, 
+the potential of the wells inside the chip can fluctuate and latchup can occur. 
+So give a current limit to e.g. 100mA. the actual steady current will be in the order of μA. 
+It is safer to first power on VDDA and then the other power domains. Correct procedure: 
+A) program the mio, power on the gpac, set DEF_CONF_N to 0. 
+B) Power on VDDA, VDDP, VDDA_DAC, VDDD C) reset the matrix logic and bcid and provide the clocks from the mio.
 ```
 
 3) Shift in, shift out and confirm configuration is not corrupted
