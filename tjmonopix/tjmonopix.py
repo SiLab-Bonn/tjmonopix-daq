@@ -148,6 +148,31 @@ class TJMonoPix(Dut):
 	self['CONF_SR']['INJ_IN_MON_L'] = 0
 	self['CONF_SR']['COL_PULSE_SEL'].setall(False)
 
+    def disable_columns(self):
+
+	self['CONF_SR']['EN_COMP'].setall(False)
+	self['CONF_SR']['EN_PMOS'].setall(False)	
+	self['CONF_SR']['EN_PMOS_NOSF'].setall(False)
+	self['CONF_SR']['EN_TEST_PATTERN'].setall(True)
+
+    def enable_columns(self):
+
+	self['CONF_SR']['EN_COMP'].setall(True)
+	self['CONF_SR']['EN_PMOS'].setall(True)	
+	self['CONF_SR']['EN_PMOS_NOSF'].setall(True)
+	self['CONF_SR']['EN_TEST_PATTERN'].setall(False)
+
+    def mask_all(self):
+
+	self['CONF_SR']['MASKD'].setall(False)
+	self['CONF_SR']['MASKH'].setall(False)
+	self['CONF_SR']['MASKV'].setall(False)
+
+    def unmask_all(self):
+
+	self['CONF_SR']['MASKD'].setall(True)
+	self['CONF_SR']['MASKH'].setall(True)
+	self['CONF_SR']['MASKV'].setall(True)
 
     def write_conf(self):
 
@@ -157,25 +182,28 @@ class TJMonoPix(Dut):
 
     def power_on(self, **kwargs):
         # Set power
-        self['VDDP'].set_current_limit(200, unit='mA')
-        self['VDDP'].set_voltage(1.8, unit='V')
-        self['VDDP'].set_enable(True)
 
-        self['VDDD'].set_current_limit(200, unit='mA')
-        self['VDDD'].set_voltage(1.8, unit='V')
-        self['VDDD'].set_enable(True)
-
-        self['VDDA'].set_current_limit(150, unit='mA')
         self['VDDA'].set_voltage(1.8, unit='V')
         self['VDDA'].set_enable(True)
+	time.sleep(0.1)
 
-        self['VDDA_DAC'].set_current_limit(200, unit='mA')
+#        self['VDDP'].set_current_limit(201, unit='mA')
+        self['VDDP'].set_voltage(1.8, unit='V')
+        self['VDDP'].set_enable(True)
+	time.sleep(0.01)
+
         self['VDDA_DAC'].set_voltage(1.8, unit='V')
         self['VDDA_DAC'].set_enable(True)
+	time.sleep(0.01)
 
-        self['BiasSF'].set_current(100, unit='uA')
-        self['VPC'].set_voltage(1.3, unit='V')
+        self['VDDD'].set_voltage(1.8, unit='V')
+        self['VDDD'].set_enable(True)
+	time.sleep(0.01)	
+
         self['VPCSWSF'].set_voltage(0.5, unit='V')
+        self['VPC'].set_voltage(1.3, unit='V')
+        self['BiasSF'].set_current(70, unit='uA')
+	time.sleep(0.01)
 
     def power_off(self):
         # Deactivate all
