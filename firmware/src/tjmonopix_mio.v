@@ -303,11 +303,11 @@ tjmono_data_rx #(
     .BUS_WR(BUS_WR),
     
     .CLK_BX(CLK40),
-    .RX_TOKEN(TOK_A), 
-    .RX_DATA(OUT_A),
+    .RX_TOKEN(TOK_B), 
+    .RX_DATA(OUT_B),
     .RX_CLK(CLK40),
-    .RX_READ(READ_A), 
-    .RX_FREEZE(FREEZE_A), 
+    .RX_READ(READ_B), 
+    .RX_FREEZE(FREEZE_B), 
     .TIMESTAMP(64'b0),
     
     .FIFO_READ(FE_FIFO_READ),
@@ -318,8 +318,8 @@ tjmono_data_rx #(
     
 ); 
 
-assign READ_B = 0;
-assign FREEZE_B = 0;
+assign READ_A = 0;
+assign FREEZE_A = 0;
 
 wire USB_READ;
 assign USB_READ = FREAD & FSTROBE;
@@ -385,3 +385,4 @@ assign LEMO_TX[1] = 0;
 assign LEMO_TX[2] = INJECTION;
 
 endmodule
+

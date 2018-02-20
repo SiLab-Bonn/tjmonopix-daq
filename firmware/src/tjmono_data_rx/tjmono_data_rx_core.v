@@ -323,7 +323,7 @@ bin_to_gray6 bin_to_gray_le(.gray_input(le_gray), .bin_out(le) );
 
 //assign data_to_cdc = {data_out};
 //assign data_to_cdc = CONF_DISSABLE_GRAY_DEC ? {token_cnt, token_timestamp, posssible_noise, le_gray, te_gray, row, col} : {token_cnt, token_timestamp, posssible_noise, 2'b0, le, te, row, col};
-assign data_to_cdc = CONF_DISSABLE_GRAY_DEC ? {data_out} : {token_cnt, token_timestamp, posssible_noise, 2'b0, le, te, row, col};
+assign data_to_cdc = CONF_DISSABLE_GRAY_DEC ? {data_out} : {token_cnt, token_timestamp, posssible_noise, le, te, row, col};
 
 
 wire [111:0] cdc_data_out; //[82:0] cdc_data_out;
@@ -384,3 +384,4 @@ assign FIFO_DATA[31:30]  =  IDENTYFIER;
 assign LOST_ERROR = LOST_DATA_CNT != 0;
 
 endmodule
+
