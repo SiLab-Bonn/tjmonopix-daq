@@ -13,6 +13,7 @@ chip['CONF']['DEF_CONF_N'] = 0
 chip['CONF'].write()
 chip.init()
 chip.power_on()
+chip.set_inj_amplitude()
 #print(chip.get_power_status())
 
 chip['CONF']['RESET_BCID'] = 1
@@ -28,18 +29,17 @@ chip['CONF']['RESET'] = 0
 chip['CONF'].write()
 
 chip.default_conf()
-chip.disable_columns()
 chip.set_icasn_low()
-chip.set_ireset_high()
-chip.set_ithr_high()
+#chip.enable_first_column_tst()
+#chip.enable_second_column()
+#chip.set_test_sim_inj()
+#chip.disable_columns()
+#chip.set_ireset_high()
+#chip.set_ithr_high()
 #chip.mask_all()
 chip.write_conf()
 
 chip['CONF']['DEF_CONF_N'] = 1
 chip['CONF'].write()
 
-chip.set_icasn_normal()
-chip.write_conf()
-
-#chip['CONF_SR']['SET_ICASN'].setall(False)
-#chip['CONF_SR']['SET_ICASN'][68:59] = True
+#chip.inject()

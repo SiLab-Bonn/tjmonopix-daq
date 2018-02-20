@@ -280,7 +280,7 @@ always@(posedge RX_CLK)
     ser <= {ser[25:0], RX_DATA};
 
 wire store_data;
-assign store_data = (cnt == 27);
+assign store_data = (cnt == 26);
 
 reg [26:0] data_out;
 wire [111:0] data_to_cdc;   // [82:0] data_to_cdc;
@@ -321,7 +321,10 @@ assign {col, te_gray, le_gray, row} = data_out;
 bin_to_gray6 bin_to_gray_te(.gray_input(te_gray), .bin_out(te) );
 bin_to_gray6 bin_to_gray_le(.gray_input(le_gray), .bin_out(le) );
 
-assign data_to_cdc = CONF_DISSABLE_GRAY_DEC ? {token_cnt, token_timestamp, posssible_noise, le_gray, te_gray, row, col} : {token_cnt, token_timestamp, posssible_noise, 2'b0, le, te, row, col};
+//assign data_to_cdc = {data_out};
+//assign data_to_cdc = CONF_DISSABLE_GRAY_DEC ? {token_cnt, token_timestamp, posssible_noise, le_gray, te_gray, row, col} : {token_cnt, token_timestamp, posssible_noise, 2'b0, le, te, row, col};
+assign data_to_cdc = CONF_DISSABLE_GRAY_DEC ? {data_out} : {token_cnt, token_timestamp, posssible_noise, 2'b0, le, te, row, col};
+
 
 wire [111:0] cdc_data_out; //[82:0] cdc_data_out;
 wire cdc_fifo_empty, fifo_full, fifo_write;

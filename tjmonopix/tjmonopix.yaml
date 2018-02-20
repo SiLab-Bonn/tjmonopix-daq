@@ -8,8 +8,8 @@ transfer_layer:
       type  : SiUsb
       init : 
         timeout  : 600
-        bit_file : tjmonopix_mio_v2.bit
-        avoid_download : True
+        bit_file : tjmonopix_mio.bit
+        avoid_download : False
 
 hw_drivers:
   - name      : GPAC
@@ -123,13 +123,13 @@ registers:
     type        : FunctionalRegister
     hw_driver   : GPAC
     arg_names   : [ value ]
-    arg_add     : { 'channel': 'INJ1'}
+    arg_add     : { 'channel': 'INJ0'}
     
   - name        : INJ_HI
     type        : FunctionalRegister
     hw_driver   : GPAC
     arg_names   : [ value ]
-    arg_add     : { 'channel': 'INJ0'}
+    arg_add     : { 'channel': 'INJ1'}
 
   - name        : BiasSF 
     type        : FunctionalRegister

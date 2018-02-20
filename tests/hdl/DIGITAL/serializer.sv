@@ -11,7 +11,7 @@ always@(posedge ClkBx)
     
 reg [1:0] Read_Out_dly;
 always@(posedge ClkOut)
-    Read_Out_dly <= {Read_Out_dly[0], Read_dly[1]};
+    Read_Out_dly <= {Read_Out_dly[0], Read_dly[0]};
     
 reg load;
 always@(posedge ClkOut)

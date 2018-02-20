@@ -148,67 +148,59 @@ class TJMonoPix(Dut):
 	self['CONF_SR']['INJ_IN_MON_L'] = 0
 	self['CONF_SR']['COL_PULSE_SEL'].setall(False)
 
-    def disable_columns(self):
 
-	self['CONF_SR']['EN_COMP'].setall(False)
-	self['CONF_SR']['EN_PMOS'].setall(False)	
-	self['CONF_SR']['EN_PMOS_NOSF'].setall(False)
-	self['CONF_SR']['EN_TEST_PATTERN'].setall(True)
+    def inject(self):
+        self['inj'].set_delay(200)
+        self['inj'].set_width(4)
+        self['inj'].set_repeat(1)
+        self['inj'].set_en(0)
+        self["inj"].start()
+       
+        while not self['inj'].is_ready:
+            time.sleep(0.001)
 
-    def enable_columns(self):
+        for _ in range(10):
+            self['inj'].is_ready
 
-	self['CONF_SR']['EN_COMP'].setall(True)
-	self['CONF_SR']['EN_PMOS'].setall(True)	
-	self['CONF_SR']['EN_PMOS_NOSF'].setall(True)
-	self['CONF_SR']['EN_TEST_PATTERN'].setall(False)
+        self["inj"].start()
+       
+        while not self['inj'].is_ready:
+            time.sleep(0.001)
 
-    def mask_all(self):
+        for _ in range(10):
+            self['inj'].is_ready
 
-	self['CONF_SR']['MASKD'].setall(False)
-	self['CONF_SR']['MASKH'].setall(False)
-	self['CONF_SR']['MASKV'].setall(False)
+        x = self['fifo'].get_data()
 
-    def unmask_all(self):
+        ix = self.interprete_raw_data(x)
+        print(ix)
 
-	self['CONF_SR']['MASKD'].setall(True)
-	self['CONF_SR']['MASKH'].setall(True)
-	self['CONF_SR']['MASKV'].setall(True)
-	
+
     def set_icasn_low(self):
 	self['CONF_SR']['SET_ICASN'].setall(False)
-	self['CONF_SR']['SET_ICASN'][65:62] = True
+	self['CONF_SR']['SET_ICASN'][65:61] = True
 
-    def set_icasn_normal(self):
-	self['CONF_SR']['SET_ICASN'].setall(False)
-	self['CONF_SR']['SET_ICASN'][68:59] = True
-
-    def set_ireset_high(self):
-	self['CONF_SR']['SET_IRESET'].setall(False)
-	self['CONF_SR']['SET_IRESET'][78:49] = True #1nA
-
-    def set_ithr_high(self):
-	self['CONF_SR']['SET_ITHR'].setall(False)
-	self['CONF_SR']['SET_ITHR'][72:55] = True #2.5nA
 
     def write_conf(self):
-
         self['CONF_SR'].write()
         while not self['CONF_SR'].is_ready:
             time.sleep(0.001)
 
+
     def power_on(self, **kwargs):
         # Set power
 
+        self['VDDP'].set_current_limit(60, unit='mA') #Sense resistor is 0.1Ohm, so 300mA=60mA*5
+        self['VDDP'].set_voltage(1.8, unit='V')
+
         self['VPCSWSF'].set_voltage(0.5, unit='V')
         self['VPC'].set_voltage(1.3, unit='V')
-        self['BiasSF'].set_current(70, unit='uA')
+        self['BiasSF'].set_current(100, unit='uA')
 
         self['VDDA'].set_voltage(1.8, unit='V')
         self['VDDA'].set_enable(True)
 	time.sleep(0.01)
 
-        self['VDDP'].set_current_limit(200, unit='mA')
-        self['VDDP'].set_voltage(1.8, unit='V')
         self['VDDP'].set_enable(True)
 
         self['VDDA_DAC'].set_voltage(1.8, unit='V')
@@ -227,11 +219,32 @@ class TJMonoPix(Dut):
 
         for pwr in ['VDDP', 'VDDD', 'VDDA', 'VDDA_DAC']:
             status[pwr+' [V]'] = self[pwr].get_voltage(unit='V')
-            status[pwr+' [mA]'] = self[pwr].get_current(unit='mA')
+            status[pwr+' [mA]'] = 5*self[pwr].get_current(unit='mA')
 
         return status
 
-    def interparete_raw_data(self, raw_data):
+    def set_inj_amplitude(self):
+
+	self['INJ_LO'].set_voltage(0.2, unit='V')
+	self['INJ_HI'].set_voltage(3.6, unit='V')
+
+
+    def interprete_raw_data(self, raw_data):
+        hit_data_sel = ((raw_data & 0xf0000000) == 0)
+        hit_data = raw_data[hit_data_sel]
+        hit_dtype = np.dtype([("col","<u1"),("row","<u2"),("le","<u1"),("te","<u1"),("noise","<u1")])
+        ret = np.empty(hit_data.shape[0], dtype = hit_dtype)
+
+        ret['col'] = (hit_data & 0x3f) 
+        ret['row'] = (hit_data & 0x7FC0) >> 6
+        ret['te'] = (hit_data & 0x1F8000) >> 15
+        ret['le'] = (hit_data & 0x7E00000) >> 21
+        ret['noise'] = (hit_data & 0x8000000) >> 27
+        
+        return ret
+
+
+    def interprete_data(self, raw_data):
         hit_data_sel = ((raw_data & 0xf0000000) == 0)
         hit_data = raw_data[hit_data_sel]
         hit_dtype = np.dtype([("col","<u1"),("row","<u2"),("le","<u1"),("te","<u1"),("noise","<u1")])
@@ -242,8 +255,8 @@ class TJMonoPix(Dut):
         ret['te'] = (hit_data & 0x1F8000) >> 15
         ret['le'] = (hit_data & 0x7E00000) >> 21
         ret['noise'] = (hit_data & 0x8000000) >> 27
-        
-        return ret
+
+	return ret
 
 if __name__ == '__main__':
     chip = TJMonoPix()
