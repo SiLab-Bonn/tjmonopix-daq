@@ -77,7 +77,31 @@ class TestSim(unittest.TestCase):
 	self.dut['CONF'].write()
 
 	chip['data_rx'].set_en(True)
-	self.dut.inject()
+
+        self.dut['inj'].set_delay(200)
+        self.dut['inj'].set_width(4)
+        self.dut['inj'].set_repeat(1)
+        self.dut['inj'].set_en(0)
+        self.dut["inj"].start()
+       
+        while not self.dut['inj'].is_ready:
+            time.sleep(0.001)
+
+        for _ in range(10):
+            self.dut['inj'].is_ready
+
+        self.dut["inj"].start()
+       
+        while not self.dut['inj'].is_ready:
+            time.sleep(0.001)
+
+        for _ in range(10):
+            self.dut['inj'].is_ready
+
+        x = self.dut['fifo'].get_data()
+
+        ix = self.dut.interprete_raw_data(x)
+        print(ix)
 
 	
 #	 self.dut.default_conf()        

@@ -149,38 +149,6 @@ class TJMonoPix(Dut):
 	self['CONF_SR']['COL_PULSE_SEL'].setall(False)
 
 
-    def inject(self):
-        self['inj'].set_delay(200)
-        self['inj'].set_width(4)
-        self['inj'].set_repeat(1)
-        self['inj'].set_en(0)
-        self["inj"].start()
-       
-        while not self['inj'].is_ready:
-            time.sleep(0.001)
-
-        for _ in range(10):
-            self['inj'].is_ready
-
-        self["inj"].start()
-       
-        while not self['inj'].is_ready:
-            time.sleep(0.001)
-
-        for _ in range(10):
-            self['inj'].is_ready
-
-        x = self['fifo'].get_data()
-
-        ix = self.interprete_raw_data(x)
-        print(ix)
-
-
-    def set_icasn_low(self):
-	self['CONF_SR']['SET_ICASN'].setall(False)
-	self['CONF_SR']['SET_ICASN'][65:61] = True
-
-
     def write_conf(self):
         self['CONF_SR'].write()
         while not self['CONF_SR'].is_ready:
