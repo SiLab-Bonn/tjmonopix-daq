@@ -225,7 +225,18 @@ class TJMonoPix(Dut):
         ret['noise'] = (hit_data & 0x8000000) >> 27
 
 	return ret
+	
+    def mask(self, flavor, col, row):
+	if flavor >3 or flavor<0:
+		print 'flavor must be between 0 and 3'
+	else:
+		mcol=(flavor)*112+col
 
+	md = mcol-row if (mcol-row) >= 0 else 448+mcol-row
+	self['CONF_SR']['MASKD'][md] = False
+	self['CONF_SR']['MASKV'][mcol] = False
+	self['CONF_SR']['MASKH'][row] = False
+	
 if __name__ == '__main__':
     chip = TJMonoPix()
     chip.init()
