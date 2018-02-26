@@ -227,16 +227,21 @@ class TJMonoPix(Dut):
 	return ret
 	
     def mask(self, flavor, col, row):
-	if flavor >3 or flavor<0:
-		print 'flavor must be between 0 and 3'
-	else:
-		mcol=(flavor)*112+col
-
+	assert 0 <= flavor <= 3, 'Flavor must be between 0 and 3'
+	mcol=(flavor)*112+col
 	md = mcol-row if (mcol-row) >= 0 else 448+mcol-row
 	self['CONF_SR']['MASKD'][md] = False
 	self['CONF_SR']['MASKV'][mcol] = False
 	self['CONF_SR']['MASKH'][row] = False
-	
+
+    def enable_column_injection(self, flavor, col):
+	assert 0 <= flavor <= 3, 'Flavor must be between 0 and 3'
+	chip['CONF_SR']['COL_PULSE_SEL'][(flavor*112)+col] = 1
+
+    def enable_column_hitor(self, flavor, col):
+	assert 0 <= flavor <= 3, 'Flavor must be between 0 and 3'
+	chip['CONF_SR']['DIG_MON_SEL'][(flavor*112)+col] = 1
+
 if __name__ == '__main__':
     chip = TJMonoPix()
     chip.init()
