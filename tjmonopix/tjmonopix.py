@@ -236,11 +236,93 @@ class TJMonoPix(Dut):
 
     def enable_column_injection(self, flavor, col):
 	assert 0 <= flavor <= 3, 'Flavor must be between 0 and 3'
-	chip['CONF_SR']['COL_PULSE_SEL'][(flavor*112)+col] = 1
+	self['CONF_SR']['COL_PULSE_SEL'][(flavor*112)+col] = 1
 
     def enable_column_hitor(self, flavor, col):
 	assert 0 <= flavor <= 3, 'Flavor must be between 0 and 3'
-	chip['CONF_SR']['DIG_MON_SEL'][(flavor*112)+col] = 1
+	self['CONF_SR']['DIG_MON_SEL'][(flavor*112)+col] = 1
+
+############################## SET BIAS CURRENTS AND VOLTAGES ##############################
+
+    def set_ibias_dacunits(self, dacunits, printen):
+	assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
+	low = (128-(dacunits+1))/2
+	high = ((dacunits+1)/2)+63
+	self['CONF_SR']['SET_IBIAS'].setall(False)
+	self['CONF_SR']['SET_IBIAS'][high:low] = True
+	if (printen == 1):
+		print 'ibias = ' +str(1400.0*((dacunits+1)/128.0)) + 'nA'
+
+    def set_idb_dacunits(self, dacunits, printen):
+	assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
+	low = (128-(dacunits+1))/2
+	high = ((dacunits+1)/2)+63
+	self['CONF_SR']['SET_IDB'].setall(False)
+	self['CONF_SR']['SET_IDB'][high:low] = True
+	if (printen == 1):
+		print 'idb = ' +str(2240.0*((dacunits+1)/128.0)) + 'nA'
+
+    def set_ithr_dacunits(self, dacunits, printen):
+	assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
+	low = (128-(dacunits+1))/2
+	high = ((dacunits+1)/2)+63
+	self['CONF_SR']['SET_ITHR'].setall(False)
+	self['CONF_SR']['SET_ITHR'][high:low] = True
+	if (printen == 1):
+		print 'ithr = ' +str(17.5*((dacunits+1)/128.0)) + 'nA'
+
+    def set_icasn_dacunits(self, dacunits, printen):
+	assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
+	low = (128-(dacunits+1))/2
+	high = ((dacunits+1)/2)+63
+	self['CONF_SR']['SET_ICASN'].setall(False)
+	self['CONF_SR']['SET_ICASN'][high:low] = True
+	if (printen == 1):
+		print 'icasn = ' +str(560.0*((dacunits+1)/128.0)) + 'nA'
+
+    def set_ireset_dacunits(self, dacunits, mode, printen):
+	assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
+	assert 0 <= mode <= 1, 'Mode must be 0 (low leakage) or 1 (high leakage)'
+	low = (128-(dacunits+1))/2
+	high = ((dacunits+1)/2)+63
+	self['CONF_SR']['SET_IRESET_BIT'] = mode
+	self['CONF_SR']['SET_IRESET'].setall(False)
+	self['CONF_SR']['SET_IRESET'][high:low] = True
+	if (printen == 1):
+		if (mode == 1):
+			print 'ireset = ' +str(4.375*((dacunits+1)/128.0)) + 'nA, high leakage mode'
+		else:
+			print 'ireset = ' +str(43.75*((dacunits+1)/128.0)) + 'pA, low leakage mode'
+
+    def set_vreset_dacunits(self, dacunits, printen):
+    	assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
+    	self['CONF_SR']['SET_VRESET_P'].setall(False)
+   	self['CONF_SR']['SET_VRESET_P'][dacunits] = True
+    	print 'vreset = ' +str(((1.8/127.0)*dacunits+0.555)) + 'V'
+
+    def set_vh_dacunits(self, dacunits, printen):
+    	assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
+    	self['CONF_SR']['SET_VH'].setall(False)
+   	self['CONF_SR']['SET_VH'][dacunits] = True
+	if (printen == 1):
+    		print 'vh = ' +str(((1.8/127.0)*dacunits+0.385)) + 'V'
+
+    def set_vl_dacunits(self, dacunits, printen):
+    	assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
+    	self['CONF_SR']['SET_VL'].setall(False)
+   	self['CONF_SR']['SET_VL'][dacunits] = True
+	if (printen == 1):
+    		print 'vl = ' +str(((1.8/127.0)*dacunits+0.385)) + 'V'
+
+    def set_vcasn_dac_dacunits(self, dacunits, printen):
+    	assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
+    	self['CONF_SR']['SET_VCASN'].setall(False)
+   	self['CONF_SR']['SET_VCASN'][dacunits] = True
+	if (printen == 1):
+    		print 'vcasn = ' +str(((1.8/127.0)*dacunits)) + 'V'
+
+###############################################################################################
+
 
 if __name__ == '__main__':
     chip = TJMonoPix()
