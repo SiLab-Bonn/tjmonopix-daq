@@ -167,7 +167,7 @@ class TJMonoPix(Dut):
 
         self['VDDA'].set_voltage(1.8, unit='V')
         self['VDDA'].set_enable(True)
-	time.sleep(0.01)
+        time.sleep(0.01)
 
         self['VDDP'].set_enable(True)
 
@@ -193,8 +193,8 @@ class TJMonoPix(Dut):
 
     def set_inj_amplitude(self):
 
-	self['INJ_LO'].set_voltage(0.2, unit='V')
-	self['INJ_HI'].set_voltage(3.6, unit='V')
+        self['INJ_LO'].set_voltage(0.2, unit='V')
+        self['INJ_HI'].set_voltage(3.6, unit='V')
 
 
     def interprete_raw_data(self, raw_data):
