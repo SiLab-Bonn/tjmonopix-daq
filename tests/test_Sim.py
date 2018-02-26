@@ -46,6 +46,7 @@ class TestSim(unittest.TestCase):
         self.dut.init()
 	self.dut.set_inj_amplitude()
 
+	self.dut['CONF']['AB_SELECT'] = 0
         self.dut['CONF']['RESET_BCID'] = 1
         self.dut['CONF']['RESET'] = 1
         self.dut['CONF'].write()
@@ -59,24 +60,23 @@ class TestSim(unittest.TestCase):
         self.dut['CONF'].write()
 
 	self.dut.default_conf()
-	self.dut.set_icasn_low()
 
-	self['CONF_SR']['EN_COMP'].setall(False)
-	self['CONF_SR']['EN_PMOS'].setall(False)
-	self['CONF_SR']['EN_PMOS_NOSF'].setall(True)
-	self['CONF_SR']['EN_TEST_PATTERN'].setall(False)
+	self.dut['CONF_SR']['EN_COMP'].setall(False)
+	self.dut['CONF_SR']['EN_PMOS'].setall(False)
+	self.dut['CONF_SR']['EN_PMOS_NOSF'].setall(True)
+	self.dut['CONF_SR']['EN_TEST_PATTERN'].setall(False)
 
-	self['CONF_SR']['COL_PULSE_SEL'][6] = 1
-	self['CONF_SR']['COL_PULSE_SEL'][5] = 1
-	self['CONF_SR']['INJ_ROW'][100] = 1
-	self['CONF_SR']['INJ_ROW'][200] = 1
+	self.dut['CONF_SR']['COL_PULSE_SEL'][6] = 1
+	self.dut['CONF_SR']['COL_PULSE_SEL'][5] = 1
+	self.dut['CONF_SR']['INJ_ROW'][100] = 1
+	self.dut['CONF_SR']['INJ_ROW'][200] = 1
 
 	self.dut.write_conf()
 
 	self.dut['CONF']['DEF_CONF_N'] = 1
 	self.dut['CONF'].write()
 
-	chip['data_rx'].set_en(True)
+	self.dut['data_rx'].set_en(True)
 
         self.dut['inj'].set_delay(200)
         self.dut['inj'].set_width(4)

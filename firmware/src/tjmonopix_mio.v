@@ -94,6 +94,7 @@ module tjmonopix_mio (
     output wire RST_N,
     
     output wire INJECTION,
+	 output wire INJECTION_MON,
     
     output wire CLK_BX,
     output wire CLK_OUT,
@@ -106,7 +107,7 @@ module tjmonopix_mio (
     input wire TOK_A,
     input wire TOK_B,
     input wire OUT_A,
-	input wire OUT_B,
+    input wire OUT_B,
     input wire HITOR_A, 
     input wire HITOR_B, 
     
@@ -205,13 +206,15 @@ gpio
     );    
 
 wire RESET_CONF, RESET_BCID_CONF;
-wire EN_BX_CLK_CONF, EN_OUT_CLK_CONF;
+wire EN_BX_CLK_CONF, EN_OUT_CLK_CONF, SELECTAB;
+wire READ_AB, FREEZE_AB, OUT_AB, TOK_AB;
 
 assign RESET_CONF = GPIO_OUT[0];
 assign RESET_BCID_CONF = GPIO_OUT[1];
 assign EN_BX_CLK_CONF = GPIO_OUT[2];
 assign EN_OUT_CLK_CONF = GPIO_OUT[3];
 assign DEF_CONF = ~GPIO_OUT[4];
+assign SELECTAB = GPIO_OUT[5];
 
 wire CONF_CLK;
 assign CONF_CLK = CLK8;
@@ -303,11 +306,11 @@ tjmono_data_rx #(
     .BUS_WR(BUS_WR),
     
     .CLK_BX(CLK40),
-    .RX_TOKEN(TOK_B), 
-    .RX_DATA(OUT_B),
+    .RX_TOKEN(TOK_AB), 
+    .RX_DATA(OUT_AB),
     .RX_CLK(CLK40),
-    .RX_READ(READ_B), 
-    .RX_FREEZE(FREEZE_B), 
+    .RX_READ(READ_AB), 
+    .RX_FREEZE(FREEZE_AB), 
     .TIMESTAMP(64'b0),
     
     .FIFO_READ(FE_FIFO_READ),
@@ -318,8 +321,12 @@ tjmono_data_rx #(
     
 ); 
 
-assign READ_A = 0;
-assign FREEZE_A = 0;
+assign OUT_AB = (SELECTAB)? OUT_B : OUT_A;
+assign TOK_AB = (SELECTAB)? TOK_B : TOK_A;
+assign READ_A = (SELECTAB)? 1'b0 : READ_AB;
+assign FREEZE_A = (SELECTAB)? 1'b0 : FREEZE_AB;
+assign READ_B = (SELECTAB)? READ_AB : 1'b0;
+assign FREEZE_B = (SELECTAB)? FREEZE_AB : 1'b0;
 
 wire USB_READ;
 assign USB_READ = FREAD & FSTROBE;
@@ -384,5 +391,5 @@ assign LEMO_TX[0] = 0;
 assign LEMO_TX[1] = 0;
 assign LEMO_TX[2] = INJECTION;
 
+assign INJECTION_MON = INJECTION;
 endmodule
-

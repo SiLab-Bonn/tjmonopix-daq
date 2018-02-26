@@ -298,7 +298,8 @@ class TJMonoPix(Dut):
     	assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
     	self['CONF_SR']['SET_VRESET_P'].setall(False)
    	self['CONF_SR']['SET_VRESET_P'][dacunits] = True
-    	print 'vreset = ' +str(((1.8/127.0)*dacunits+0.555)) + 'V'
+	if (printen == 1):
+    		print 'vreset = ' +str(((1.8/127.0)*dacunits+0.555)) + 'V'
 
     def set_vh_dacunits(self, dacunits, printen):
     	assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'

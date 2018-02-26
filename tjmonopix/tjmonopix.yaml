@@ -8,7 +8,7 @@ transfer_layer:
       type  : SiUsb
       init : 
         timeout  : 600
-        bit_file : tjmonopix_mio_b.bit
+        bit_file : tjmonopix_mio.bit
         avoid_download : False
 
 hw_drivers:
@@ -59,6 +59,9 @@ registers:
     hw_driver   : gpio
     size        : 16
     fields :
+      - name    : AB_SELECT
+        size    : 1
+        offset  : 5
       - name    : DEF_CONF_N
         size    : 1
         offset  : 4
