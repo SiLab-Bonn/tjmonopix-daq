@@ -167,7 +167,7 @@ class TJMonoPix(Dut):
 
         self['VDDA'].set_voltage(1.8, unit='V')
         self['VDDA'].set_enable(True)
-	time.sleep(0.01)
+        time.sleep(0.01)
 
         self['VDDP'].set_enable(True)
 
@@ -193,8 +193,8 @@ class TJMonoPix(Dut):
 
     def set_inj_amplitude(self):
 
-	self['INJ_LO'].set_voltage(0.2, unit='V')
-	self['INJ_HI'].set_voltage(3.6, unit='V')
+        self['INJ_LO'].set_voltage(0.2, unit='V')
+        self['INJ_HI'].set_voltage(3.6, unit='V')
 
 
     def interprete_raw_data(self, raw_data):
@@ -227,20 +227,20 @@ class TJMonoPix(Dut):
 	return ret
 	
     def mask(self, flavor, col, row):
-	assert 0 <= flavor <= 3, 'Flavor must be between 0 and 3'
-	mcol=(flavor)*112+col
-	md = mcol-row if (mcol-row) >= 0 else 448+mcol-row
-	self['CONF_SR']['MASKD'][md] = False
-	self['CONF_SR']['MASKV'][mcol] = False
-	self['CONF_SR']['MASKH'][row] = False
+        assert 0 <= flavor <= 3, 'Flavor must be between 0 and 3'
+        mcol=(flavor)*112+col
+        md = mcol-row if (mcol-row) >= 0 else 448+mcol-row
+        self['CONF_SR']['MASKD'][md] = False
+        self['CONF_SR']['MASKV'][mcol] = False
+        self['CONF_SR']['MASKH'][row] = False
 
     def enable_column_injection(self, flavor, col):
-	assert 0 <= flavor <= 3, 'Flavor must be between 0 and 3'
-	chip['CONF_SR']['COL_PULSE_SEL'][(flavor*112)+col] = 1
+        assert 0 <= flavor <= 3, 'Flavor must be between 0 and 3'
+        self['CONF_SR']['COL_PULSE_SEL'][(flavor*112)+col] = 1
 
     def enable_column_hitor(self, flavor, col):
-	assert 0 <= flavor <= 3, 'Flavor must be between 0 and 3'
-	chip['CONF_SR']['DIG_MON_SEL'][(flavor*112)+col] = 1
+        assert 0 <= flavor <= 3, 'Flavor must be between 0 and 3'
+        self['CONF_SR']['DIG_MON_SEL'][(flavor*112)+col] = 1
 
 if __name__ == '__main__':
     chip = TJMonoPix()
