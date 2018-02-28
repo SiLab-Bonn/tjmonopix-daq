@@ -234,9 +234,12 @@ class TJMonoPix(Dut):
 	self['CONF_SR']['MASKV'][mcol] = False
 	self['CONF_SR']['MASKH'][row] = False
 
-    def enable_column_injection(self, flavor, col):
+    def enable_injection(self, flavor, col, row):
 	assert 0 <= flavor <= 3, 'Flavor must be between 0 and 3'
+	assert 0 <= col <= 111, 'Column must be between 0 and 111'
+	assert 0 <= row <= 223, 'Row must be between 0 and 223'
 	self['CONF_SR']['COL_PULSE_SEL'][(flavor*112)+col] = 1
+	self['CONF_SR']['INJ_ROW'][row] = 1
 
     def enable_column_hitor(self, flavor, col):
 	assert 0 <= flavor <= 3, 'Flavor must be between 0 and 3'
