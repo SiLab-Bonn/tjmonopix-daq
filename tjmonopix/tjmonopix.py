@@ -336,10 +336,9 @@ class TJMonoPix(Dut):
     def scurve(self, x, A, mu, sigma):
         return 0.5 * A * erf((x - mu) / (np.sqrt(2) * sigma)) + 0.5 * A
 
-    def inj_scan(self, flavor, col, row, VL, VHLrange, start_dif, delay, width, repeat, noise_en, analog_en):
+    def inj_scan(self, flavor, col, row, VL, VHLrange, start_dif, delay, width, repeat, noise_en, analog_en, sleeptime):
 
         hits = np.zeros((VHLrange+1), dtype=int)
-	#xhits = range(start_dif,VHLrange+start_dif+1)
 
         self['inj'].set_delay(delay)
         self['inj'].set_width(width)
@@ -352,9 +351,10 @@ class TJMonoPix(Dut):
 	self['CONF_SR']['COL_PULSE_SEL'].setall(False)
 	self.enable_injection(flavor,col,row)
         self.set_vl_dacunits(VL,0)
+	self.set_vh_dacunits(VL+start_dif,0)
 	self.write_conf()
 
-        for i in range(5):
+        for _ in range(5):
             x2 = self['fifo'].get_data()
 
         for i in range(VHLrange+1):
@@ -367,6 +367,7 @@ class TJMonoPix(Dut):
                 self['inj'].is_ready
             self["inj"].start()
 
+	    time.sleep(sleeptime)
             x = self['fifo'].get_data()
             ix = self.interprete_data(x)
 
