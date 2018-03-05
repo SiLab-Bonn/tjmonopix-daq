@@ -9,7 +9,7 @@ transfer_layer:
       init : 
         timeout  : 600
         bit_file : tjmonopix_mio.bit
-        avoid_download : False
+        avoid_download : True
 
 hw_drivers:
   - name      : GPAC

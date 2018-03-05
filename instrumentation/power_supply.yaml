@@ -1,0 +1,31 @@
+transfer_layer:
+  - name     : Serial
+    type     : Serial
+    init     :
+        port     : /dev/ttyUSB0
+        read_termination : "\r\n"
+        write_termination : "\n"
+        baudrate : 19200
+        timeout  : 2.0
+        xonxoff  : True
+        parity   : N
+        stopbits : 1
+        bytesize : 8
+
+hw_drivers:
+  - name      : SCC_Powersupply
+    type      : tti_ql355tp
+    interface : Serial
+
+registers:
+  - name      : VDD_LEFT
+    type      : FunctionalRegister
+    hw_driver : SCC_Powersupply
+    arg_names : [ value, on ]
+    arg_add   : { 'channel': 1 }
+    
+  - name      : VDD_RIGHT
+    type      : FunctionalRegister
+    hw_driver : SCC_Powersupply
+    arg_names : [ value, on ]
+    arg_add   : { 'channel': 2 }

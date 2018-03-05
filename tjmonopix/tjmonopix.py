@@ -14,6 +14,10 @@ import struct
 import numpy as np
 import tables as tb
 
+import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
+from scipy.special import erf
+
 import basil
 #from bitarray import bitarray
 from basil.dut import Dut
@@ -228,6 +232,8 @@ class TJMonoPix(Dut):
 	
     def mask(self, flavor, col, row):
 	assert 0 <= flavor <= 3, 'Flavor must be between 0 and 3'
+	assert 0 <= col <= 111, 'Column must be between 0 and 111'
+	assert 0 <= row <= 223, 'Row must be between 0 and 223'
 	mcol=(flavor)*112+col
 	md = mcol-row if (mcol-row) >= 0 else 448+mcol-row
 	self['CONF_SR']['MASKD'][md] = False
@@ -326,6 +332,85 @@ class TJMonoPix(Dut):
     		print 'vcasn = ' +str(((1.8/127.0)*dacunits)) + 'V'
 
 ###############################################################################################
+
+    def scurve(self, x, A, mu, sigma):
+        return 0.5 * A * erf((x - mu) / (np.sqrt(2) * sigma)) + 0.5 * A
+
+    def inj_scan(self, flavor, col, row, VL, VHLrange, start_dif, delay, width, repeat, noise_en, analog_en):
+
+        hits = np.zeros((VHLrange+1), dtype=int)
+	#xhits = range(start_dif,VHLrange+start_dif+1)
+
+        self['inj'].set_delay(delay)
+        self['inj'].set_width(width)
+        self['inj'].set_repeat(repeat)
+        self['inj'].set_en(0)
+	
+	self['CONF_SR']['INJ_ROW'].setall(False)
+	if analog_en == 1:
+		self['CONF_SR']['INJ_ROW'][223]=True
+	self['CONF_SR']['COL_PULSE_SEL'].setall(False)
+	self.enable_injection(flavor,col,row)
+        self.set_vl_dacunits(VL,0)
+	self.write_conf()
+
+        for i in range(5):
+            x2 = self['fifo'].get_data()
+
+        for i in range(VHLrange+1):
+            self.set_vh_dacunits(VL+i+start_dif,0)
+            self.write_conf()
+
+            while not self['inj'].is_ready:
+                time.sleep(0.001)
+            for _ in range(10):
+                self['inj'].is_ready
+            self["inj"].start()
+
+            x = self['fifo'].get_data()
+            ix = self.interprete_data(x)
+
+            cnt = 0
+            for hit in ix:
+                if hit['col'] == col and  hit['row'] == row:
+		    if noise_en == 1:
+			if hit['noise'] == 0: 
+                            cnt += 1
+		    else:
+			cnt += 1
+
+            hits[i] =  cnt
+
+        return hits
+
+
+    def plot_scurve(self, col, row, xhits, hits, max_occ, threshold, s, se, DUtoe):
+
+        popt, _ = curve_fit(self.scurve, xhits, hits, p0=[max_occ, threshold, s], check_finite=False)
+
+        newxhits = np.arange(xhits[0],xhits[-1],0.01)
+        fit = self.scurve(newxhits, *popt)
+
+        fig, (ax1, ax2) = plt.subplots(1, 2, sharey=True, figsize=(15,5))
+        ax1.plot(xhits, hits, 'o', label='data')
+        ax1.plot(newxhits, fit, label='fit')
+        ax1.set(xlabel='DU', ylabel='Hit count',title=('ENC of pixel (' +str(col) +',' +str(row) +')'))
+        ax1.legend(loc='best')
+        ax1.text(0, max_occ*0.8, ('Theshold=' +str(round(popt[1],2)) +'DU, ENC=' +str(round(popt[2],2)) +'DU'), bbox=dict(facecolor='white', alpha=0.5))
+        ax1.text(0, max_occ*0.7, "1DU=14.1mV, 1,43e/mV", bbox=dict(facecolor='white', alpha=0.5))
+
+        xhitse = (np.array(xhits))*DUtoe
+        popt, _ = curve_fit(self.scurve, xhitse, hits, p0=[max_occ, threshold*DUtoe, se], check_finite=False)
+        newxhitse = newxhits*DUtoe
+        fite = self.scurve(newxhitse, *popt)
+
+        ax2.plot(xhitse, hits, 'o', label='data')
+        ax2.plot(newxhitse, fite, label='fit')
+        ax2.set(xlabel='e-', ylabel='Hit count',title=('ENC of pixel (' +str(col) +',' +str(row) +')'))
+        ax2.legend(loc='best')
+        ax2.text(0, max_occ*0.8, ('Theshold=' +str(round(popt[1],2)) +'e-, ENC=' +str(round(popt[2],2)) +'e-'), bbox=dict(facecolor='white', alpha=0.5))
+        ax2.text(0, max_occ*0.7, "1DU=14.1mV, 1,43e/mV", bbox=dict(facecolor='white', alpha=0.5))
+        fig.savefig('/faust/user/kmoustakas/ENC')
 
 
 if __name__ == '__main__':
