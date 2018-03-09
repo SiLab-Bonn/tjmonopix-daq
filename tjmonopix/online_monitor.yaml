@@ -1,0 +1,23 @@
+converter :
+    DUT0_Interpreter :
+        kind : tjmonopix_converter
+        frontend : tcp://127.0.0.1:5500
+        backend : tcp://127.0.0.1:5600
+    DUT0_Histogrammer :
+        kind : tjmonopix_histogrammer
+        frontend : tcp://127.0.0.1:5600
+        backend : tcp://127.0.0.1:5700
+        noisy_threshold : 1
+    # TDC_Histogrammer :
+    #     kind : tjmonopix_histogrammer
+    #     frontend : tcp://127.0.0.1:5600
+    #     backend : tcp://127.0.0.1:5800
+    #     noisy_threshold : 1
+
+receiver :
+    DUT0 :
+        kind : tjmonopix_receiver
+        frontend : tcp://127.0.0.1:5700
+    # TDC :
+    #     kind: tjmonopix_tdc_receiver
+    #     frontend : tcp://127.0.0.1:5800
