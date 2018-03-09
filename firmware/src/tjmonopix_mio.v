@@ -10,6 +10,10 @@
 `include "utils/generic_fifo.v"
 `include "utils/cdc_pulse_sync.v"
 
+`include "utils/flag_domain_crossing.v"
+`include "utils/ddr_des.v"
+`include "utils/3_stage_synchronizer.v"
+
 `include "utils/reset_gen.v"
 //`include "utils/pulse_gen_rising.v"
 `include "utils/CG_MOD_pos.v"
@@ -19,6 +23,16 @@
 `include "spi/blk_mem_gen_8_to_1_2k.v"
 
 `include "gpio/gpio.v"
+
+`include "tdc_s3/tdc_s3.v"
+`include "tdc_s3/tdc_s3_core.v"
+
+`include "tlu/tlu_controller.v"
+`include "tlu/tlu_controller_core.v"
+`include "tlu/tlu_controller_fsm.v"
+
+`include "timestamp/timestamp.v"
+`include "timestamp/timestamp_core.v"
 
 //`include "utils/cdc_reset_sync.v"
 `include "utils/fx2_to_bus.v"
@@ -37,7 +51,7 @@
 
 `ifdef COCOTB_SIM //for simulation
     `include "utils/ODDR_sim.v"
-    //`include "utils/IDDR_sim.v"
+    `include "utils/IDDR_sim.v"
     `include "utils/DCM_sim.v"
     `include "utils/clock_multiplier.v"
     `include "utils/BUFG_sim.v"
@@ -47,7 +61,7 @@
     //`include "utils/IBUFGDS_sim.v"
     //`include "utils/OBUFDS_sim.v"
 `else
-    //`include "utils/IDDR_s3.v"
+    `include "utils/IDDR_s3.v"
     `include "utils/ODDR_s3.v"
 `endif 
 
@@ -168,6 +182,17 @@ localparam SPI_HIGHADDR = 16'h2000-1;
 localparam FIFO_BASEADDR = 16'h8000;
 localparam FIFO_HIGHADDR = 16'h9000-1;
 
+localparam PULSE_GATE_TDC_BASEADDR = 16'h0400;
+localparam PULSE_GATE_TDC_HIGHADDR = 16'h0500-1;
+
+localparam TDC_BASEADDR = 16'h0300;
+localparam TDC_HIGHADDR = 16'h0400-1;
+
+localparam TLU_BASEADDR = 16'h0600;
+localparam TLU_HIGHADDR = 16'h0700-1;
+
+localparam TS_BASEADDR = 16'h0700;
+localparam TS_HIGHADDR = 16'h0800-1;
 
 // -------  BUS SYGNALING  ------- //
 wire [15:0] BUS_ADD;
@@ -247,6 +272,8 @@ assign CLK_CONF = SCLK;
 assign SI_CONF = SDI;
 assign SDO = SO_CONF;    
 assign LD_CONF = SLD;
+
+wire GATE_TDC;
     
 pulse_gen
 #( 
@@ -262,36 +289,164 @@ pulse_gen
     .BUS_WR(BUS_WR),
 
     .PULSE_CLK(CLK40), //~CLK40),
-    .EXT_START(1'b0),
+    .EXT_START(GATE_TDC),
     .PULSE(INJECTION)
 );
+
+pulse_gen
+#( 
+    .BASEADDR(PULSE_GATE_TDC_BASEADDR), 
+    .HIGHADDR(PULSE_GATE_TDC_HIGHADDR)
+    ) pulse_gen_gate_tdc
+(
+    .BUS_CLK(BUS_CLK),
+    .BUS_RST(BUS_RST),
+    .BUS_ADD(BUS_ADD),
+    .BUS_DATA(BUS_DATA[7:0]),
+    .BUS_RD(BUS_RD),
+    .BUS_WR(BUS_WR),
+
+    .PULSE_CLK(CLK40),
+    .EXT_START(1'b0),
+    .PULSE(GATE_TDC) 
+);    
 
 wire ARB_READY_OUT, ARB_WRITE_OUT;
 wire [31:0] ARB_DATA_OUT;
 
-wire FE_FIFO_READ;
-wire FE_FIFO_EMPTY;
+
+wire FE_FIFO_READ, TS_FIFO_READ, TDC_FIFO_READ, TLU_FIFO_READ;
+wire FE_FIFO_EMPTY, TS_FIFO_EMPTY, TDC_FIFO_EMPTY, TLU_FIFO_EMPTY;
 wire [31:0] FE_FIFO_DATA;
+wire [31:0] TDC_FIFO_DATA;
+wire [31:0] TS_FIFO_DATA;
+wire [31:0] TLU_FIFO_DATA;
+wire TLU_FIFO_PEEMPT_REQ;
 
 wire FIFO_FULL;
 
 rrp_arbiter 
 #( 
-    .WIDTH(1)
+    .WIDTH(4)
 ) rrp_arbiter (
 
     .RST(BUS_RST),
     .CLK(BUS_CLK),
 
-    .WRITE_REQ({~FE_FIFO_EMPTY}),
-    .HOLD_REQ({1'b0}),
-    .DATA_IN({FE_FIFO_DATA}),
-    .READ_GRANT({FE_FIFO_READ}),
+    .WRITE_REQ({~TS_FIFO_EMPTY, ~TDC_FIFO_EMPTY, ~FE_FIFO_EMPTY, ~TLU_FIFO_EMPTY}),
+    .HOLD_REQ({3'b0, TLU_FIFO_PEEMPT_REQ}),
+    .DATA_IN({TS_FIFO_DATA, TDC_FIFO_DATA, FE_FIFO_DATA, TLU_FIFO_DATA}),
+    .READ_GRANT({TS_FIFO_READ, TDC_FIFO_READ, FE_FIFO_READ, TLU_FIFO_READ}),
 
     .READY_OUT(ARB_READY_OUT),
     .WRITE_OUT(ARB_WRITE_OUT),
     .DATA_OUT(ARB_DATA_OUT)
 );
+
+wire TDC_TDC_OUT, TDC_TRIG_OUT;
+
+wire [64:0] TIMESTAMP;
+wire TLU_BUSY,TLU_CLOCK;
+wire TRIGGER_ACKNOWLEDGE_FLAG,TRIGGER_ACCEPTED_FLAG;
+
+tdc_s3 #(
+    .BASEADDR(TDC_BASEADDR),
+    .HIGHADDR(TDC_HIGHADDR),
+    .CLKDV(4),
+    .DATA_IDENTIFIER(4'b0100), 
+    .FAST_TDC(1),
+    .FAST_TRIGGER(1)
+) tdc (
+    .CLK320(CLK320),
+    .CLK160(CLK160),
+    .DV_CLK(CLK40),
+    .TDC_IN(HITOR_B),
+    .TDC_OUT(TDC_TDC_OUT),
+    //.TRIG_IN(1'b0),
+    .TRIG_IN(RJ45_TRIGGER),
+    .TRIG_OUT(TDC_TRIG_OUT),
+
+    .FIFO_READ(TDC_FIFO_READ),
+    .FIFO_EMPTY(TDC_FIFO_EMPTY),
+    .FIFO_DATA(TDC_FIFO_DATA),
+
+    .BUS_CLK(BUS_CLK),
+    .BUS_RST(BUS_RST),
+    .BUS_ADD(BUS_ADD),
+    .BUS_DATA(BUS_DATA),
+    .BUS_RD(BUS_RD),
+    .BUS_WR(BUS_WR),
+
+    .ARM_TDC(~TLU_BUSY),
+    .EXT_EN(GATE_TDC),
+    
+    .TIMESTAMP(TIMESTAMP[15:0])
+);
+
+//// TLU
+
+tlu_controller #(
+    .BASEADDR(TLU_BASEADDR),
+    .HIGHADDR(TLU_HIGHADDR),
+    .DIVISOR(8),
+	.TIMESTAMP_N_OF_BIT(64)
+) i_tlu_controller (
+    .BUS_CLK(BUS_CLK),
+    .BUS_RST(BUS_RST),
+    .BUS_ADD(BUS_ADD),
+    .BUS_DATA(BUS_DATA),
+    .BUS_RD(BUS_RD),
+    .BUS_WR(BUS_WR),
+    
+    .TRIGGER_CLK(CLK40),
+    
+    .FIFO_READ(TLU_FIFO_READ),
+    .FIFO_EMPTY(TLU_FIFO_EMPTY),
+    .FIFO_DATA(TLU_FIFO_DATA),
+    
+    .FIFO_PREEMPT_REQ(TLU_FIFO_PEEMPT_REQ),
+    
+    .TRIGGER({7'b0,TDC_TRIG_OUT}),
+    .TRIGGER_VETO({7'b0,FIFO_FULL}),
+	 
+    .TRIGGER_ACKNOWLEDGE(TRIGGER_ACKNOWLEDGE_FLAG),
+    .TRIGGER_ACCEPTED_FLAG(TRIGGER_ACCEPTED_FLAG),
+	 //.EXT_TRIGGER_ENABLE(TLU_EXT_TRIGGER_ENABLE)
+	 
+    .TLU_TRIGGER(TDC_TRIG_OUT),
+    .TLU_RESET(RJ45_RESET),
+    .TLU_BUSY(TLU_BUSY),
+    .TLU_CLOCK(TLU_CLOCK),
+    
+    .TIMESTAMP(TIMESTAMP)
+);
+assign TRIGGER_ACKNOWLEDGE_FLAG = TRIGGER_ACCEPTED_FLAG;
+
+timestamp
+#(
+    .BASEADDR(TS_BASEADDR),
+    .HIGHADDR(TS_HIGHADDR),
+    .IDENTIFIER(4'b0101)
+)i_timestamp(
+    .BUS_CLK(BUS_CLK),
+    .BUS_ADD(BUS_ADD),
+    .BUS_DATA(BUS_DATA),
+    .BUS_RST(BUS_RST),
+    .BUS_WR(BUS_WR),
+    .BUS_RD(BUS_RD),
+    
+    .CLK(CLK40),
+	 .DI(LEMO_RX[2]),
+	 .EXT_ENABLE(1'b0),
+	 .EXT_TIMESTAMP(TIMESTAMP),
+
+    .FIFO_READ(TS_FIFO_READ),
+    .FIFO_EMPTY(TS_FIFO_EMPTY),
+    .FIFO_DATA(TS_FIFO_DATA)
+    
+);
+
+
     
 tjmono_data_rx #(
    .BASEADDR(DATA_RX_BASEADDR),
@@ -311,7 +466,7 @@ tjmono_data_rx #(
     .RX_CLK(CLK40),
     .RX_READ(READ_AB), 
     .RX_FREEZE(FREEZE_AB), 
-    .TIMESTAMP(64'b0),
+    .TIMESTAMP(TIMESTAMP),
     
     .FIFO_READ(FE_FIFO_READ),
     .FIFO_EMPTY(FE_FIFO_EMPTY),
@@ -319,7 +474,7 @@ tjmono_data_rx #(
     
     .LOST_ERROR()
     
-); 
+);
 
 assign OUT_AB = (SELECTAB)? OUT_B : OUT_A;
 assign TOK_AB = (SELECTAB)? TOK_B : TOK_A;
@@ -387,8 +542,8 @@ assign LED[2] = 0;
 assign LED[3] = 0;
 assign LED[4] = 0;
 
-assign LEMO_TX[0] = 0; 
-assign LEMO_TX[1] = 0;
+assign LEMO_TX[0] = TLU_CLOCK; // trigger clock; also connected to RJ45 output
+assign LEMO_TX[1] = TLU_BUSY;  // TLU_BUSY signal; also connected to RJ45 output. Asserted when TLU FSM has 
 assign LEMO_TX[2] = INJECTION;
 
 assign INJECTION_MON = INJECTION;

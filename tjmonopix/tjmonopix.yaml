@@ -8,7 +8,7 @@ transfer_layer:
       type  : SiUsb
       init : 
         timeout  : 600
-        bit_file : tjmonopix_mio.bit
+        bit_file : tjmonopix_mioB.bit
         avoid_download : False
 
 hw_drivers:
@@ -45,6 +45,28 @@ hw_drivers:
     type      : tjmonopix.tjmono_data_rx
     interface : intf
     base_addr : 0x10500
+
+  - name      : tlu
+    type      : tlu
+    interface : intf
+    base_addr : 0x10600
+    size      : 8
+    
+  - name      : timestamp
+    type      : timestamp
+    interface : intf
+    base_addr : 0x10700
+    size      : 8
+
+  - name      : tdc
+    type      : tdc_s3
+    interface : intf
+    base_addr : 0x10300
+     
+  - name      : gate_tdc
+    type      : pulse_gen
+    interface : intf
+    base_addr : 0x10400
     
   - name        : NTC
     type        : NTCRegister
