@@ -105,7 +105,7 @@ class TJMonopixHistogrammer(Transceiver):
         hits['col'][:] = tmp["col"]
         hits['row'][:] = tmp["row"]
 
-        print hit_data
+        #print hit_data
 
         tdc = hit_data[hit_data["cnt"] > 1]
         # print 'histogrammer tdc: ', tdc

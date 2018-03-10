@@ -228,17 +228,23 @@ class TJMonoPix(Dut):
         ret['le'] = (hit_data & 0x7E00000) >> 21
         ret['noise'] = (hit_data & 0x8000000) >> 27
 
-	return ret
+        return ret
 	
     def mask(self, flavor, col, row):
-	assert 0 <= flavor <= 3, 'Flavor must be between 0 and 3'
-	assert 0 <= col <= 111, 'Column must be between 0 and 111'
-	assert 0 <= row <= 223, 'Row must be between 0 and 223'
-	mcol=(flavor)*112+col
-	md = mcol-row if (mcol-row) >= 0 else 448+mcol-row
-	self['CONF_SR']['MASKD'][md] = False
-	self['CONF_SR']['MASKV'][mcol] = False
-	self['CONF_SR']['MASKH'][row] = False
+		assert 0 <= flavor <= 3, 'Flavor must be between 0 and 3'
+		mcol=(flavor)*112+col
+		md = mcol-row if (mcol-row) >= 0 else 448+mcol-row
+		self['CONF_SR']['MASKD'][md] = False
+		self['CONF_SR']['MASKV'][mcol] = False
+		self['CONF_SR']['MASKH'][row] = False
+
+    def unmask(self, flavor, col, row):
+		assert 0 <= flavor <= 3, 'Flavor must be between 0 and 3'
+		mcol=(flavor)*112+col
+		md = mcol-row if (mcol-row) >= 0 else 448+mcol-row
+		self['CONF_SR']['MASKD'][md] = True
+		self['CONF_SR']['MASKV'][mcol] = True
+		self['CONF_SR']['MASKH'][row] = True
 
     def enable_injection(self, flavor, col, row):
 	assert 0 <= flavor <= 3, 'Flavor must be between 0 and 3'
@@ -331,6 +337,80 @@ class TJMonoPix(Dut):
 	if (printen == 1):
     		print 'vcasn = ' +str(((1.8/127.0)*dacunits)) + 'V'
 
+###############################################################################################
+
+    def set_tlu(self,tlu_delay=8):
+        self["tlu"]["RESET"]=1
+        self["tlu"]["TRIGGER_MODE"]=3
+        self["tlu"]["EN_TLU_VETO"]=0
+        self["tlu"]["MAX_TRIGGERS"]=0
+        self["tlu"]["TRIGGER_COUNTER"]=0
+        self["tlu"]["TRIGGER_LOW_TIMEOUT"]=0
+        self["tlu"]["TRIGGER_VETO_SELECT"]=0
+        self["tlu"]["TRIGGER_THRESHOLD"]=0
+        self["tlu"]["DATA_FORMAT"]=2
+        self["tlu"]["TRIGGER_HANDSHAKE_ACCEPT_WAIT_CYCLES"]=20
+        self["tlu"]["TRIGGER_DATA_DELAY"]=tlu_delay
+        self["tlu"]["TRIGGER_SELECT"]=0
+        # self.logger.info("set_tlu: tlu_delay=%d"%tlu_delay)
+        self["tlu"]["TRIGGER_ENABLE"]=1
+        
+    def stop_tlu(self):
+        self["tlu"]["TRIGGER_ENABLE"]=0
+        # self.logger.info("stop_tlu:") 
+
+    def set_timestamp(self,src="rx1"):
+        self["timestamp"].reset()
+        self["timestamp"]["EXT_TIMESTAMP"]=True
+        self["timestamp"]["ENABLE"]=1
+        logging.info("set_timestamp:src=%s"%src)
+        
+    def stop_timestamp(self):
+        self["timestamp"]["ENABLE"]=0
+        lost_cnt=self["timestamp"]["LOST_COUNT"]
+        if lost_cnt!=0:
+            logging.warn("stop_timestamp: lost_cnt=%d"%lost_cnt)
+        return lost_cnt
+
+    def set_monoread(self):
+        self['CONF']['RESET_BCID'] = 1
+        self['CONF']['RESET'] = 1
+        self['CONF'].write()
+
+        self['CONF']['EN_BX_CLK'] = 1
+        self['CONF']['EN_OUT_CLK'] = 1
+        self['CONF'].write()
+        
+        self['CONF']['RESET_BCID'] = 0
+        self['CONF']['RESET'] = 0
+        self['CONF'].write()
+        self['data_rx'].set_en(True)
+
+    def stop_monoread(self):
+        self['data_rx'].set_en(False)
+        lost_cnt=self["data_rx"]["LOST_COUNT"]
+        if lost_cnt!=0:
+            logging.warn("stop_monoread: error cnt=%d"%lost_cnt)
+        self['CONF']['EN_BX_CLK'] = 0
+        self['CONF']['EN_OUT_CLK'] = 0
+        self['CONF'].write()
+
+    def set_tdc(self):
+		self["tdc"]["RESET"]=1
+		self["tdc"]["ENABLE_EXTERN"]=0
+		self["tdc"]["EN_WRITE_TIMESTAMP"]=1
+		self["tdc"]["EN_TRIGGER_DIST"]=1
+		self["tdc"]["EN_NO_WRITE_TRIG_ERR"]=0
+		self["tdc"]["EN_INVERT_TRIGGER"]=0
+		self["tdc"]["EN_INVERT_TDC"]=0
+
+		self["tdc"]["ENABLE"]=1
+
+    def stop_tdc(self):
+        self["tdc"]["ENABLE"]=0
+        lost_cnt=self["tdc"]["LOST_DATA_COUNTER"]
+        if lost_cnt!=0:
+            logging.warn("stop_tdc: error cnt=%d"%lost_cnt)
 ###############################################################################################
 
     def scurve(self, x, A, mu, sigma):

@@ -9,6 +9,7 @@ import tables as tb
 from contextlib import contextmanager
 from tjmonopix import TJMonoPix
 from fifo_readout import FifoReadout
+import online_monitor.sender
 
 
 class ScanBase(object):
@@ -16,7 +17,7 @@ class ScanBase(object):
     Basic run meta class
     """
 
-    def __init__(self, working_dir=None):
+    def __init__(self, working_dir=None, send_addr="tcp://127.0.0.1:5500"):
         """
         Constructor. Sets output folder, logger and starts device.
 
@@ -43,6 +44,9 @@ class ScanBase(object):
         self.logger = logging.getLogger()
         self.logger.addHandler(self.fh)
         logging.info("Initializing {0}".format(self.__class__.__name__))
+        
+        #### monitor
+        self.socket=send_addr
 
         # Initialize chip and power up
         self.dut = TJMonoPix()
@@ -110,85 +114,7 @@ class ScanBase(object):
         # ENABLES OR DISABLES THE COMPLEMENTARY HITOR PADS, ACTIVE LOW
         self.dut['CONF_SR']['nEN_HITOR_OUT'].setall(True)
 
-        #self.dut['CONF_SR']['EN_PMOS'][9] = 1
-        self.dut['CONF_SR']['EN_PMOS'].setall(True)
-        #self.dut['CONF_SR']['EN_HITOR_OUT'][1] = 0
-
-        # SELECT WHICH PHYSICAL COLUMNS, ROWS, DIAGONALS TO MASK
-        # TO MASK ONE PIXEL, MASKV, MASKH and MASKD OF THIS PIXEL SHOULD BE 0 (FALSE)
-        # THE MASKD NUMBER OF THE PIXEL WE WANT TO MASK (or UNMASK), IS GIVEN BY: MASKD = PHYSCOL- PHYSROW
-        # IF PHYSCOL-PHYSROW<0, then MASKD = 448+PHYSCOL-PHYSROW
-        self.dut['CONF_SR']['MASKD'].setall(True)
-        self.dut['CONF_SR']['MASKH'].setall(True)
-        self.dut['CONF_SR']['MASKV'].setall(True)
-
-        # TO USE THE MASK FUNCTION YOU MUST INPUT THE FLAVOR, COLUMN AND ROW
-        # THE FLAVOR NUMERS IS: 0 FOR PMOS_NOSF, 1 FOR PMOS, 2 FOR COMP, 3 FOR HV
-        self.dut.mask(1, 5, 179)
-        self.dut.mask(1, 59, 95)
-        self.dut.mask(1, 42, 136)
-        self.dut.mask(1, 60, 137)
-        self.dut.mask(1, 86, 126)
-
-        self.dut.mask(1, 102, 139)
-        self.dut.mask(1, 66, 39)
-        self.dut.mask(1, 103, 154)
-        self.dut.mask(1, 102, 149)
-        self.dut.mask(1, 38, 144)
-        self.dut.mask(1, 45, 131)
-        self.dut.mask(1, 101, 131)
-        self.dut.mask(1, 106, 119)
-        self.dut.mask(1, 0, 101)
-        self.dut.mask(1, 11, 117)
-        self.dut.mask(1, 81, 51)
-        self.dut.mask(1, 39, 93)
-        self.dut.mask(1, 80, 144)
-        self.dut.mask(1, 29, 103)
-        self.dut.mask(1, 66, 129)
-        self.dut.mask(1, 35, 157)
-        self.dut.mask(1, 13, 16)
-        self.dut.mask(1, 23, 45)
-        self.dut.mask(1, 48, 157)
-        self.dut.mask(1, 26, 60)
-        self.dut.mask(1, 102, 134)
-        self.dut.mask(1, 87, 184)
-        self.dut.mask(1, 108, 1)
-        self.dut.mask(1, 45, 149)
-        self.dut.mask(1, 24, 96)
-        self.dut.mask(1, 28, 98)
-        self.dut.mask(1, 42, 210)
-        self.dut.mask(1, 108, 196)
-
-        #self.dut['CONF_SR']['MASKD'][31] = True
-        #self.dut['CONF_SR']['MASKH'][99] = False
-
-        # SELECT WHICH PHYSICAL COLUMS TO INJECT
-        # INJ_IN_MON_L AND INJ_IN_MON_L SELECT THE LEFT AND RIGHT SPECIAL ANALOG MONITORING PIXELS
-        self.dut['CONF_SR']['COL_PULSE_SEL'].setall(False)
-
-        # ENABLE INJECTION FOR THE ANALOG MONITORING PIXELS LEFT SIDE
-        self.dut['CONF_SR']['INJ_IN_MON_L'] = 1
-        # ENABLE INJECTION FOR THE ANALOG MONITORING PIXELS RIGHT SIDE
-        self.dut['CONF_SR']['INJ_IN_MON_R'] = 0
-
-        # SELECT WHICH PHYSICAL ROWS TO INJECT
-        # THE SPEXIAL PIXELS OUTA_MON3 to OUTA_MON0 CORRESPONT TO ROWS 223 to 220 FOR INJECTION
-        self.dut['CONF_SR']['INJ_ROW'].setall(False)
-        # FOR THE ANALOG MONITORING TOP PIXEL
-        self.dut['CONF_SR']['INJ_ROW'][223] = True
-
-        # SELECT PHYSICAL COLUMNS AND ROWS FOR INJECTION WITH FUNCTION
-        self.dut.enable_injection(1, 18, 99)
-
-        # SELECT PHYSICAL COLUMN(S) FOR HITOR OUTPUT
-        # nMASKH (SO SETTING MASKH TO FALSE) ENABLES HITOR FOR THE SPECIFIC ROW
-        self.dut['CONF_SR']['DIG_MON_SEL'].setall(False)
-        # self.dut.enable_column_hitor(1,18)
-
-        self.dut.write_conf()
-
-    def start(self):
-        self.filename = os.path.join(self.working_dir, "data.h5")  # TODO
+    def start(self, **kwargs):
         self.h5_file = tb.open_file(self.filename, mode="w", title="")
         self.raw_data_earray = self.h5_file.create_earray(
             self.h5_file.root,
@@ -198,10 +124,38 @@ class ScanBase(object):
             title="Raw data",
             filters=tb.Filters(complib="blosc", complevel=5, fletcher32=False))
 
-        self.fifo_readout = FifoReadout(self.dut)
+        self.meta_data_table = self.h5_file.create_table(
+            self.h5_file.root,
+            name='meta_data',
+            description=MetaTable,
+            title='meta_data',
+            filters=tb.Filters(complib='zlib', complevel=5, fletcher32=False))
 
-    def stop(self):
+        ### open socket for monitor
+        if (self.socket==""): 
+            self.socket=None
+        else:
+            try:
+                self.socket=online_monitor.sender.init(self.socket)
+                self.logger.info('ScanBase.start:data_send.data_send_init connected=%s'%self.socket)
+            except:
+                self.logger.warn('ScanBase.start:data_send.data_send_init failed addr=%s'%self.socket)
+                self.socket=None
+
+        self.fifo_readout = FifoReadout(self.dut)
+        self.scan(**kwargs)
+
+        ### close file
         self.h5_file.close()
+
+        ### close socket
+        if self.socket!=None:
+           try:
+               online_monitor.sender.close(self.socket)
+           except:
+               pass
+
+
 
     @contextmanager
     def readout(self, *args, **kwargs):
@@ -228,10 +182,34 @@ class ScanBase(object):
         self.fifo_readout.stop()
 
     def _handle_data(self, data_tuple):
+
+        total_words = self.raw_data_earray.nrows
+        len_raw_data = data_tuple[0].shape[0]
+
         self.raw_data_earray.append(data_tuple[0])
         self.raw_data_earray.flush()
 
-        # TODO: meta data handling
+        self.meta_data_table.row['data_length'] = len_raw_data
+        self.meta_data_table.row['index_start'] = total_words
+        total_words += len_raw_data
+        self.meta_data_table.row['index_stop'] = total_words
+        self.dut['CONF_SR']['MASKD'].setall(True)
+        self.dut['CONF_SR']['MASKH'].setall(True)
+        self.dut['CONF_SR']['MASKV'].setall(True)
+        # TODO: more meta data handling
+
+        self.meta_data_table.row.append()
+        self.meta_data_table.flush()
+        if self.socket!=None:
+            try:
+                online_monitor.sender.send_data(self.socket,data_tuple)
+            except:
+                self.logger.warn('ScanBase.hadle_data:sender.send_data failed')
+                try:
+                    online_monitor.sender.close(self.socket)
+                except:
+                    pass
+                self.socket=None
 
     def _handle_err(self, exc):
         msg = str(exc[1])
@@ -239,3 +217,9 @@ class ScanBase(object):
             self.logger.error(msg)
         else:
             self.logger.error("Aborting run...")
+
+
+class MetaTable(tb.IsDescription):
+    index_start = tb.UInt32Col(pos=0)
+    index_stop = tb.UInt32Col(pos=1)
+    data_length = tb.UInt32Col(pos=2)
