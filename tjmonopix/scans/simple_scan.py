@@ -13,31 +13,6 @@ from tjmonopix.analysis.interpreter import interpret_h5
 class SimpleScan(ScanBase):
     scan_id = "simple"
 
-    def __init__(self, dut=None, fname=None, send_addr="tcp://127.0.0.1:5500"):
-        self.dut = dut
-
-        if fname == None:
-            self.working_dir = os.path.join(os.getcwd(), "output_data")
-            self.run_name = time.strftime("%Y%m%d_%H%M%S_") + self.scan_id
-        else:
-            self.working_dir = os.path.dirname(os.path.realpath(fname))
-            self.run_name = os.path.basename(os.path.realpath(fname))
-        if not os.path.exists(self.working_dir):
-            os.makedirs(self.working_dir)
-        self.filename = os.path.join(self.working_dir, self.run_name + '.h5')
-
-        #### monitor
-        self.socket=send_addr
-
-        # Set up logging to log to file and console and format log messages
-        self.fh = logging.FileHandler(
-            os.path.join(self.working_dir, "log.log"))
-        self.fh.setFormatter(logging.Formatter(
-            "%(asctime)s [%(levelname)-5.5s] %(message)s"))
-        self.fh.setLevel(logging.DEBUG)
-        self.logger = logging.getLogger()
-        self.logger.addHandler(self.fh)
-        logging.info("Initializing {0}".format(self.__class__.__name__))
 
     def scan(self, **kwargs):
         with_tlu = kwargs.pop('with_tlu', True)
@@ -113,7 +88,7 @@ class SimpleScan(ScanBase):
 
     def analyze(self, filename=None):
         if filename == None:
-            filename = self.filename
+            filename = self.output_filename+'.h5'
         interpret_h5(filename, filename[:-3]+"_hit.h5",data_format=0x43)
 
 

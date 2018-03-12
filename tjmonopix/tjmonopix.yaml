@@ -8,8 +8,8 @@ transfer_layer:
       type  : SiUsb
       init : 
         timeout  : 600
-        bit_file : tjmonopix_mio.bit
-        avoid_download : True
+        bit_file : ../firmware/ise/tjmonopix_mioAB.bit
+        avoid_download : False
 
 hw_drivers:
   - name      : GPAC
