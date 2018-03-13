@@ -333,7 +333,7 @@ class TJMonoPix(Dut):
 
 ###############################################################################################
 
-    def inj_scan(self, flavor, col, startrow, rownumber, VL, VHLrange, start_dif, delay, width, repeat, noise_en, analog_en, sleeptime):
+    def inj_scan_row(self, flavor, col, startrow, rownumber, VL, VHLrange, start_dif, delay, width, repeat, noise_en, analog_en, sleeptime):
 
         hits = np.zeros((rownumber, VHLrange+1), dtype=int)
 
@@ -380,6 +380,40 @@ class TJMonoPix(Dut):
                 hits[uniquerow-startrow,i]=countrow
 
         return hits
+
+    def inj_scan(self, flavor, col_high, col_low, row_high, row_low, rowstep, VL, VHLrange, start_dif, delay, width, repeat, noise_en, analog_en, sleeptime, partname):
+
+	col_no=col_high-col_low+1
+	row_no=row_high-row_low+1
+	pix_no = (col_no)*(row_no)
+	scurve = np.zeros((pix_no,VHLrange+1), dtype=int)
+	#xhits = range(start_dif,VHLrange+start_dif+1)
+
+	i = 0
+	for col in range(col_low,col_high+1):
+    	    for row in range(row_low,row_high+1-rowstep,rowstep):
+                #print 'row=%d' %row
+                hits = self.inj_scan_row(flavor, col, row, rowstep, VL, VHLrange, start_dif, delay, width, repeat, noise_en, analog_en, sleeptime)
+                print 'i=%d' %i
+                #print hits
+                scurve[i:i+20] = hits
+                i += 20
+                #print 'i+=%d' %i
+                time.sleep(0.01)
+        
+            #print 'row=%d' %(row+rowstep)
+            print 'i=%d' %i        
+            hits = chip.inj_scan_row(flavor, col, row+rowstep, (row_high%(row+rowstep))+1, VL, VHLrange, start_dif, delay, width, repeat, noise_en, analog_en, sleeptime)
+            #print hits
+            scurve[i:i+((row_high%(row+rowstep))+1)] = hits
+            i += (row_high%(row+rowstep))+1
+            #print (row_high%(row+rowstep))+1
+            print 'i=%d' %i
+            time.sleep(0.01)
+
+        #print scurve
+        np.save('scurvedata'+partname+'.npy',scurve)
+	logger.info(' S-Curve data saved successfully')
 
 if __name__ == '__main__':
     chip = TJMonoPix()
