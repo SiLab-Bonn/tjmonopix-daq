@@ -68,6 +68,27 @@ class ScanBase(object):
             shape=(0,),
             title="Raw data",
             filters=tb.Filters(complib="blosc", complevel=5, fletcher32=False))
+        self.meta_data_table = self.h5_file.create_table(
+            self.h5_file.root,
+            name='meta_data',
+            description=MetaTable,
+            title='meta_data',
+            filters=tb.Filters(complib='zlib', complevel=5, fletcher32=False))
+        self.meta_data_table.attrs.kwargs = yaml.dump(kwargs)
+
+        ### open socket for monitor
+        if (self.socket==""): 
+            self.socket=None
+        else:
+            try:
+                self.socket=online_monitor.sender.init(self.socket)
+                self.logger.info('ScanBase.start:data_send.data_send_init connected=%s'%self.socket)
+            except:
+                self.logger.warn('ScanBase.start:data_send.data_send_init failed addr=%s'%self.socket)
+                self.socket=None
+
+        ### execute scan       
+        self.logger.info('Chip Status: %s', str(self.dut.get_power_status()))
 
         self.meta_data_table = self.h5_file.create_table(
             self.h5_file.root,
