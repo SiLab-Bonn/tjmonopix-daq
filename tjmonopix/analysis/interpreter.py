@@ -205,6 +205,7 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
         elif (r & 0xF0000000 == 0x40000000):
             tdc = r & 0x0FFF
             tdc_org = (r >> 12) & 0xFFFF
+            tdc_trig = (r >> 20) & 0xFF
             if debug & 0x20 == 0x00:
                 tdc_timestamp = ts_pre & TDC_NOT_MASK | np.uint64(tdc_org)
                 if tdc_org < (np.int32(ts_pre) & 0xFFFF):
@@ -220,7 +221,7 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
             if debug & 0x40 == 0x40:
                 buf[buf_i]["col"] = 0xFC
                 buf[buf_i]["row"] = 0xFF
-                buf[buf_i]["le"] = 0xFF
+                buf[buf_i]["le"] = tdc_trig
                 buf[buf_i]["te"] = 0xFF
                 buf[buf_i]["timestamp"] = tdc_timestamp
                 buf[buf_i]["cnt"] = tdc
@@ -232,8 +233,6 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
             return 7, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_pre, ts2_flg, ts2_cnt, tlu, tlu_timestamp, tdc, tdc_timestamp
     return 0, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_pre, ts2_flg, ts2_cnt, tlu, tlu_timestamp, tdc, tdc_timestamp
 
-
-        interpret_h5(filename, filename[:-3]+"_hit.h5",data_format=0x42)
 def interpret_h5(fin, fout, data_format=0x43, n=100000000):
     buf = np.empty(n, dtype=hit_dtype)
     col = 0xFF

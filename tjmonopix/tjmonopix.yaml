@@ -8,7 +8,7 @@ transfer_layer:
       type  : SiUsb
       init : 
         timeout  : 600
-        bit_file : tjmonopix_mioB.bit
+        bit_file : tjmonopix_mioAB.bit
         avoid_download : False
 
 hw_drivers:
