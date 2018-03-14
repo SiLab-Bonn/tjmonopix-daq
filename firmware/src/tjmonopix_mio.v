@@ -233,6 +233,7 @@ gpio
 wire RESET_CONF, RESET_BCID_CONF;
 wire EN_BX_CLK_CONF, EN_OUT_CLK_CONF, SELECTAB;
 wire READ_AB, FREEZE_AB, OUT_AB, TOK_AB;
+wire EN_HITOR_TX;
 
 assign RESET_CONF = GPIO_OUT[0];
 assign RESET_BCID_CONF = GPIO_OUT[1];
@@ -240,6 +241,7 @@ assign EN_BX_CLK_CONF = GPIO_OUT[2];
 assign EN_OUT_CLK_CONF = GPIO_OUT[3];
 assign DEF_CONF = ~GPIO_OUT[4];
 assign SELECTAB = GPIO_OUT[5];
+assign EN_HITOR_TX = GPIO_OUT[5];
 
 wire CONF_CLK;
 assign CONF_CLK = CLK8;
@@ -344,25 +346,28 @@ rrp_arbiter
 );
 
 wire TDC_TDC_OUT, TDC_TRIG_OUT;
+wire HITOR_AB;
 
 wire [64:0] TIMESTAMP;
 wire TLU_BUSY,TLU_CLOCK;
 wire TRIGGER_ACKNOWLEDGE_FLAG,TRIGGER_ACCEPTED_FLAG;
+
+assign HITOR_AB = (SELECTAB)? HITOR_B : HITOR_A;
 
 tdc_s3 #(
     .BASEADDR(TDC_BASEADDR),
     .HIGHADDR(TDC_HIGHADDR),
     .CLKDV(4),
     .DATA_IDENTIFIER(4'b0100), 
-    .FAST_TDC(1),
-    .FAST_TRIGGER(1)
+    .FAST_TDC(0),
+    .FAST_TRIGGER(0)
 ) tdc (
     .CLK320(CLK320),
     .CLK160(CLK160),
     .DV_CLK(CLK40),
-    .TDC_IN(HITOR_B),
+    .TDC_IN(HITOR_AB),
     .TDC_OUT(TDC_TDC_OUT),
-    //.TRIG_IN(1'b0),
+    //.TRIG_IN(LEMO_RX[0]),
     .TRIG_IN(RJ45_TRIGGER),
     .TRIG_OUT(TDC_TRIG_OUT),
 
@@ -413,7 +418,7 @@ tlu_controller #(
     .TRIGGER_ACCEPTED_FLAG(TRIGGER_ACCEPTED_FLAG),
 	 //.EXT_TRIGGER_ENABLE(TLU_EXT_TRIGGER_ENABLE)
 	 
-    .TLU_TRIGGER(TDC_TRIG_OUT),
+    .TLU_TRIGGER(RJ45_TRIGGER),
     .TLU_RESET(RJ45_RESET),
     .TLU_BUSY(TLU_BUSY),
     .TLU_CLOCK(TLU_CLOCK),
@@ -544,7 +549,7 @@ assign LED[4] = 0;
 
 assign LEMO_TX[0] = TLU_CLOCK; // trigger clock; also connected to RJ45 output
 assign LEMO_TX[1] = TLU_BUSY;  // TLU_BUSY signal; also connected to RJ45 output. Asserted when TLU FSM has 
-assign LEMO_TX[2] = INJECTION;
+assign LEMO_TX[2] = EN_HITOR_TX ? HITOR_AB :INJECTION;
 
 assign INJECTION_MON = INJECTION;
 endmodule
