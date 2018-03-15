@@ -68,7 +68,7 @@ class plotting():
         ax2.text(0, max_occ*0.7, "1DU=14.1mV, 1,43e/mV", bbox=dict(facecolor='white', alpha=0.5))
         fig.savefig('ENC.png')
 
-    def plot_scurve_histogram(self, max_occ, DUtoe, folder):
+    def plot_scurve_histogram(self, max_occ, DUtoe, folder, tickspacing, figx, figy):
 
 	scurves = np.load('./'+folder+'/scurvedatabot.npy')
 	scurves = np.delete(scurves, (np.where(~scurves.any(axis=1))[0]), axis=0)
@@ -77,13 +77,13 @@ class plotting():
 
 	param_count = scurves.shape[1]
 
-	ticks=np.arange(0, param_count*DUtoe, 50)
+	ticks=np.arange(0, param_count*DUtoe, tickspacing)
 
 	hist = np.empty([param_count, max_occ], dtype=np.uint32)
 	for param in range(param_count):
     	    hist[param] = np.bincount(scurves[:, param], minlength=max_occ)[:max_occ]
  
-	fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16,6), dpi=150)
+	fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(figx, figy), dpi=150)
 
 	p1 = ax1.imshow(hist.T, norm=colors.LogNorm(), aspect='auto', origin='lower', extent=[0, param_count*DUtoe, 0, max_occ])
 	ax1.set(xlabel='Injection [e-]', ylabel='#hits',xticks=ticks, title='Entire Bottom Half of Second Flavor (FULL DPW)')
@@ -122,7 +122,7 @@ class plotting():
 	fig.savefig('./'+folder+'/Scurve_dispersion.png')
 
     def fit_scurvedata(self, VHLrange, start_dif, max_occ, DUtoe, threshold, sigma, folder):
-
+	errorstot=0
 	for part in ('bot', 'top'):
 	    xhits = np.arange(start_dif,VHLrange+start_dif+1)*DUtoe
 	    scurves = np.load('./'+folder+'/scurvedata'+part+'.npy')
@@ -132,19 +132,28 @@ class plotting():
 
 	    thresholds = np.empty(scurves.shape[0], dtype=np.float32)
 	    encs = np.empty(scurves.shape[0], dtype=np.float32)
-
+	    errors=0
 	    for i in range(scurves.shape[0]):
 		if ~np.any(scurves[i,:]):
 		    thresholds[i]=0
 		    encs[i]=0
 		else:
-		    popt, _ = curve_fit(self.scurve, xhits, scurves[i,:], p0=[max_occ, threshold, sigma], check_finite=False)
-		    thresholds[i]=popt[1]
-		    encs[i]=popt[2]
+		    try:
+		        popt, _ = curve_fit(self.scurve, xhits, scurves[i,:], p0=[max_occ, threshold, sigma], check_finite=False)
+		        thresholds[i]=popt[1]
+		        encs[i]=popt[2]
+		    except:
+			errors += 1
+		        thresholds[i]=0
+		        encs[i]=0
+			logger.info('Fitting Error in part %s, no=%d' %(part, i)) 	
+	    errorstot += errors
+	    if errors != 0:
+	        logger.info('%d Fitting Errors in part %s' %(errors, part)) 	
 
 	    np.save('./'+folder+'/threshold'+part+'.npy',thresholds)
 	    np.save('./'+folder+'/enc'+part+'.npy',encs)
-	logger.info(' S-Curve fit data saved successfully')
+	logger.info('S-Curve fit data saved successfully, total errors=%d' %(errorstot))
 
     def plot_thr_dispersion(self, folder):
 
@@ -242,7 +251,7 @@ class plotting():
 	points = np.linspace(min(plot_range), max(plot_range), 500)
 	gau = self.gauss(points, *popt)
 
-	fig, (ax1, ax2) = plt.subplots(2,1, figsize=(14,14), dpi=150)
+	fig, (ax1, ax2) = plt.subplots(2,1, figsize=(14,14), dpi=100)
 	figtitle = fig.suptitle('ENC Histogram', fontsize=14, fontweight='bold')
 
 	b1 = ax1.bar(bins[:-1], hist, width=tick_size, align='edge')
@@ -291,18 +300,19 @@ class plotting():
 
 	cmap = plt.cm.OrRd
 	cmap.set_bad(color='black')
+	ticks=np.arange(0, 113, 14)
 
-	fig, ax1 = plt.subplots(1, 1, figsize=(12,12), dpi=150)
+	fig, ax1 = plt.subplots(1, 1, figsize=(12,12), dpi=100)
 	p1 = ax1.imshow(dataall2d, aspect='equal', origin='lower', extent=[0, dataall2d.shape[1]-1, 0, dataall2d.shape[0]-1], cmap=cmap)
-	t1 = ax1.set(xlabel='COLUMN', ylabel='ROW')
+	t1 = ax1.set(xlabel='COLUMN', ylabel='ROW', xticks=ticks)
 	divider = make_axes_locatable(ax1)
 	cax1 = divider.append_axes("right", size="5%", pad=0.05)
 	cb1 = fig.colorbar(p1, cax=cax1)
 	fig.savefig('./'+folder+'/'+thresholdorenc+'_2dplot.png')
 
-	fig, ax1 = plt.subplots(1, 1, figsize=(12,12), dpi=150)
+	fig, ax1 = plt.subplots(1, 1, figsize=(12,12), dpi=100)
 	p1 = ax1.imshow(dataall2d, aspect='equal', origin='lower', norm=colors.LogNorm(), extent=[0, dataall2d.shape[1]-1, 0, dataall2d.shape[0]-1], cmap=cmap)
-	t1 = ax1.set(xlabel='COLUMN', ylabel='ROW')
+	t1 = ax1.set(xlabel='COLUMN', ylabel='ROW', xticks=ticks)
 	divider = make_axes_locatable(ax1)
 	cax1 = divider.append_axes("right", size="5%", pad=0.05)
 	cb1 = fig.colorbar(p1, cax=cax1)

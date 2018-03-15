@@ -142,3 +142,22 @@ class sourcemeter2634(Dut):
     def init(self):
         super(sourcemeter2634, self).init()
 
+
+class sourcemeter2410(Dut):    
+
+    def __init__(self, conf=None, **kwargs):
+
+        self.proj_dir = os.path.dirname(
+            os.path.dirname(os.path.abspath(__file__)))
+
+        if not conf:
+            conf = os.path.join(self.proj_dir, 'instrumentation' +
+                                os.sep + 'keithley2410_pyvisa.yaml')
+
+        logger.debug("Loading configuration file from {:s}".format(conf))
+
+        super(sourcemeter2410, self).__init__(conf)
+
+    def init(self):
+        super(sourcemeter2410, self).init()
+
