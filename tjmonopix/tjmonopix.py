@@ -381,7 +381,15 @@ class TJMonoPix(Dut):
 
         return hits
 
-    def inj_scan(self, flavor, col_high, col_low, row_high, row_low, rowstep, VL, VHLrange, start_dif, delay, width, repeat, noise_en, analog_en, sleeptime, partname):
+    def inj_scan(self, flavor=None, col_high=111, col_low=0, row_high=111, row_low=0, rowstep=20, VL=40, VHLrange=40, start_dif=0, delay=1500, width=350, repeat=500, noise_en=0, analog_en=1, sleeptime=0.05, sleeptime_step=0.01, partname=None):
+
+	if (row_high and row_low) is None:
+	    if partname == 'bot':
+		row_high=111
+		row_low=0
+	    if partname == 'top':
+		row_high=223
+		row_low=112
 
 	col_no=col_high-col_low+1
 	row_no=row_high-row_low+1
@@ -399,21 +407,21 @@ class TJMonoPix(Dut):
                 scurve[i:i+20] = hits
                 i += 20
                 #print 'i+=%d' %i
-                time.sleep(0.01)
+                time.sleep(sleeptime_step)
         
             #print 'row=%d' %(row+rowstep)
             print 'i=%d' %i        
-            hits = chip.inj_scan_row(flavor, col, row+rowstep, (row_high%(row+rowstep))+1, VL, VHLrange, start_dif, delay, width, repeat, noise_en, analog_en, sleeptime)
+            hits = self.inj_scan_row(flavor, col, row+rowstep, (row_high%(row+rowstep))+1, VL, VHLrange, start_dif, delay, width, repeat, noise_en, analog_en, sleeptime)
             #print hits
             scurve[i:i+((row_high%(row+rowstep))+1)] = hits
             i += (row_high%(row+rowstep))+1
             #print (row_high%(row+rowstep))+1
             print 'i=%d' %i
-            time.sleep(0.01)
+            time.sleep(sleeptime_step)
 
         #print scurve
         np.save('scurvedata'+partname+'.npy',scurve)
-	logger.info(' S-Curve data saved successfully')
+	logger.info('Injection scan finished successfully, data saved with filename:%s' %('scurvedata'+partname+'.npy')) 
 
 if __name__ == '__main__':
     chip = TJMonoPix()
