@@ -73,128 +73,129 @@ class TJMonoPix(Dut):
         super(TJMonoPix, self).init()
 
         self.fw_version, self.board_version = self.get_daq_version()
-        print(self.board_version)
-        # logger.info('Found board %s running firmware version %s' % (self.hw_map[self.board_version], self.fw_version))
+        #print(self.board_version)
+        #logger.info('Found board %s running firmware version %s' % (self.hw_map[self.board_version], self.fw_version))
 
         # do this before powering up
         self['CONF_SR'].set_size(3925)
-        self['CONF']['DEF_CONF_N'] = 0
-        self['CONF']['AB_SELECT'] = B
-        self['CONF'].write()
+        #self['CONF']['DEF_CONF_N'] = 0
+        #self['CONF']['AB_SELECT'] = B
+        #self['CONF'].write()
 
-        self['data_rx'].CONF_START_FREEZE = 15  # default 3
-        self['data_rx'].CONF_STOP_FREEZE = 100  # default 40
-        self['data_rx'].CONF_START_READ = 35  # default 6
-        self['data_rx'].CONF_STOP_READ = 37  # default 7
-        self['data_rx'].CONF_STOP = 105  # default 45
+        #self['data_rx'].CONF_START_FREEZE = 57  # default 3
+        #self['data_rx'].CONF_STOP_FREEZE = 95  # default 40
+        #self['data_rx'].CONF_START_READ = 60  # default 6
+        #self['data_rx'].CONF_STOP_READ = 62  # default 7
+        #self['data_rx'].CONF_STOP = 100  # default 45
 
-        self.power_on()
+        #self.power_on()
 
-        self['CONF']['RESET_BCID'] = 1
-        self['CONF']['RESET'] = 1
-        self['CONF'].write()
+        #self['CONF']['RESET_BCID'] = 1
+        #self['CONF']['RESET'] = 1
+        #self['CONF'].write()
 
-        self['CONF']['EN_BX_CLK'] = 1
-        self['CONF']['EN_OUT_CLK'] = 1
-        self['CONF'].write()
+        #self['CONF']['EN_BX_CLK'] = 1
+        #self['CONF']['EN_OUT_CLK'] = 1
+        #self['CONF'].write()
 
-        self['CONF']['RESET_BCID'] = 0
-        self['CONF']['RESET'] = 0
-        self['CONF'].write()
+        #self['CONF']['RESET_BCID'] = 0
+        #self['CONF']['RESET'] = 0
+        #self['CONF'].write()
 
-        self.default_conf()
+        #self.default_conf()
 
-        self.set_icasn_dacunits(0, 0)
-        self.set_vreset_dacunits(35, 0)
-        self.set_ireset_dacunits(128 + 5, 0)
-        self.set_ithr_dacunits(30, 0)
-        self.set_idb_dacunits(50, 0)
+        #self.set_icasn_dacunits(0, 0)
+        #self.set_vreset_dacunits(35, 0)
+        #self.set_ireset_dacunits(128 + 5, 0)
+        #self.set_ithr_dacunits(30, 0)
+        #self.set_idb_dacunits(50, 0)
 
-        self['CONF_SR']['EN_HV'].setall(False)
-        self['CONF_SR']['EN_COMP'].setall(False)
-        self['CONF_SR']['EN_PMOS'].setall(False)
-        self['CONF_SR']['EN_PMOS_NOSF'].setall(False)
-        self['CONF_SR']['EN_TEST_PATTERN'].setall(False)
+        #self['CONF_SR']['EN_HV'].setall(False)
+        #self['CONF_SR']['EN_COMP'].setall(False)
+        #self['CONF_SR']['EN_PMOS'].setall(False)
+        #self['CONF_SR']['EN_PMOS_NOSF'].setall(False)
+        #self['CONF_SR']['EN_TEST_PATTERN'].setall(False)
 
-        self['CONF_SR']['MASKD'].setall(False)
-        self['CONF_SR']['MASKH'].setall(False)
-        self['CONF_SR']['MASKV'].setall(False)
+       # self['CONF_SR']['MASKD'].setall(False)
+        #self['CONF_SR']['MASKH'].setall(False)
+        #self['CONF_SR']['MASKV'].setall(False)
 
-        self.write_conf()
+        #self.write_conf()
 
-        self['CONF']['DEF_CONF_N'] = 1
-        self['CONF'].write()
+        #self['CONF']['DEF_CONF_N'] = 1
+        #self['CONF'].write()
 
-        logging.info(str(self.get_power_status()))
+        #logging.info(str(self.get_power_status()))
 
     def default_conf(self):
 
-        self['CONF_SR']['nEN_HITOR_OUT'].setall(True)
-        self['CONF_SR']['EN_HITOR_OUT'].setall(True)
-        self['CONF_SR']['nEN_OUT'].setall(True)
-        self['CONF_SR']['EN_OUT'].setall(False)
-        self['CONF_SR']['EN_HV'].setall(True)
-        self['CONF_SR']['EN_COMP'].setall(True)
-        self['CONF_SR']['EN_PMOS'].setall(True)
-        self['CONF_SR']['EN_PMOS_NOSF'].setall(True)
-        self['CONF_SR']['EN_TEST_PATTERN'].setall(False)
+	self['CONF_SR']['nEN_HITOR_OUT'].setall(True)
+	self['CONF_SR']['EN_HITOR_OUT'].setall(True)
+	self['CONF_SR']['nEN_OUT'].setall(True)
+	self['CONF_SR']['EN_OUT'].setall(False)
+	self['CONF_SR']['EN_HV'].setall(True)
+	self['CONF_SR']['EN_COMP'].setall(True)
+	self['CONF_SR']['EN_PMOS'].setall(True)	
+	self['CONF_SR']['EN_PMOS_NOSF'].setall(True)
+	self['CONF_SR']['EN_TEST_PATTERN'].setall(False)
 
-        self['CONF_SR']['SWCNTL_VRESET_P'] = 0
-        self['CONF_SR']['SWCNTL_VRESET_D'] = 0
-        self['CONF_SR']['SWCNTL_VL'] = 0
-        self['CONF_SR']['SWCNTL_VH'] = 0
-        self['CONF_SR']['SWCNTL_VCLIP'] = 0
-        self['CONF_SR']['SWCNTL_VCASN'] = 0
-        self['CONF_SR']['SWCNTL_ITHR'] = 0
-        self['CONF_SR']['SWCNTL_IRESET'] = 0
-        self['CONF_SR']['SWCNTL_IREF'] = 0
-        self['CONF_SR']['SWCNTL_IDB'] = 0
-        self['CONF_SR']['SWCNTL_ICASN'] = 0
-        self['CONF_SR']['SWCNTL_IBIAS'] = 0
-        self['CONF_SR']['SWCNTL_DACMONV'] = 0
-        self['CONF_SR']['SWCNTL_DACMONI'] = 0
+	self['CONF_SR']['SWCNTL_VRESET_P'] = 0
+	self['CONF_SR']['SWCNTL_VRESET_D'] = 0
+	self['CONF_SR']['SWCNTL_VL'] = 0
+	self['CONF_SR']['SWCNTL_VH'] = 0
+	self['CONF_SR']['SWCNTL_VCLIP'] = 0
+	self['CONF_SR']['SWCNTL_VCASN'] = 0
+	self['CONF_SR']['SWCNTL_ITHR'] = 0
+	self['CONF_SR']['SWCNTL_IRESET'] = 0
+	self['CONF_SR']['SWCNTL_IREF'] = 0
+	self['CONF_SR']['SWCNTL_IDB'] = 0
+	self['CONF_SR']['SWCNTL_ICASN'] = 0
+	self['CONF_SR']['SWCNTL_IBIAS'] = 0
+	self['CONF_SR']['SWCNTL_DACMONV'] = 0
+	self['CONF_SR']['SWCNTL_DACMONI'] = 0
 
-        self['CONF_SR']['SET_IBUFN_L'] = 0b1001
-        self['CONF_SR']['SET_IBUFP_L'] = 0b0101
-        self['CONF_SR']['SET_IBUFP_R'] = 0b0101
-        self['CONF_SR']['SET_IBUFN_R'] = 0b1001
+	self['CONF_SR']['SET_IBUFN_L'] = 0b1001
+	self['CONF_SR']['SET_IBUFP_L'] = 0b0101
+	self['CONF_SR']['SET_IBUFP_R'] = 0b0101
+	self['CONF_SR']['SET_IBUFN_R'] = 0b1001
 
-        self['CONF_SR']['SET_IRESET_BIT'] = 1
+	self['CONF_SR']['SET_IRESET_BIT'] = 1
 
-        self['CONF_SR']['SET_VCLIP'].setall(False)
-        self['CONF_SR']['SET_VRESET_D'].setall(False)
-        self['CONF_SR']['SET_VRESET_D'][45] = 1
-        self['CONF_SR']['SET_VCASN'].setall(False)
-        self['CONF_SR']['SET_VCASN'][40] = 1
-        self['CONF_SR']['SET_VL'].setall(False)
-        self['CONF_SR']['SET_VL'][44] = 1
-        self['CONF_SR']['SET_VH'].setall(False)
-        self['CONF_SR']['SET_VH'][79] = 1
-        self['CONF_SR']['SET_VRESET_P'].setall(False)
-        self['CONF_SR']['SET_VRESET_P'][16] = 1
+	self['CONF_SR']['SET_VCLIP'].setall(False)
+	self['CONF_SR']['SET_VRESET_D'].setall(False)
+	self['CONF_SR']['SET_VRESET_D'][45] = 1
+	self['CONF_SR']['SET_VCASN'].setall(False)
+	self['CONF_SR']['SET_VCASN'][40] = 1
+	self['CONF_SR']['SET_VL'].setall(False)
+	self['CONF_SR']['SET_VL'][44] = 1
+	self['CONF_SR']['SET_VH'].setall(False)
+	self['CONF_SR']['SET_VH'][79] = 1
+	self['CONF_SR']['SET_VRESET_P'].setall(False)
+	self['CONF_SR']['SET_VRESET_P'][16] = 1
 
-        # Be carefull!!! because the type is BitLogic, the slicing is verilog type not python, this means the limits are inclusive. Also MSB must be first in the slice
-        self['CONF_SR']['SET_ICASN'].setall(False)
-        self['CONF_SR']['SET_ICASN'][82:45] = True
-        self['CONF_SR']['SET_IRESET'].setall(False)
-        self['CONF_SR']['SET_IRESET'][71:57] = True
-        self['CONF_SR']['SET_ITHR'].setall(False)
-        self['CONF_SR']['SET_ITHR'][67:60] = True
-        self['CONF_SR']['SET_IDB'].setall(False)
-        self['CONF_SR']['SET_IDB'][78:50] = True
-        self['CONF_SR']['SET_IBIAS'].setall(False)
-        self['CONF_SR']['SET_IBIAS'][86:41] = True
+	#Be carefull!!! because the type is BitLogic, the slicing is verilog type not python, this means the limits are inclusive. Also MSB must be first in the slice
+	self['CONF_SR']['SET_ICASN'].setall(False)
+	self['CONF_SR']['SET_ICASN'][82:45] = True
+	self['CONF_SR']['SET_IRESET'].setall(False)
+	self['CONF_SR']['SET_IRESET'][71:57] = True
+	self['CONF_SR']['SET_ITHR'].setall(False)
+	self['CONF_SR']['SET_ITHR'][67:60] = True
+	self['CONF_SR']['SET_IDB'].setall(False)
+	self['CONF_SR']['SET_IDB'][78:50] = True
+	self['CONF_SR']['SET_IBIAS'].setall(False)
+	self['CONF_SR']['SET_IBIAS'][86:41] = True
 
-        self['CONF_SR']['DIG_MON_SEL'].setall(False)
+	self['CONF_SR']['DIG_MON_SEL'].setall(False)
 
-        self['CONF_SR']['MASKD'].setall(True)
-        self['CONF_SR']['MASKH'].setall(True)
-        self['CONF_SR']['MASKV'].setall(True)
+	self['CONF_SR']['MASKD'].setall(True)
+	self['CONF_SR']['MASKH'].setall(True)
+	self['CONF_SR']['MASKV'].setall(True)
 
-        self['CONF_SR']['INJ_ROW'].setall(False)
-        self['CONF_SR']['INJ_IN_MON_R'] = 0
-        self['CONF_SR']['INJ_IN_MON_L'] = 0
-        self['CONF_SR']['COL_PULSE_SEL'].setall(False)
+	self['CONF_SR']['INJ_ROW'].setall(False)
+	self['CONF_SR']['INJ_IN_MON_R'] = 0
+	self['CONF_SR']['INJ_IN_MON_L'] = 0
+	self['CONF_SR']['COL_PULSE_SEL'].setall(False)
+
 
     def write_conf(self):
         self['CONF_SR'].write()
@@ -301,7 +302,6 @@ class TJMonoPix(Dut):
         # Deactivate all
         for pwr in ['VDDP', 'VDDD', 'VDDA', 'VDDA_DAC']:
             self[pwr].set_enable(False)
-            self.SET[pwr] = None
 
     def get_power_status(self, log=False):
         status = {}
@@ -381,176 +381,151 @@ class TJMonoPix(Dut):
                 self['CONF_SR'][m] = conf[m]
 
     def mask(self, flavor, col, row):
-        assert 0 <= flavor <= 3, 'Flavor must be between 0 and 3'
-        mcol = (flavor)*112+col
-        md = mcol-row if (mcol-row) >= 0 else 448+mcol-row
-        self.conf_flg = 1
-        self['CONF_SR']['MASKD'][md] = False
-        self['CONF_SR']['MASKV'][mcol] = False
-        self['CONF_SR']['MASKH'][row] = False
+	assert 0 <= flavor <= 3, 'Flavor must be between 0 and 3'
+	assert 0 <= col <= 111, 'Column must be between 0 and 111'
+	assert 0 <= row <= 223, 'Row must be between 0 and 223'
+	mcol=(flavor)*112+col
+	md = mcol-row if (mcol-row) >= 0 else 448+mcol-row
+	self['CONF_SR']['MASKD'][md] = False
+	self['CONF_SR']['MASKV'][mcol] = False
+	self['CONF_SR']['MASKH'][row] = False
 
     def enable_injection(self, flavor, col, row):
-        assert 0 <= flavor <= 3, 'Flavor must be between 0 and 3'
-        assert 0 <= col <= 111, 'Column must be between 0 and 111'
-        assert 0 <= row <= 223, 'Row must be between 0 and 223'
-        self.conf_flg = 1
-        self['CONF_SR']['COL_PULSE_SEL'][(flavor*112)+col] = 1
-        self['CONF_SR']['INJ_ROW'][row] = 1
+	assert 0 <= flavor <= 3, 'Flavor must be between 0 and 3'
+	assert 0 <= col <= 111, 'Column must be between 0 and 111'
+	assert 0 <= row <= 223, 'Row must be between 0 and 223'
+	self['CONF_SR']['COL_PULSE_SEL'][(flavor*112)+col] = 1
+	self['CONF_SR']['INJ_ROW'][row] = 1
 
     def enable_column_hitor(self, flavor, col):
-        assert 0 <= flavor <= 3, 'Flavor must be between 0 and 3'
-        self.conf_flg = 1
-        self['CONF_SR']['DIG_MON_SEL'][(flavor*112)+col] = 1
-
-    def enable_flavor_hitor(self, flavor):
-        self.conf_flg = 1
-        self['CONF_SR']['EN_HITOR_OUT'][flavor] = 0  # active low
-
-    def enable_column_readout(self, flavor, col):
-        self.conf_flg = 1
-        self['CONF_SR']['EN_OUT'][flavor] = 0  # active low
-
-        if flavor == 1:
-            flavor = 'EN_PMOS'
-        self['CONF_SR'][flavor][col] = 1
+	assert 0 <= flavor <= 3, 'Flavor must be between 0 and 3'
+	self['CONF_SR']['DIG_MON_SEL'][(flavor*112)+col] = 1
 
 ############################## SET BIAS CURRENTS AND VOLTAGES ##############################
 
-    def set_ibias_dacunits(self, dacunits, printen=True):
-        assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
-        low = (128-(dacunits+1))/2
-        high = ((dacunits+1)/2)+63
-        self.conf_flg = 1
-        self['CONF_SR']['SET_IBIAS'].setall(False)
-        self['CONF_SR']['SET_IBIAS'][high:low] = True
-        if printen:
-            logging.info("set_ibias_dacunits: ibias=%.4fnA dac=%d,%d-%d" %
-                         (1400.0*((dacunits+1)/128.0), dacunits, high, low))
+    def set_ibias_dacunits(self, dacunits, printen):
+	assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
+	low = (128-(dacunits+1))/2
+	high = ((dacunits+1)/2)+63
+	self['CONF_SR']['SET_IBIAS'].setall(False)
+	self['CONF_SR']['SET_IBIAS'][high:low] = True
+	if (printen == 1):
+		print 'ibias = ' +str(1400.0*((dacunits+1)/128.0)) + 'nA'
 
-    def set_idb_dacunits(self, dacunits, printen=True):
-        assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
-        low = (128-(dacunits+1))/2
-        high = ((dacunits+1)/2)+63
-        self['CONF_SR']['SET_IDB'].setall(False)
-        self['CONF_SR']['SET_IDB'][high:low] = True
-        if printen:
-            logging.info("set_idb_dacunits: idb=%.4fnA dac=%d,%d-%d" %
-                         (2240.0*((dacunits+1)/128.0), dacunits, high, low))
+    def set_idb_dacunits(self, dacunits, printen):
+	assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
+	low = (128-(dacunits+1))/2
+	high = ((dacunits+1)/2)+63
+	self['CONF_SR']['SET_IDB'].setall(False)
+	self['CONF_SR']['SET_IDB'][high:low] = True
+	if (printen == 1):
+		print 'idb = ' +str(2240.0*((dacunits+1)/128.0)) + 'nA'
 
-    def set_ithr_dacunits(self, dacunits, printen=True):
-        assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
-        low = (128-(dacunits+1))/2
-        high = ((dacunits+1)/2)+63
-        self.conf_flg = 1
-        self['CONF_SR']['SET_ITHR'].setall(False)
-        self['CONF_SR']['SET_ITHR'][high:low] = True
-        if printen:
-            logging.info("set_ithr_dacunits: ithr=%.4fnA dac=%d,%d-%d" %
-                         (17.5*((dacunits+1)/128.0), dacunits, high, low))
+    def set_ithr_dacunits(self, dacunits, printen):
+	assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
+	low = (128-(dacunits+1))/2
+	high = ((dacunits+1)/2)+63
+	self['CONF_SR']['SET_ITHR'].setall(False)
+	self['CONF_SR']['SET_ITHR'][high:low] = True
+	if (printen == 1):
+		print 'ithr = ' +str(17.5*((dacunits+1)/128.0)) + 'nA'
 
-    def set_icasn_dacunits(self, dacunits, printen=True):
-        assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
-        low = (128-(dacunits+1))/2
-        high = ((dacunits+1)/2)+63
-        self.conf_flg = 1
-        self['CONF_SR']['SET_ICASN'].setall(False)
-        self['CONF_SR']['SET_ICASN'][high:low] = True
-        if printen:
-            logging.info("set_icasn_dacunits: icasn=%.4fnA dac=%d,%d-%d" %
-                         (560.0*((dacunits+1)/128.0), dacunits, high, low))
+    def set_icasn_dacunits(self, dacunits, printen):
+	assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
+	low = (128-(dacunits+1))/2
+	high = ((dacunits+1)/2)+63
+	self['CONF_SR']['SET_ICASN'].setall(False)
+	self['CONF_SR']['SET_ICASN'][high:low] = True
+	if (printen == 1):
+		print 'icasn = ' +str(560.0*((dacunits+1)/128.0)) + 'nA'
 
-    def set_ireset_dacunits(self, dacunits, printen=True):
-        assert 0 <= dacunits <= 511, 'Dac Units must be between 0 and 511'
-        #assert 0 <= mode <= 1, 'Mode must be 0 (low leakage) or 1 (high leakage)'
-        low = (128-(dacunits % 128+1))/2
-        high = ((dacunits % 128+1)/2)+63
-        mode = dacunits//128
-        self.conf_flg = 1
-        self['CONF_SR']['SET_IRESET_BIT'] = mode
-        self['CONF_SR']['SET_IRESET'].setall(False)
-        self['CONF_SR']['SET_IRESET'][high:low] = True
-        if printen:
-            if (mode == 1):
-                ireset = 4375.*((dacunits % 128+1)/128.0)
-            else:
-                ireset = 43.75*((dacunits % 128+1)/128.0)
-            logging.info("set_icasset_ireset_dacunits: icasn=%.4fpA dac=%d,%d,%d-%d" %
-                         (560.0*((dacunits+1)/128.0), dacunits, mode, high, low))
+    def set_ireset_dacunits(self, dacunits, mode, printen):
+	assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
+	assert 0 <= mode <= 1, 'Mode must be 0 (low leakage) or 1 (high leakage)'
+	low = (128-(dacunits+1))/2
+	high = ((dacunits+1)/2)+63
+	self['CONF_SR']['SET_IRESET_BIT'] = mode
+	self['CONF_SR']['SET_IRESET'].setall(False)
+	self['CONF_SR']['SET_IRESET'][high:low] = True
+	if (printen == 1):
+		if (mode == 1):
+			print 'ireset = ' +str(4.375*((dacunits+1)/128.0)) + 'nA, high leakage mode'
+		else:
+			print 'ireset = ' +str(43.75*((dacunits+1)/128.0)) + 'pA, low leakage mode'
 
-    def set_vreset_dacunits(self, dacunits, printen=True):
-        assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
-        self.conf_flg = 1
-        self['CONF_SR']['SET_VRESET_P'].setall(False)
-        self['CONF_SR']['SET_VRESET_P'][dacunits] = True
-        if printen:
-            logging.info("set_vcasn_dac_dacunits: vreset=%.4fV dac=%d" %
-                         ((1.8/127.0)*dacunits+0.555, dacunits))
+    def set_vreset_dacunits(self, dacunits, printen):
+    	assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
+    	self['CONF_SR']['SET_VRESET_P'].setall(False)
+   	self['CONF_SR']['SET_VRESET_P'][dacunits] = True
+	if (printen == 1):
+    		print 'vreset = ' +str(((1.8/127.0)*dacunits+0.555)) + 'V'
 
-    def set_vh_dacunits(self, dacunits, printen=True):
-        assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
-        self.conf_flg = 1
-        self['CONF_SR']['SET_VH'].setall(False)
-        self['CONF_SR']['SET_VH'][dacunits] = True
-        if printen:
-            logging.info("set_vh_dacunits: vh=%.4fV, dac=%d" %
-                         ((1.8/127.0)*dacunits+0.385, dacunits))
+    def set_vh_dacunits(self, dacunits, printen):
+    	assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
+    	self['CONF_SR']['SET_VH'].setall(False)
+   	self['CONF_SR']['SET_VH'][dacunits] = True
+	if (printen == 1):
+    		print 'vh = ' +str(((1.8/127.0)*dacunits+0.385)) + 'V'
 
-    def set_vl_dacunits(self, dacunits, printen=True):
-        assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
-        self.conf_flg = 1
-        self['CONF_SR']['SET_VL'].setall(False)
-        self['CONF_SR']['SET_VL'][dacunits] = True
-        if printen:
-            logging.info("set_vl_dacunits: vl=%.4fV dac=%d" %
-                         ((1.8/127.0)*dacunits+0.385, dacunits))
+    def set_vl_dacunits(self, dacunits, printen):
+    	assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
+    	self['CONF_SR']['SET_VL'].setall(False)
+   	self['CONF_SR']['SET_VL'][dacunits] = True
+	if (printen == 1):
+    		print 'vl = ' +str(((1.8/127.0)*dacunits+0.385)) + 'V'
 
-    def set_vcasn_dac_dacunits(self, dacunits, printen=True):
-        assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
-        self.conf_flg = 1
-        self['CONF_SR']['SET_VCASN'].setall(False)
-        self['CONF_SR']['SET_VCASN'][dacunits] = True
-        if printen:
-            logging.info("set_vcasn_dac_dacunits: vcasn=%.4fV dac=%d" %
-                         ((1.8/127.0)*dacunits, dacunits))
+    def set_vcasn_dac_dacunits(self, dacunits, printen):
+    	assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
+    	self['CONF_SR']['SET_VCASN'].setall(False)
+   	self['CONF_SR']['SET_VCASN'][dacunits] = True
+	if (printen == 1):
+    		print 'vcasn = ' +str(((1.8/127.0)*dacunits)) + 'V'
 
 ############################## SET data readout ##############################
+    def set_tlu(self,tlu_delay=8):
+        self["tlu"]["RESET"]=1
+        self["tlu"]["TRIGGER_MODE"]=3
+        self["tlu"]["EN_TLU_VETO"]=0
+        self["tlu"]["MAX_TRIGGERS"]=0
+        self["tlu"]["TRIGGER_COUNTER"]=0
+        self["tlu"]["TRIGGER_LOW_TIMEOUT"]=0
+        self["tlu"]["TRIGGER_VETO_SELECT"]=0
+        self["tlu"]["TRIGGER_THRESHOLD"]=0
+        self["tlu"]["DATA_FORMAT"]=2
+        self["tlu"]["TRIGGER_HANDSHAKE_ACCEPT_WAIT_CYCLES"]=20
+        self["tlu"]["TRIGGER_DATA_DELAY"]=tlu_delay
+        self["tlu"]["TRIGGER_SELECT"]=0
+        self["timestamp_tlu"]["RESET"]=1
+        self["timestamp_tlu"]["EXT_TIMESTAMP"]=1
+        self["timestamp_tlu"]["ENABLE_TOT"]=0
+        logging.info("set_tlu: tlu_delay=%d"%tlu_delay)
 
-    def set_tlu(self, tlu_delay=8):
-        self["tlu"]["RESET"] = 1
-        self["tlu"]["TRIGGER_MODE"] = 3
-        self["tlu"]["EN_TLU_VETO"] = 0
-        self["tlu"]["MAX_TRIGGERS"] = 0
-        self["tlu"]["TRIGGER_COUNTER"] = 0
-        self["tlu"]["TRIGGER_LOW_TIMEOUT"] = 0
-        self["tlu"]["TRIGGER_VETO_SELECT"] = 0
-        self["tlu"]["TRIGGER_THRESHOLD"] = 0
-        self["tlu"]["DATA_FORMAT"] = 2
-        self["tlu"]["TRIGGER_HANDSHAKE_ACCEPT_WAIT_CYCLES"] = 20
-        self["tlu"]["TRIGGER_DATA_DELAY"] = tlu_delay
-        self["tlu"]["TRIGGER_SELECT"] = 0
-        # self.logger.info("set_tlu: tlu_delay=%d"%tlu_delay)
-        self["tlu"]["TRIGGER_ENABLE"] = 1
+        self["timestamp_tlu"]["ENABLE_EXTERN"]=1
+        self["tlu"]["TRIGGER_ENABLE"]=1
 
     def stop_tlu(self):
-        self["tlu"]["TRIGGER_ENABLE"] = 0
-        # self.logger.info("stop_tlu:")
+        self["tlu"]["TRIGGER_ENABLE"]=0
+        self["timestamp_tlu"]["ENABLE_EXTERN"]=0
+        lost_cnt=self["tdc"]["LOST_COUNT"]
+        if lost_cnt!=0:
+            logging.warn("stop_tdc: error cnt=%d"%lost_cnt)
 
-    def set_timestamp(self, src="rx1"):
+    def set_timestamp(self,src="rx1"):
         self["timestamp"].reset()
-        self["timestamp"]["EXT_TIMESTAMP"] = True
-        self["timestamp"]["ENABLE"] = 1
-        logging.info("set_timestamp:src=%s" % src)
-
+        self["timestamp"]["EXT_TIMESTAMP"]=True
+        self["timestamp"]["ENABLE"]=1
+        logging.info("set_timestamp:src=%s"%src)
+        
     def stop_timestamp(self):
-        self["timestamp"]["ENABLE"] = 0
-        lost_cnt = self["timestamp"]["LOST_COUNT"]
-        if lost_cnt != 0:
-            logging.warn("stop_timestamp: lost_cnt=%d" % lost_cnt)
+        self["timestamp"]["ENABLE"]=0
+        lost_cnt=self["timestamp"]["LOST_COUNT"]
+        if lost_cnt!=0:
+            logging.warn("stop_timestamp: lost_cnt=%d"%lost_cnt)
         return lost_cnt
 
-    def set_monoread(self, start_feeze=15, start_read=35, stop_read=37, stop_feeze=100, stop=105, en=True):
-        self['data_rx'].CONF_START_FREEZE = start_feeze  # default 3
-        self['data_rx'].CONF_STOP_FREEZE = stop_feeze  # default 40
+    def set_monoread(self, start_freeze=57, start_read=60, stop_read=62, stop_freeze=95, stop=100, en=True):
+        self['data_rx'].CONF_START_FREEZE = start_freeze  # default 3
+        self['data_rx'].CONF_STOP_FREEZE = stop_freeze  # default 40
         self['data_rx'].CONF_START_READ = start_read  # default 6
         self['data_rx'].CONF_STOP_READ = stop_read  # default 7
         self['data_rx'].CONF_STOP = stop  # default 45
@@ -567,25 +542,17 @@ class TJMonoPix(Dut):
             logging.warn("stop_monoread: error cnt=%d" % lost_cnt)
 
     def set_tdc(self):
-        self["tdc"]["RESET"] = 1
-        self["tdc"]["ENABLE_EXTERN"] = 0
-        self["tdc"]["EN_WRITE_TIMESTAMP"] = 1
-        self["tdc"]["EN_TRIGGER_DIST"] = 1
-        self["tdc"]["EN_NO_WRITE_TRIG_ERR"] = 0
-        self["tdc"]["EN_INVERT_TRIGGER"] = 0
-        self["tdc"]["EN_INVERT_TDC"] = 0
-
-        self["tdc"]["ENABLE"] = 1
+        self["tdc"]["RESET"]=1
+        self["tdc"]["EXT_TIMESTAMP"]=1
+        self["tdc"]["ENABLE_TOT"]=1
+        self["tdc"]["ENABLE"]=1
+        logging.info("set_tdc:")
 
     def stop_tdc(self):
-        self["tdc"]["ENABLE"] = 0
-        lost_cnt = self["tdc"]["LOST_DATA_COUNTER"]
-        if lost_cnt != 0:
-            logging.warn("stop_tdc: error cnt=%d" % lost_cnt)
-###############################################################################################
-
-    def set_injection(self, low, high, unit='V'):
-        pass
+        self["tdc"]["ENABLE"]=0
+        lost_cnt=self["tdc"]["LOST_COUNT"]
+        if lost_cnt!=0:
+            logging.warn("stop_tdc: error cnt=%d"%lost_cnt)
 
 ########################## scans  #####################################################################
     def inj_scan(self, flavor, col, row, VL, VHLrange, start_dif, delay, width, repeat, noise_en, analog_en, sleeptime):
@@ -636,6 +603,88 @@ class TJMonoPix(Dut):
 
         return hits
 
+
+    def inj_scan_row(self, flavor, col, startrow, rownumber, VL, VHLrange, start_dif, delay, width, repeat, noise_en, analog_en, sleeptime):
+
+        hits = np.zeros((rownumber, VHLrange+1), dtype=int)
+
+        self['inj'].set_delay(delay)
+        self['inj'].set_width(width)
+        self['inj'].set_repeat(repeat)
+        self['inj'].set_en(0)
+
+        self['CONF_SR']['INJ_ROW'].setall(False)
+        if analog_en == 1:
+            self['CONF_SR']['INJ_ROW'][223]=True
+        self['CONF_SR']['COL_PULSE_SEL'].setall(False)
+        for i in range (startrow, startrow+rownumber):
+            self.enable_injection(flavor,col,i)  
+        self.set_vl_dacunits(VL,0)
+        self.set_vh_dacunits(VL+start_dif,0)
+        self.write_conf()
+
+        for _ in range(5):
+            x2 = self['fifo'].get_data()
+            time.sleep(0.01)
+
+        for i in range(VHLrange+1):
+            if i!=0:
+                self.set_vh_dacunits(VL+i+start_dif,0)
+                self.write_conf()
+
+            while not self['inj'].is_ready:
+                time.sleep(0.001)
+            for _ in range(10):
+                self['inj'].is_ready
+            self["inj"].start()
+
+            time.sleep(sleeptime)
+            x = self['fifo'].get_data()
+            ix = self.interprete_data(x)
+            ixd=np.delete(ix, np.where((ix['col']!=col)|(ix['row']<startrow)|(ix['row']>=startrow+rownumber))[0])
+            if noise_en == 1:
+                ixd=np.delete(ixd, np.where((ix['noise'] == 1))[0])
+
+            uniquerow, countrow = np.unique(ixd['row'], return_counts=True)
+
+            if (uniquerow.size != 0):
+                hits[uniquerow-startrow,i]=countrow
+
+        return hits
+
+    def inj_scan(self, flavor, col_high, col_low, row_high, row_low, rowstep, VL, VHLrange, start_dif, delay, width, repeat, noise_en, analog_en, sleeptime, partname):
+
+	col_no=col_high-col_low+1
+	row_no=row_high-row_low+1
+	pix_no = (col_no)*(row_no)
+	scurve = np.zeros((pix_no,VHLrange+1), dtype=int)
+	#xhits = range(start_dif,VHLrange+start_dif+1)
+
+	i = 0
+	for col in range(col_low,col_high+1):
+    	    for row in range(row_low,row_high+1-rowstep,rowstep):
+                #print 'row=%d' %row
+                hits = self.inj_scan_row(flavor, col, row, rowstep, VL, VHLrange, start_dif, delay, width, repeat, noise_en, analog_en, sleeptime)
+                print 'i=%d' %i
+                #print hits
+                scurve[i:i+20] = hits
+                i += 20
+                #print 'i+=%d' %i
+                time.sleep(0.01)
+        
+            #print 'row=%d' %(row+rowstep)
+            print 'i=%d' %i        
+            hits = chip.inj_scan_row(flavor, col, row+rowstep, (row_high%(row+rowstep))+1, VL, VHLrange, start_dif, delay, width, repeat, noise_en, analog_en, sleeptime)
+            #print hits
+            scurve[i:i+((row_high%(row+rowstep))+1)] = hits
+            i += (row_high%(row+rowstep))+1
+            #print (row_high%(row+rowstep))+1
+            print 'i=%d' %i
+            time.sleep(0.01)
+
+        #print scurve
+        np.save('scurvedata'+partname+'.npy',scurve)
+	logger.info(' S-Curve data saved successfully')
 
 if __name__ == '__main__':
     chip = TJMonoPix()

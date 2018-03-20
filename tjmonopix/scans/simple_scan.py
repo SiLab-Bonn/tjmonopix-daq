@@ -88,7 +88,9 @@ class SimpleScan(ScanBase):
     def analyze(self, filename=None):
         if filename == None:
             filename = self.output_filename+'.h5'
-        interpret_h5(filename, filename[:-3]+"_interpreted.h5",data_format=0x43)
+        self.logger.info('interpret input file:%s'%filename)
+        interpret_h5(filename, filename[:-3]+"_hit.h5",data_format=0x43)
+        self.logger.info('interpret output file:%s'%(filename[:-3]+"_hit.h5"))
 
 
 if __name__ == "__main__":
@@ -99,47 +101,19 @@ if __name__ == "__main__":
                         help='Name of data file without extention')
     parser.add_argument('--scan_time', type=int, default=10,
                         help="Scan time in seconds. Default=10, disable=0")
-    parser.add_argument('--config_file', type=str, default=None,
-                        help="Name of config file(yaml)")
-    args = parser.parse_args()
-
-    dut = TJMonoPix()
-    
-    if args.config_file==None:
-        dut.init(B=True)
-        ### set mask 
-        dut['CONF_SR']['EN_PMOS'][9] = 1
-        dut['CONF_SR']['EN_PMOS'][10] = 1
-        dut['CONF_SR']['EN_PMOS'][11] = 1
-        dut['CONF_SR']['EN_HITOR_OUT'][1] = 0
-        for d in range(28,34):
-           dut['CONF_SR']['MASKD'][d] = True
-        for i in range(99,105):    
-           dut['CONF_SR']['MASKH'][i] = True
-        dut['CONF_SR']['MASKH'][102] = False
-        dut.mask(1, 33, 72)
-        dut.mask(1, 17, 30)
-        dut.mask(1, 41, 66)
-        dut.mask(1, 97, 94)
-        dut.mask(1, 34, 151)
-        dut.mask(1, 40, 123)
-        dut.mask(1, 82, 193)
-        dut.enable_column_hitor(1,20)
-        dut.write_conf()
-        ### set globals
-        dut.set_vl_dacunits(49,1)
-        dut.set_vh_dacunits(79,1)
-        dut.set_vreset_dacunits(40,1) #1V
-        dut.set_icasn_dacunits(0,1) #4.375nA
-        dut.set_ireset_dacunits(131,1) #270pA,
-        dut.set_ithr_dacunits(15,1) #680pA
-        dut.set_idb_dacunits(20,1) #500nA
-        dut.set_ibias_dacunits(100,1) #500nA
-        dut.write_conf()
-    else:
-        dut.load_config(args.config_file)
-    
+    #parser.add_argument('--config_file', type=str, default=None,
+    #                    help="Name of config file(yaml)")
+    args = parser.parse_args()    
     ### run  
-    scan = SimpleScan(dut,fname=args.data,sender_addr="tcp://127.0.0.1:6500")
-    scan.start(scan_time=args.scan_time)
+    scan = SimpleScan(dut=None,filename=args.data,send_addr="tcp://131.220.162.237:5500")
+
+    #This sets up the hit_or in a single pixel
+    col = 48
+    row = 32
+    scan.dut['CONF_SR']['EN_HITOR_OUT'][1]=False
+    scan.dut.enable_column_hitor(1,col)
+    scan.dut['CONF_SR']['MASKH'][row]=False
+    scan.dut.write_conf()
+
+    output_filename=scan.start(scan_time=args.scan_time, with_tdc=True, with_timestamp=False, with_tlu=True)
     scan.analyze()

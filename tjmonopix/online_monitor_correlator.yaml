@@ -12,27 +12,27 @@
 
 converter :
     DUT0_Interpreter :
-        kind : monopix_converter
+        kind : tjmonopix_converter
         frontend : tcp://127.0.0.1:5500
         backend : tcp://127.0.0.1:5600
     DUT1_Interpreter :
         kind : pybar_fei4
-        frontend : tcp://131.220.162.237:5500
-#        frontend: tcp://127.0.0.1:6500
+#        frontend : tcp://131.220.162.237:5500
+        frontend: tcp://127.0.0.1:6500
         backend : tcp://127.0.0.1:6600
-    MONOPIX_FEI4_Correlator :
-        kind : monopix_fei4_correlator
+    TJMONOPIX_FEI4_Correlator :
+        kind : tjmonopix_fei4_correlator
         frontend :
           - tcp://127.0.0.1:6600
           - tcp://127.0.0.1:5600
         backend : tcp://127.0.0.1:7700
         max_n_rows_fei4 : 337
         max_n_columns_fei4: 81
-        max_n_rows_monopix : 130
-        max_n_columns_monopix: 37 
+        max_n_rows_monopix : 225
+        max_n_columns_monopix: 113 
         noisy_threshold : 1
     DUT0_Histogrammer :
-        kind : monopix_histogrammer
+        kind : tjmonopix_histogrammer
         frontend : tcp://127.0.0.1:5600
         backend : tcp://127.0.0.1:5700
         noisy_threshold : 1
@@ -44,18 +44,18 @@ converter :
 
 receiver :
     DUT0 :
-        kind : monopix_receiver
+        kind : tjmonopix_receiver
         frontend : tcp://127.0.0.1:5700
     DUT1 :
         kind : pybar_fei4
         frontend : tcp://127.0.0.1:6700
     MONOPIX_FEI4_Correlator:
-        kind : monopix_fei4_corr_receiver
+        kind : tjmonopix_fei4_corr_receiver
         frontend : tcp://127.0.0.1:7700
         devices :
           - tcp://127.0.0.1:6600
           - tcp://127.0.0.1:5600
         max_n_rows_fei4 : 337
         max_n_columns_fei4: 81
-        max_n_rows_monopix : 130
-        max_n_columns_monopix: 37
+        max_n_rows_monopix : 225
+        max_n_columns_monopix: 113
