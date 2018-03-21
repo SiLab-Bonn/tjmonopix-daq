@@ -286,6 +286,7 @@ class ScanBase(object):
         self.logger.addHandler(fh)
         logging.info("Initializing {0}".format(self.__class__.__name__))
 
+
     def start(self, **kwargs):
 
         #### open file

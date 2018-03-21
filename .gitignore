@@ -110,4 +110,6 @@ ENV/
 /firmware/ise/*
 !/firmware/ise/*.xise
 
+/output_data/*
+
 .project

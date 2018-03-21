@@ -10,7 +10,7 @@ hit_dtype = np.dtype([("col", "<u1"), ("row", "<u2"), ("le", "<u1"), ("te", "<u1
                       ("timestamp", "<u8")])
 
 
-#@njit
+@njit
 def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt,
                ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt, debug):
     MASK1_LOWER = np.uint64(0x00000000FFFFFFFF)
@@ -35,6 +35,7 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
             #rx_cnt= (rx_cnt & 0xF)  | ((np.uint32(r) << np.int64(4)) & 0xFFFFFFF0)
             pass
         elif (r & 0xF0000000 == 0x00000000):
+
             col = 2 * (r & 0x3f) + (((r & 0x7FC0) >> 6) // 256)
             row = ((r & 0x7FC0) >> 6) % 256
             te = (r & 0x1F8000) >> 15
@@ -108,6 +109,7 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
                 (np.uint64(r & TS_MASK_DAT) << np.uint64(28))
             # if debug & 0x4 ==0x4:
             #print r_i,hex(r),"timestamp2",hex(ts_timestamp),
+
             if ts_flg == 0x1:
                 ts_flg = 0x2
             else:
@@ -118,6 +120,7 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
                 (np.uint64(r & TS_MASK_DAT) << np.uint64(52))
             # if debug & 0x4 ==0x4:
             #print r_i,hex(r),"timestamp3",hex(ts_timestamp),
+
             if ts_flg == 0x0:
                 ts_flg = 0x1
             else:
@@ -138,6 +141,7 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
             if ts2_flg == 2:
                 ts2_flg = 0
                 if debug & 0x1 == 0x1:
+ 
                     buf[buf_i]["col"] = 0xFD
                     buf[buf_i]["row"] = np.uint16(ts2_cnt & 0xFFFF)
                     buf[buf_i]["le"] = np.uint8(ts2_cnt >> 16)
@@ -368,15 +372,7 @@ class InterRaw():
         end = len(raw)
         ret = np.empty(0, dtype=hit_dtype)
         while start < end:  # TODO make chunk work
-
             tmpend = min(end, start+self.n)
-            
-            with open("/tmp/tmp.txt", "a") as f:
-               f.write('%s\n'%(str(self.col)+str(self.row)+ str(self.le)+str(self.te)+str(self.noise)+str(self.timestamp)+str(self.rx_flg))
-               f.write('%s\n'%(str(self.ts_timestamp)+str(self.ts_pre)+str(self.ts_flg)+str(self.ts_cnt))
-               f.write('%s\n'%(str(self.ts2_timestamp)+str(self.ts2_tot)+str(self.ts2_flg)+str(self.ts2_cnt))
-               f.write('%s\n'%(str(self.ts3_timestamp)+str(self.ts3_flg)+str(self.ts3_cnt))
-
             (err, hit_dat, r_i,
              self.col, self.row, self.le, self.te, self.noise, self.timestamp, self.rx_flg,
              self.ts_timestamp, self.ts_pre, self.ts_flg, self.ts_cnt,
@@ -389,13 +385,6 @@ class InterRaw():
                 self.ts2_timestamp, self.ts2_tot, self.ts2_flg, self.ts2_cnt,
                 self.ts3_timestamp, self.ts3_flg, self.ts3_cnt,
                 data_format)
-
-            print err, hit_dat, r_i,
-            print self.col, self.row, self.le, self.te, self.noise, self.timestamp, self.rx_flg,
-            print self.ts_timestamp, self.ts_pre, self.ts_flg, self.ts_cnt,
-            print self.ts2_timestamp, self.ts2_tot, self.ts2_flg, self.ts2_cnt,
-            print self.ts3_timestamp, self.ts3_flg, self.ts3_cnt
-
             if err != 0:
                 self.reset()
             ret = np.append(ret, hit_dat)
