@@ -25,65 +25,65 @@ class ScanBase(object):
             self.dut = TJMonoPix(conf=dut)
             # Initialize self.dut and power up
             self.dut.init()
-            self.dut['CONF']['DEF_CONF_N'] = 0
-            self.dut['CONF']['AB_SELECT'] = 1
-            self.dut['CONF'].write()
+            #self.dut['CONF']['DEF_CONF_N'] = 0
+            #self.dut['CONF']['AB_SELECT'] = 1
+            #self.dut['CONF'].write()
 
-            self.dut['data_rx'].CONF_START_FREEZE = 15 #default 3
-            self.dut['data_rx'].CONF_STOP_FREEZE = 100 #default 40
-            #self.dut['data_rx'].CONF_STOP_FREEZE = 250 #default 40
-            self.dut['data_rx'].CONF_START_READ = 35 #default 6
-            self.dut['data_rx'].CONF_STOP_READ = 37 #default 7
-            self.dut['data_rx'].CONF_STOP = 105 #default 45
-            #self.dut['data_rx'].CONF_STOP = 255 #default 45
+            #self.dut['data_rx'].CONF_START_FREEZE = 15 #default 3
+            #self.dut['data_rx'].CONF_STOP_FREEZE = 100 #default 40
+            ##self.dut['data_rx'].CONF_STOP_FREEZE = 250 #default 40
+            #self.dut['data_rx'].CONF_START_READ = 35 #default 6
+            #self.dut['data_rx'].CONF_STOP_READ = 37 #default 7
+            #self.dut['data_rx'].CONF_STOP = 105 #default 45
+            ##self.dut['data_rx'].CONF_STOP = 255 #default 45
 
-            self.dut.power_on()
+            #self.dut.power_on()
 
-            self.dut['CONF']['RESET_BCID'] = 1
-            self.dut['CONF']['RESET'] = 1
-            self.dut['CONF'].write()
+            #self.dut['CONF']['RESET_BCID'] = 1
+            #self.dut['CONF']['RESET'] = 1
+            #self.dut['CONF'].write()
 
-            self.dut['CONF']['EN_BX_CLK'] = 1
-            self.dut['CONF']['EN_OUT_CLK'] = 1
-            self.dut['CONF'].write()
+            #self.dut['CONF']['EN_BX_CLK'] = 1
+            #self.dut['CONF']['EN_OUT_CLK'] = 1
+            #self.dut['CONF'].write()
              
-            self.dut['CONF']['RESET_BCID'] = 0
-            self.dut['CONF']['RESET'] = 0
-            self.dut['CONF'].write()
+            #self.dut['CONF']['RESET_BCID'] = 0
+            #self.dut['CONF']['RESET'] = 0
+            #self.dut['CONF'].write()
 
-            self.dut.default_conf()
+            #self.dut.default_conf()
 
             #-------------------------------------------------#
-            self.dut.set_icasn_dacunits(0,0)
-            self.dut.set_vreset_dacunits(35,0)
-            self.dut.set_ireset_dacunits(5,1,0)
-            self.dut.set_ithr_dacunits(30,0)
-            self.dut.set_idb_dacunits(50,0)
+            #self.dut.set_icasn_dacunits(0,0)
+            #self.dut.set_vreset_dacunits(35,0)
+            #self.dut.set_ireset_dacunits(5,1,0)
+            #self.dut.set_ithr_dacunits(30,0)
+            #self.dut.set_idb_dacunits(50,0)
 
-            self.dut['CONF_SR']['EN_HV'].setall(False)
-            self.dut['CONF_SR']['EN_COMP'].setall(False)
-            self.dut['CONF_SR']['EN_PMOS'].setall(False)
-            self.dut['CONF_SR']['EN_PMOS_NOSF'].setall(False)
-            self.dut['CONF_SR']['EN_TEST_PATTERN'].setall(False)
+            #self.dut['CONF_SR']['EN_HV'].setall(False)
+            #self.dut['CONF_SR']['EN_COMP'].setall(False)
+            #self.dut['CONF_SR']['EN_PMOS'].setall(False)
+            #self.dut['CONF_SR']['EN_PMOS_NOSF'].setall(False)
+            #self.dut['CONF_SR']['EN_TEST_PATTERN'].setall(False)
 
-            self.dut['CONF_SR']['MASKD'].setall(False)
-            self.dut['CONF_SR']['MASKH'].setall(False)
-            self.dut['CONF_SR']['MASKV'].setall(False)
+            #self.dut['CONF_SR']['MASKD'].setall(False)
+            #self.dut['CONF_SR']['MASKH'].setall(False)
+            #self.dut['CONF_SR']['MASKV'].setall(False)
 
-            self.dut.write_conf()
+            #self.dut.write_conf()
 
-            self.dut['CONF']['DEF_CONF_N'] = 1
-            self.dut['CONF'].write()
+            #self.dut['CONF']['DEF_CONF_N'] = 1
+            #self.dut['CONF'].write()
 
             # SELECT WHICH DOUBLE COLUMNS TO ENABLE
-            self.dut['CONF_SR']['EN_PMOS_NOSF'].setall(False)
-            self.dut['CONF_SR']['EN_PMOS'].setall(False)
-            self.dut['CONF_SR']['EN_COMP'].setall(False)
-            self.dut['CONF_SR']['EN_HV'].setall(False)
-            self.dut['CONF_SR']['EN_OUT'].setall(False) #ENABLES OR DISABLES THE NORMAL OUTPUT PADS, ACTIVE LOW
-            self.dut['CONF_SR']['nEN_OUT'].setall(True) #ENABLES OR DISABLES THE COMPLEMENTARY OUTPUT PADS, ACTIVE LOW
-            self.dut['CONF_SR']['EN_HITOR_OUT'].setall(True) #ENABLES OR DISABLES THE NORMAL HITOR PADS, HITOR0-3 =  1-4 flavor, ACTIVE LOW
-            self.dut['CONF_SR']['nEN_HITOR_OUT'].setall(True) #ENABLES OR DISABLES THE COMPLEMENTARY HITOR PADS, ACTIVE LOW
+            #self.dut['CONF_SR']['EN_PMOS_NOSF'].setall(False)
+            #self.dut['CONF_SR']['EN_PMOS'].setall(False)
+            #self.dut['CONF_SR']['EN_COMP'].setall(False)
+            #self.dut['CONF_SR']['EN_HV'].setall(False)
+            #self.dut['CONF_SR']['EN_OUT'].setall(False) #ENABLES OR DISABLES THE NORMAL OUTPUT PADS, ACTIVE LOW
+            #self.dut['CONF_SR']['nEN_OUT'].setall(True) #ENABLES OR DISABLES THE COMPLEMENTARY OUTPUT PADS, ACTIVE LOW
+            #self.dut['CONF_SR']['EN_HITOR_OUT'].setall(True) #ENABLES OR DISABLES THE NORMAL HITOR PADS, HITOR0-3 =  1-4 flavor, ACTIVE LOW
+            #self.dut['CONF_SR']['nEN_HITOR_OUT'].setall(True) #ENABLES OR DISABLES THE COMPLEMENTARY HITOR PADS, ACTIVE LOW
 
             #self.dut['CONF_SR']['EN_PMOS'][9] = 1
             self.dut['CONF_SR']['EN_PMOS'].setall(True)
@@ -130,55 +130,24 @@ class ScanBase(object):
             self.dut.mask(1, 88, 96)
             self.dut.mask(1, 78, 209)
 
-            # self.dut.mask(3,10,30)
-            # self.dut.mask(3,9,131)
-            # self.dut.mask(3,72,70)
-            # self.dut.mask(3,36,46)
-            # self.dut.mask(3,80,44)
-            # self.dut.mask(3,80,55)
-            # self.dut.mask(3,21,119)
-            # self.dut.mask(3,104,109)
-            # self.dut.mask(3,6,119)
-            # self.dut.mask(3,87,166)
-            # self.dut.mask(3,82,178)
-            # self.dut.mask(3,35,172)
-            # self.dut.mask(3,56,118)
-            # self.dut.mask(3,42,67)
-            # self.dut.mask(3,110,48)
-            # self.dut.mask(3,16,178)
-            # self.dut.mask(3,25,94)
-            # self.dut.mask(3,46,109)
-            # self.dut.mask(3,47,59)
-            # self.dut.mask(3,48,194)
-            # self.dut.mask(3,93,191)
-            # self.dut.mask(3,106,202)
-            # self.dut.mask(3,61,181)
-            # self.dut.mask(3,83,146)
-            # self.dut.mask(3,42,7)
-
-
-            #self.dut['CONF_SR']['MASKD'][31] = True
-            #self.dut['CONF_SR']['MASKH'][99] = False
-
             # SELECT WHICH PHYSICAL COLUMS TO INJECT
             # INJ_IN_MON_L AND INJ_IN_MON_L SELECT THE LEFT AND RIGHT SPECIAL ANALOG MONITORING PIXELS
-            self.dut['CONF_SR']['COL_PULSE_SEL'].setall(False)
-            #self.dut['CONF_SR']['COL_PULSE_SEL'][130]=True
+            #self.dut['CONF_SR']['COL_PULSE_SEL'].setall(False)
 
-            self.dut['CONF_SR']['INJ_IN_MON_L'] = 1 # ENABLE INJECTION FOR THE ANALOG MONITORING PIXELS LEFT SIDE
-            self.dut['CONF_SR']['INJ_IN_MON_R'] = 1 # ENABLE INJECTION FOR THE ANALOG MONITORING PIXELS RIGHT SIDE
+            #self.dut['CONF_SR']['INJ_IN_MON_L'] = 0 # ENABLE INJECTION FOR THE ANALOG MONITORING PIXELS LEFT SIDE
+            #self.dut['CONF_SR']['INJ_IN_MON_R'] = 0 # ENABLE INJECTION FOR THE ANALOG MONITORING PIXELS RIGHT SIDE
 
             # SELECT WHICH PHYSICAL ROWS TO INJECT
             # THE SPEXIAL PIXELS OUTA_MON3 to OUTA_MON0 CORRESPONT TO ROWS 223 to 220 FOR INJECTION
-            self.dut['CONF_SR']['INJ_ROW'].setall(False)
-            self.dut['CONF_SR']['INJ_ROW'][223:220] = True # FOR THE ANALOG MONITORING TOP PIXEL
+            #self.dut['CONF_SR']['INJ_ROW'].setall(False)
+            #self.dut['CONF_SR']['INJ_ROW'][223:220] = True # FOR THE ANALOG MONITORING TOP PIXEL
 
             # SELECT PHYSICAL COLUMNS AND ROWS FOR INJECTION WITH FUNCTION
-            self.dut.enable_injection(1,18,99)
+            #self.dut.enable_injection(1,18,99)
 
             # SELECT PHYSICAL COLUMN(S) FOR HITOR OUTPUT
             # nMASKH (SO SETTING MASKH TO FALSE) ENABLES HITOR FOR THE SPECIFIC ROW
-            self.dut['CONF_SR']['DIG_MON_SEL'].setall(False)
+            #self.dut['CONF_SR']['DIG_MON_SEL'].setall(False)
             #self.dut.enable_column_hitor(1,18)
 
             self.dut.write_conf()
@@ -189,8 +158,8 @@ class ScanBase(object):
             ## V = (127/1.8)*#BIT
             # The default values are VL=44, VH=79, VH-VL=35
             # VDAC LSB=14.17mV, Cinj=230aF, 1.43e-/mV, ~710e-
-            self.dut.set_vl_dacunits(44,1)
-            self.dut.set_vh_dacunits(79,1)
+            #self.dut.set_vl_dacunits(44,1)
+            #self.dut.set_vh_dacunits(79,1)
 
             ####### CONFIGURE THE FRONT END ######
 

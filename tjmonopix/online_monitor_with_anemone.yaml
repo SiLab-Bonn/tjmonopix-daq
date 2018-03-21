@@ -1,15 +1,15 @@
 converter :
     TJ_Interpreter :
         kind : tjmonopix_converter
-        frontend : tcp://127.0.0.1:5500
+        frontend : tcp://131.220.162.237:5500
         backend : tcp://127.0.0.1:5600
-    DUT0_Interpreter :
-        kind : pybar_mimosa26
-        frontend : tcp://127.0.0.1:4500
-        backend : tcp://127.0.0.1:4600
-    DUT1_Interpreter :
+#    DUT0_Interpreter :
+#        kind : pybar_mimosa26
+#        frontend : tcp://131.220.162.237:4500
+#        backend : tcp://127.0.0.1:4600
+    FE_Interpreter :
         kind : pybar_fei4
-        frontend : tcp://127.0.0.1:6500
+        frontend : tcp://131.220.162.237:6500
         backend : tcp://127.0.0.1:6600
 #    ANEMONE_Correlator :
 #        kind : anemone_correlator
@@ -27,12 +27,12 @@ converter :
         frontend : tcp://127.0.0.1:5600
         backend : tcp://127.0.0.1:5700
         noisy_threshold : 1
-    DUT0_Histogrammer :
-        kind : pybar_mimosa26_histogrammer
-        frontend : tcp://127.0.0.1:4600
-        backend : tcp://127.0.0.1:4700
-        noisy_threshold : 1
-    DUT1_Histogrammer :
+#    DUT0_Histogrammer :
+#        kind : pybar_mimosa26_histogrammer
+#        frontend : tcp://127.0.0.1:4600
+#        backend : tcp://127.0.0.1:4700
+#        noisy_threshold : 1
+    FE_Histogrammer :
         kind : pybar_fei4_histogrammer
         frontend : tcp://127.0.0.1:6600
         backend : tcp://127.0.0.1:6700
@@ -47,10 +47,10 @@ receiver :
     TJ :
         kind : tjmonopix_receiver
         frontend : tcp://127.0.0.1:5700
-    DUT0 :
-        kind : pybar_mimosa26
-        frontend : tcp://127.0.0.1:4700
-    DUT1 :
+#    M26 :
+#        kind : pybar_mimosa26
+#        frontend : tcp://127.0.0.1:4700
+    FEI4 :
         kind : pybar_fei4
         frontend : tcp://127.0.0.1:6700
 #    ANEMONE_Correlator :

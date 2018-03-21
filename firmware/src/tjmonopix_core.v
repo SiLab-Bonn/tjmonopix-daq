@@ -285,7 +285,7 @@ timestamp
     .BUS_RD(BUS_RD),
     
     .CLK(CLK40),
-	 .DI(LEMO_RX[2]),
+	 .DI(LEMO_RX[1]),
 	 .EXT_ENABLE(GATE_TDC),
 	 .EXT_TIMESTAMP(TIMESTAMP),
 

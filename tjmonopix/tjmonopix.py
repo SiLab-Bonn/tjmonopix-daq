@@ -69,62 +69,60 @@ class TJMonoPix(Dut):
 
     def init(self, B=True):
         super(TJMonoPix, self).init()
-
         self.fw_version, self.board_version = self.get_daq_version()
-        #print(self.board_version)
         logger.info('Found board %s running firmware version %s' % (self.board_version, self.fw_version))
 
         # do this before powering up
         self['CONF_SR'].set_size(3925)
-        #self['CONF']['DEF_CONF_N'] = 0
-        #self['CONF']['AB_SELECT'] = B
-        #self['CONF'].write()
+        self['CONF']['DEF_CONF_N'] = 0
+        self['CONF']['AB_SELECT'] = B
+        self['CONF'].write()
 
-        #self['data_rx'].CONF_START_FREEZE = 64  # default 3
-        #self['data_rx'].CONF_STOP_FREEZE = 100  # default 40
-        #self['data_rx'].CONF_START_READ = 66  # default 6
-        #self['data_rx'].CONF_STOP_READ = 68  # default 7
-        #self['data_rx'].CONF_STOP = 105  # default 45
+        self['data_rx'].CONF_START_FREEZE = 64  # default 3
+        self['data_rx'].CONF_STOP_FREEZE = 100  # default 40
+        self['data_rx'].CONF_START_READ = 66  # default 6
+        self['data_rx'].CONF_STOP_READ = 68  # default 7
+        self['data_rx'].CONF_STOP = 105  # default 45
 
-        #self.power_on()
+        self.power_on()
 
-        #self['CONF']['RESET_BCID'] = 1
-        #self['CONF']['RESET'] = 1
-        #self['CONF'].write()
+        self['CONF']['RESET_BCID'] = 1
+        self['CONF']['RESET'] = 1
+        self['CONF'].write()
 
-        #self['CONF']['EN_BX_CLK'] = 1
-        #self['CONF']['EN_OUT_CLK'] = 1
-        #self['CONF'].write()
+        self['CONF']['EN_BX_CLK'] = 1
+        self['CONF']['EN_OUT_CLK'] = 1
+        self['CONF'].write()
 
-        #self['CONF']['RESET_BCID'] = 0
-        #self['CONF']['RESET'] = 0
-        #self['CONF'].write()
+        self['CONF']['RESET_BCID'] = 0
+        self['CONF']['RESET'] = 0
+        self['CONF'].write()
 
-        #self.default_conf()
+        self.default_conf()
 
-        #self.set_icasn_dacunits(0, 0)
-        #self.set_vreset_dacunits(35, 0)
-        #self.set_ireset_dacunits(2, 1, 0)
+        self.set_icasn_dacunits(0, 0)
+        self.set_vreset_dacunits(35, 0)
+        self.set_ireset_dacunits(2, 1, 0)
         #self.set_ireset_dacunits(128 + 5, 0)
-        #self.set_ithr_dacunits(30, 0)
-        #self.set_idb_dacunits(50, 0)
+        self.set_ithr_dacunits(30, 0)
+        self.set_idb_dacunits(50, 0)
 
-        #self['CONF_SR']['EN_HV'].setall(False)
-        #self['CONF_SR']['EN_COMP'].setall(False)
-        #self['CONF_SR']['EN_PMOS'].setall(False)
-        #self['CONF_SR']['EN_PMOS_NOSF'].setall(False)
-        #self['CONF_SR']['EN_TEST_PATTERN'].setall(False)
+        self['CONF_SR']['EN_HV'].setall(False)
+        self['CONF_SR']['EN_COMP'].setall(False)
+        self['CONF_SR']['EN_PMOS'].setall(False)
+        self['CONF_SR']['EN_PMOS_NOSF'].setall(False)
+        self['CONF_SR']['EN_TEST_PATTERN'].setall(False)
 
-        #self['CONF_SR']['MASKD'].setall(False)
-        #self['CONF_SR']['MASKH'].setall(False)
-        #self['CONF_SR']['MASKV'].setall(False)
+        self['CONF_SR']['MASKD'].setall(False)
+        self['CONF_SR']['MASKH'].setall(False)
+        self['CONF_SR']['MASKV'].setall(False)
 
-        #self.write_conf()
+        self.write_conf()
 
-        #self['CONF']['DEF_CONF_N'] = 1
-        #self['CONF'].write()
+        self['CONF']['DEF_CONF_N'] = 1
+        self['CONF'].write()
 
-        #logging.info(str(self.get_power_status()))
+        logging.info(str(self.get_power_status()))
 
     def default_conf(self):
 
@@ -134,7 +132,7 @@ class TJMonoPix(Dut):
 	self['CONF_SR']['EN_OUT'].setall(False)
 	self['CONF_SR']['EN_HV'].setall(True)
 	self['CONF_SR']['EN_COMP'].setall(True)
-	self['CONF_SR']['EN_PMOS'].setall(True)	
+	self['CONF_SR']['EN_PMOS'].setall(True)
 	self['CONF_SR']['EN_PMOS_NOSF'].setall(True)
 	self['CONF_SR']['EN_TEST_PATTERN'].setall(False)
 
@@ -224,7 +222,6 @@ class TJMonoPix(Dut):
         self['VDDD'].set_enable(True)
 
     def write_conf(self):
-        print self['CONF_SR']['EN_PMOS']
         self['CONF_SR'].write()
         while not self['CONF_SR'].is_ready:
             time.sleep(0.001)

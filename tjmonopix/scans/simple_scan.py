@@ -9,28 +9,20 @@ from tjmonopix.scan_base import ScanBase
 from tjmonopix.tjmonopix import TJMonoPix
 from tjmonopix.analysis.interpreter import interpret_h5
 
-
 class SimpleScan(ScanBase):
     scan_id = "simple"
-
 
     def scan(self, **kwargs):
         with_tlu = kwargs.pop('with_tlu', True)
         with_timestamp = kwargs.pop('with_timestamp', True)
         with_tdc = kwargs.pop('with_tdc', True)
-        scan_time = kwargs.pop('scan_time', 10)
-        # start_freeze=50,start_read=52,stop_read=52+2,stop_freeze=52+36,stop=52+36+10,
-        #start_freeze = kwargs.pop('start_freeze', 50)
-        #start_read = kwargs.pop('start_read', start_freeze+2)
-        #stop_read = kwargs.pop('stop_read', start_read+2)
-        #stop_freeze = kwargs.pop('stop_freeze', start_freeze+36)
-        #stop_rx = kwargs.pop('stop', stop_freeze+10)
+        scan_timeout = kwargs.pop('scan_timeout', 10)
 
         cnt = 0
         scanned = 0
 
         ####################
-        # stop readout and clean fifo
+        # stop readout and clean fifo  but this does not clean all
         if with_timestamp:
             self.dut.stop_timestamp()
         if with_tlu:
@@ -43,6 +35,9 @@ class SimpleScan(ScanBase):
         ####################
         # start readout
         self.dut.set_monoread()
+        for _ in range(5): ### reset fifo to clean up.
+            time.sleep(0.1)
+            self.dut['fifo'].reset()
         if with_tdc:
             self.dut.set_tdc()
         if with_tlu:
@@ -65,13 +60,13 @@ class SimpleScan(ScanBase):
                 scanned = time.time()-t0
                 self.logger.info('time=%.0fs dat=%d rate=%.3fk/s' %
                                  (scanned, cnt, (cnt-pre_cnt)/(scanned-pre_scanned)/1024))
-                if scanned+10 > scan_time and scan_time > 0:
+                if scanned+10 > scan_timeout and scan_timeout > 0:
                     break
                 elif scanned < 30:
                     time.sleep(1)
                 else:
                     time.sleep(10)
-            time.sleep(max(0, scan_time-scanned))
+            time.sleep(max(0, scan_timeout-scanned))
         ####################
         # stop readout
         if with_timestamp:
@@ -100,21 +95,11 @@ if __name__ == "__main__":
         description='TJ-MONOPIX simple scan \n example: simple_scan --scan_time 10 --data simple_0', formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('-d', '--data',  type=str, default=None,
                         help='Name of data file without extention')
-    parser.add_argument('--scan_time', type=int, default=10,
+    parser.add_argument('--scan_timeout', type=int, default=10,
                         help="Scan time in seconds. Default=10, disable=0")
-    #parser.add_argument('--config_file', type=str, default=None,
-    #                    help="Name of config file(yaml)")
+
     args = parser.parse_args()    
-    ### run  
-    scan = SimpleScan(dut=None,filename=args.data,send_addr="tcp://131.220.162.237:5500")
 
-    #This sets up the hit_or in a single pixel
-    col = 48
-    row = 32
-    scan.dut['CONF_SR']['EN_HITOR_OUT'][1]=False
-    scan.dut.enable_column_hitor(1,col)
-    scan.dut['CONF_SR']['MASKH'][row]=False
-    scan.dut.write_conf()
-
-    output_filename=scan.start(scan_time=args.scan_time, with_tdc=True, with_timestamp=False, with_tlu=True)
+    scan = SimpleScan(dut=dut,filename=args.data,send_addr="tcp://131.220.162.237:5500")
+    output_filename=scan.start(scan_timeout=args.scan_timeout, with_tdc=False, with_timestamp=False, with_tlu=False)
     scan.analyze()
