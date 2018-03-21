@@ -93,53 +93,54 @@ class SimpleScan(ScanBase):
 
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(
+        description='TJ-MONOPIX simple scan \n example: simple_scan --scan_time 10 --data simple_0', formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument('-d', '--data',  type=str, default=None,
+                        help='Name of data file without extention')
+    parser.add_argument('--scan_time', type=int, default=10,
+                        help="Scan time in seconds. Default=10, disable=0")
+    parser.add_argument('--config_file', type=str, default=None,
+                        help="Name of config file(yaml)")
+    args = parser.parse_args()
+
     dut = TJMonoPix()
-    dut['CONF']['DEF_CONF_N'] = 0
-    dut['CONF']['AB_SELECT'] = 1
-    dut['CONF'].write()
-    dut.init()
-
-    scan = SimpleScan(dut=dut)
-    scan.start()
-
-    print scan.dut.get_power_status()
-    raw_input("Check...")
-
-    scan.dut['CONF_SR']['EN_PMOS_NOSF'].setall(False)
-    scan.dut['CONF_SR']['EN_PMOS'].setall(False)
-    scan.dut['CONF_SR']['EN_COMP'].setall(False)
-    scan.dut['CONF_SR']['EN_HV'].setall(False)
-    scan.dut['CONF_SR']['EN_OUT'].setall(False)
-    scan.dut['CONF_SR']['nEN_OUT'].setall(True)
-    scan.dut['CONF_SR']['EN_HITOR_OUT'].setall(True)
-    scan.dut['CONF_SR']['nEN_HITOR_OUT'].setall(True)
-
-    scan.dut['CONF_SR']['EN_PMOS'][9] = 1
-    scan.dut['CONF_SR']['MASKD'][31] = 1
-    # scan.dut.enable_injection(1,18,99)
-
-    # scan.dut['CONF_SR']['INJ_ROW'][223] = False # FOR THE ANALOG MONITORING TOP PIXEL
-    # scan.dut['CONF_SR']['INJ_IN_MON_L'] = 0 # ENABLE INJECTION FOR THE ANALOG MONITORING PIXELS LEFT SIDE
-    # scan.dut['CONF_SR']['INJ_IN_MON_R'] = 0 # ENABLE INJECTION FOR THE ANALOG MONITORING PIXELS RIGHT SIDE
-
-    # FRONT END TUNING
-    scan.dut.set_vl_dacunits(49, 1)
-    scan.dut.set_vh_dacunits(79, 1)
-    scan.dut.set_vreset_dacunits(40, 1)
-    scan.dut.set_icasn_dacunits(0, 1)
-    # Change analog input (at the sensor) reset rate, also reduces pile-up at the input
-    scan.dut.set_ireset_dacunits(3, 1, 1)
-    # change analog output reset rate, tot resolution
-    scan.dut.set_ithr_dacunits(8, 1)
-    scan.dut.set_idb_dacunits(15, 1)  # Hihter IDB, Higher Threshold
-    scan.dut.set_ibias_dacunits(50, 1)
-    #################################
-
-    scan.dut.write_conf()
-
-    with scan.readout():
-        scan.dut["data_rx"].set_en(True)
-        time.sleep(10)
-
-    scan.stop()
+    
+    if args.config_file==None:
+        dut.init(B=True)
+        ### set mask 
+        dut['CONF_SR']['EN_PMOS'][9] = 1
+        dut['CONF_SR']['EN_PMOS'][10] = 1
+        dut['CONF_SR']['EN_PMOS'][11] = 1
+        dut['CONF_SR']['EN_HITOR_OUT'][1] = 0
+        for d in range(28,34):
+           dut['CONF_SR']['MASKD'][d] = True
+        for i in range(99,105):    
+           dut['CONF_SR']['MASKH'][i] = True
+        dut['CONF_SR']['MASKH'][102] = False
+        dut.mask(1, 33, 72)
+        dut.mask(1, 17, 30)
+        dut.mask(1, 41, 66)
+        dut.mask(1, 97, 94)
+        dut.mask(1, 34, 151)
+        dut.mask(1, 40, 123)
+        dut.mask(1, 82, 193)
+        dut.enable_column_hitor(1,20)
+        dut.write_conf()
+        ### set globals
+        dut.set_vl_dacunits(49,1)
+        dut.set_vh_dacunits(79,1)
+        dut.set_vreset_dacunits(40,1) #1V
+        dut.set_icasn_dacunits(0,1) #4.375nA
+        dut.set_ireset_dacunits(131,1) #270pA,
+        dut.set_ithr_dacunits(15,1) #680pA
+        dut.set_idb_dacunits(20,1) #500nA
+        dut.set_ibias_dacunits(100,1) #500nA
+        dut.write_conf()
+    else:
+        dut.load_config(args.config_file)
+    
+    ### run  
+    scan = SimpleScan(dut,fname=args.data,sender_addr="tcp://127.0.0.1:6500")
+    scan.start(scan_time=args.scan_time)
     scan.analyze()

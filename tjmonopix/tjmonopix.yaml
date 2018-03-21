@@ -8,8 +8,9 @@ transfer_layer:
       type  : SiUsb
       init : 
         timeout  : 600
-        bit_file : ../firmware/ise/tjmonopix_mioAB.bit
-        avoid_download : False
+        bit_file : tjmonopix_mio.bit
+        avoid_download : True
+        board_id : 129
 
 hw_drivers:
   - name      : GPAC
@@ -59,10 +60,16 @@ hw_drivers:
     size      : 8
 
   - name      : tdc
-    type      : tdc_s3
+    type      : timestamp_div
     interface : intf
-    base_addr : 0x10300
-     
+    base_addr : 0x10900
+
+  - name      : timestamp_tlu
+    type      : timestamp_div
+    interface : intf
+    base_addr : 0x10A00
+
+
   - name      : gate_tdc
     type      : pulse_gen
     interface : intf

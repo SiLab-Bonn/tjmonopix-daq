@@ -17,7 +17,7 @@
   <files>
     <file xil_pn:name="../src/tjmonopix_mio.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="3"/>
-      <association xil_pn:name="Implementation" xil_pn:seqID="33"/>
+      <association xil_pn:name="Implementation" xil_pn:seqID="1"/>
     </file>
     <file xil_pn:name="../src/tjmonopix_mio.ucf" xil_pn:type="FILE_UCF">
       <association xil_pn:name="Implementation" xil_pn:seqID="0"/>
@@ -344,13 +344,13 @@
     <file xil_pn:name="../../../basil/firmware/modules/spi/spi.v" xil_pn:type="FILE_VERILOG"/>
     <file xil_pn:name="../../../basil/firmware/modules/spi/blk_mem_gen_8_to_1_2k.v" xil_pn:type="FILE_VERILOG"/>
     <file xil_pn:name="../../../basil/firmware/modules/gpio/gpio.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../../basil/firmware/modules/tdc_s3/tdc_s3.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../../basil/firmware/modules/tdc_s3/tdc_s3_core.v" xil_pn:type="FILE_VERILOG"/>
     <file xil_pn:name="../../../basil/firmware/modules/tlu/tlu_controller.v" xil_pn:type="FILE_VERILOG"/>
     <file xil_pn:name="../../../basil/firmware/modules/tlu/tlu_controller_core.v" xil_pn:type="FILE_VERILOG"/>
     <file xil_pn:name="../../../basil/firmware/modules/tlu/tlu_controller_fsm.v" xil_pn:type="FILE_VERILOG"/>
     <file xil_pn:name="../../../basil/firmware/modules/timestamp/timestamp.v" xil_pn:type="FILE_VERILOG"/>
     <file xil_pn:name="../../../basil/firmware/modules/timestamp/timestamp_core.v" xil_pn:type="FILE_VERILOG"/>
+    <file xil_pn:name="../../../basil/firmware/modules/timestamp_div/timestamp_div.v" xil_pn:type="FILE_VERILOG"/>
+    <file xil_pn:name="../../../basil/firmware/modules/timestamp_div/timestamp_div_core.v" xil_pn:type="FILE_VERILOG"/>
     <file xil_pn:name="../../../basil/firmware/modules/utils/fx2_to_bus.v" xil_pn:type="FILE_VERILOG"/>
     <file xil_pn:name="../../../basil/firmware/modules/pulse_gen/pulse_gen.v" xil_pn:type="FILE_VERILOG"/>
     <file xil_pn:name="../../../basil/firmware/modules/pulse_gen/pulse_gen_core.v" xil_pn:type="FILE_VERILOG"/>
