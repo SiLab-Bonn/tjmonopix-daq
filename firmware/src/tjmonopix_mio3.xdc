@@ -290,3 +290,5 @@ set_property IOSTANDARD LVCMOS33 [get_ports RJ45_RESET]
 set_property IOSTANDARD LVCMOS33 [get_ports RJ45_TRIGGER]
 
 
+
+

@@ -338,14 +338,13 @@ timestamp_div
     .CLK40(CLK40),
     .CLK160(CLK160),
     .CLK320(CLK320),
-	 .DI(LEMO_RX[0]),
+    .DI(RJ45_TRIGGER),
 	 .EXT_ENABLE(~TLU_BUSY),
 	 .EXT_TIMESTAMP(TIMESTAMP),
 
     .FIFO_READ(TS_TLU_FIFO_READ),
     .FIFO_EMPTY(TS_TLU_FIFO_EMPTY),
     .FIFO_DATA(TS_TLU_FIFO_DATA)
-    
 );
 
 tjmono_data_rx #(

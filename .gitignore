@@ -109,6 +109,8 @@ ENV/
 
 /firmware/ise/*
 !/firmware/ise/*.xise
+/firmware/vivado/*
+!/firmware/vivado/*.xpr
 
 /output_data/*
 
