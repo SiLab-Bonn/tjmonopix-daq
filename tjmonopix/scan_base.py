@@ -19,23 +19,26 @@ class ScanBase(object):
 
     def __init__(self, dut=None, filename=None, send_addr="tcp://127.0.0.1:5500"):
         # if DUT instance is not passed as argument, initialize it
-        if dut is None:
-            self.dut = TJMonoPix()
-            # Initialize chip and power up
+        if isinstance(dut, TJMonoPix):
+            self.dut = dut
+        else:
+            self.dut = TJMonoPix(conf=dut)
+            # Initialize self.dut and power up
             self.dut.init()
             self.dut['CONF']['DEF_CONF_N'] = 0
             self.dut['CONF']['AB_SELECT'] = 1
             self.dut['CONF'].write()
 
-            self.dut['data_rx'].CONF_START_FREEZE = 57  # default 3
-            self.dut['data_rx'].CONF_STOP_FREEZE = 95  # default 40
-            self.dut['data_rx'].CONF_START_READ = 60  # default 6
-            self.dut['data_rx'].CONF_STOP_READ = 62  # default 7
-            self.dut['data_rx'].CONF_STOP = 100  # default 45
+            self.dut['data_rx'].CONF_START_FREEZE = 15 #default 3
+            self.dut['data_rx'].CONF_STOP_FREEZE = 100 #default 40
+            #self.dut['data_rx'].CONF_STOP_FREEZE = 250 #default 40
+            self.dut['data_rx'].CONF_START_READ = 35 #default 6
+            self.dut['data_rx'].CONF_STOP_READ = 37 #default 7
+            self.dut['data_rx'].CONF_STOP = 105 #default 45
+            #self.dut['data_rx'].CONF_STOP = 255 #default 45
 
             self.dut.power_on()
-            
-            ##  reset chip readout
+
             self.dut['CONF']['RESET_BCID'] = 1
             self.dut['CONF']['RESET'] = 1
             self.dut['CONF'].write()
@@ -43,24 +46,23 @@ class ScanBase(object):
             self.dut['CONF']['EN_BX_CLK'] = 1
             self.dut['CONF']['EN_OUT_CLK'] = 1
             self.dut['CONF'].write()
-
+             
             self.dut['CONF']['RESET_BCID'] = 0
             self.dut['CONF']['RESET'] = 0
             self.dut['CONF'].write()
-            
-            ##  set default value
+
             self.dut.default_conf()
-            ##  set default value more..
-            self.dut.set_icasn_dacunits(0, 0)
-            self.dut.set_vreset_dacunits(35, 0)
-            self.dut.set_ireset_dacunits(5, 1, 0)
-            self.dut.set_ithr_dacunits(30, 0)
-            self.dut.set_idb_dacunits(50, 0)
+
+            #-------------------------------------------------#
+            self.dut.set_icasn_dacunits(0,0)
+            self.dut.set_vreset_dacunits(35,0)
+            self.dut.set_ireset_dacunits(5,1,0)
+            self.dut.set_ithr_dacunits(30,0)
+            self.dut.set_idb_dacunits(50,0)
 
             self.dut['CONF_SR']['EN_HV'].setall(False)
             self.dut['CONF_SR']['EN_COMP'].setall(False)
             self.dut['CONF_SR']['EN_PMOS'].setall(False)
-
             self.dut['CONF_SR']['EN_PMOS_NOSF'].setall(False)
             self.dut['CONF_SR']['EN_TEST_PATTERN'].setall(False)
 
@@ -69,30 +71,22 @@ class ScanBase(object):
             self.dut['CONF_SR']['MASKV'].setall(False)
 
             self.dut.write_conf()
-            
-            ##  enable chip
+
             self.dut['CONF']['DEF_CONF_N'] = 1
             self.dut['CONF'].write()
-            
-            ##  apply mask for christian's chip
+
             # SELECT WHICH DOUBLE COLUMNS TO ENABLE
             self.dut['CONF_SR']['EN_PMOS_NOSF'].setall(False)
             self.dut['CONF_SR']['EN_PMOS'].setall(False)
             self.dut['CONF_SR']['EN_COMP'].setall(False)
             self.dut['CONF_SR']['EN_HV'].setall(False)
-            # ENABLES OR DISABLES THE NORMAL OUTPUT PADS, ACTIVE LOW
-            self.dut['CONF_SR']['EN_OUT'].setall(False)
-            # ENABLES OR DISABLES THE COMPLEMENTARY OUTPUT PADS, ACTIVE LOW
-            self.dut['CONF_SR']['nEN_OUT'].setall(True)
-            # ENABLES OR DISABLES THE NORMAL HITOR PADS, HITOR0-3 =  1-4 flavor, ACTIVE LOW
-            self.dut['CONF_SR']['EN_HITOR_OUT'].setall(True)
-            # ENABLES OR DISABLES THE COMPLEMENTARY HITOR PADS, ACTIVE LOW
-            self.dut['CONF_SR']['nEN_HITOR_OUT'].setall(True)
+            self.dut['CONF_SR']['EN_OUT'].setall(False) #ENABLES OR DISABLES THE NORMAL OUTPUT PADS, ACTIVE LOW
+            self.dut['CONF_SR']['nEN_OUT'].setall(True) #ENABLES OR DISABLES THE COMPLEMENTARY OUTPUT PADS, ACTIVE LOW
+            self.dut['CONF_SR']['EN_HITOR_OUT'].setall(True) #ENABLES OR DISABLES THE NORMAL HITOR PADS, HITOR0-3 =  1-4 flavor, ACTIVE LOW
+            self.dut['CONF_SR']['nEN_HITOR_OUT'].setall(True) #ENABLES OR DISABLES THE COMPLEMENTARY HITOR PADS, ACTIVE LOW
 
             #self.dut['CONF_SR']['EN_PMOS'][9] = 1
-            #self.dut['CONF_SR']['EN_PMOS'].setall(True)
-            self.dut['CONF_SR']['EN_PMOS'][27:0] = True
-            print self.dut['CONF_SR']['EN_PMOS']
+            self.dut['CONF_SR']['EN_PMOS'].setall(True)
             #self.dut['CONF_SR']['EN_HITOR_OUT'][1] = 0
 
             # SELECT WHICH PHYSICAL COLUMNS, ROWS, DIAGONALS TO MASK
@@ -101,50 +95,10 @@ class ScanBase(object):
             # IF PHYSCOL-PHYSROW<0, then MASKD = 448+PHYSCOL-PHYSROW
             self.dut['CONF_SR']['MASKD'].setall(True)
             self.dut['CONF_SR']['MASKH'].setall(True)
-            #self.dut['CONF_SR']['MASKH'][112:0]=False
-            #print len(self.dut['CONF_SR']['MASKH']),self.dut['CONF_SR']['MASKH'].to01()
-            #import sys
-            #sys.exit()
             self.dut['CONF_SR']['MASKV'].setall(True)
 
             # TO USE THE MASK FUNCTION YOU MUST INPUT THE FLAVOR, COLUMN AND ROW
             # THE FLAVOR NUMERS IS: 0 FOR PMOS_NOSF, 1 FOR PMOS, 2 FOR COMP, 3 FOR HV
-            #self.dut.mask(1, 5, 179)
-            #self.dut.mask(1, 59, 95)
-            #self.dut.mask(1, 42, 136)
-            #self.dut.mask(1, 60, 137)
-            #self.dut.mask(1, 86, 126)
-
-            #self.dut.mask(1,102,139)
-            #self.dut.mask(1,66,39)
-            #self.dut.mask(1,103,154)
-            #self.dut.mask(1,102,149)
-            #self.dut.mask(1,38,144)
-            #self.dut.mask(1,45,131)
-            #self.dut.mask(1,101,131)
-            #14357self.dut.mask(1,106,119)
-            #self.dut.mask(1,0,101)
-            #self.dut.mask(1,11,117)
-            #self.dut.mask(1,81,51)
-            #self.dut.mask(1,39,93)
-            #self.dut.mask(1,80,144)
-            #self.dut.mask(1,29,103)
-            #self.dut.mask(1,66,129)
-            #self.dut.mask(1,35,157)
-            #self.dut.mask(1,13,16)
-            #self.dut.mask(1,23,45)
-            #self.dut.mask(1,48,157)
-            #self.dut.mask(1,26,60)
-            #self.dut.mask(1,102,134)
-            #self.dut.mask(1,87,184)
-            #self.dut.mask(1,108,1)
-            #self.dut.mask(1,45,149)
-            #self.dut.mask(1,24,96)
-            #self.dut.mask(1,28,98)
-            #self.dut.mask(1,42,210)
-            #self.dut.mask(1,108,196)
-            #self.dut.mask(1,71,128)
-
             self.dut.mask(1, 33, 72)
             self.dut.mask(1, 17, 30)
             self.dut.mask(1, 19, 31)
@@ -173,10 +127,34 @@ class ScanBase(object):
             self.dut.mask(1, 72, 77)
             self.dut.mask(1, 14, 54)
             self.dut.mask(1, 78, 196)
-            self.dut.mask(1, 62, 66)
-            self.dut.mask(1, 78, 209)
             self.dut.mask(1, 88, 96)
-            self.dut.mask(1, 53, 117)
+            self.dut.mask(1, 78, 209)
+
+            # self.dut.mask(3,10,30)
+            # self.dut.mask(3,9,131)
+            # self.dut.mask(3,72,70)
+            # self.dut.mask(3,36,46)
+            # self.dut.mask(3,80,44)
+            # self.dut.mask(3,80,55)
+            # self.dut.mask(3,21,119)
+            # self.dut.mask(3,104,109)
+            # self.dut.mask(3,6,119)
+            # self.dut.mask(3,87,166)
+            # self.dut.mask(3,82,178)
+            # self.dut.mask(3,35,172)
+            # self.dut.mask(3,56,118)
+            # self.dut.mask(3,42,67)
+            # self.dut.mask(3,110,48)
+            # self.dut.mask(3,16,178)
+            # self.dut.mask(3,25,94)
+            # self.dut.mask(3,46,109)
+            # self.dut.mask(3,47,59)
+            # self.dut.mask(3,48,194)
+            # self.dut.mask(3,93,191)
+            # self.dut.mask(3,106,202)
+            # self.dut.mask(3,61,181)
+            # self.dut.mask(3,83,146)
+            # self.dut.mask(3,42,7)
 
 
             #self.dut['CONF_SR']['MASKD'][31] = True
@@ -185,29 +163,26 @@ class ScanBase(object):
             # SELECT WHICH PHYSICAL COLUMS TO INJECT
             # INJ_IN_MON_L AND INJ_IN_MON_L SELECT THE LEFT AND RIGHT SPECIAL ANALOG MONITORING PIXELS
             self.dut['CONF_SR']['COL_PULSE_SEL'].setall(False)
+            #self.dut['CONF_SR']['COL_PULSE_SEL'][130]=True
 
-            # ENABLE INJECTION FOR THE ANALOG MONITORING PIXELS LEFT SIDE
-            self.dut['CONF_SR']['INJ_IN_MON_L'] = 0
-            # ENABLE INJECTION FOR THE ANALOG MONITORING PIXELS RIGHT SIDE
-            self.dut['CONF_SR']['INJ_IN_MON_R'] = 0
+            self.dut['CONF_SR']['INJ_IN_MON_L'] = 1 # ENABLE INJECTION FOR THE ANALOG MONITORING PIXELS LEFT SIDE
+            self.dut['CONF_SR']['INJ_IN_MON_R'] = 1 # ENABLE INJECTION FOR THE ANALOG MONITORING PIXELS RIGHT SIDE
 
             # SELECT WHICH PHYSICAL ROWS TO INJECT
             # THE SPEXIAL PIXELS OUTA_MON3 to OUTA_MON0 CORRESPONT TO ROWS 223 to 220 FOR INJECTION
             self.dut['CONF_SR']['INJ_ROW'].setall(False)
-            # FOR THE ANALOG MONITORING TOP PIXEL
-            #self.dut['CONF_SR']['INJ_ROW'][223:220] = True # FOR THE ANALOG MONITORING TOP PIXEL
-
+            self.dut['CONF_SR']['INJ_ROW'][223:220] = True # FOR THE ANALOG MONITORING TOP PIXEL
 
             # SELECT PHYSICAL COLUMNS AND ROWS FOR INJECTION WITH FUNCTION
-            #self.dut.enable_injection(1, 18, 99)  #### TODO disable this !!
+            self.dut.enable_injection(1,18,99)
 
             # SELECT PHYSICAL COLUMN(S) FOR HITOR OUTPUT
             # nMASKH (SO SETTING MASKH TO FALSE) ENABLES HITOR FOR THE SPECIFIC ROW
             self.dut['CONF_SR']['DIG_MON_SEL'].setall(False)
-            
+            #self.dut.enable_column_hitor(1,18)
+
             self.dut.write_conf()
-            
-            ##  set global dac value 
+
             ## SET THE INJECTION PULSE AMPLITUDE
             ## 128-bit DAC (7-bit binary equivalent)
             ## SET THE VOLTAGES IN ONE HOT ENCODING, ONLY ONE BIT ACTIVE AT A TIME.
@@ -245,20 +220,18 @@ class ScanBase(object):
             # SET IBIAS, THIS CURRENT IS THE DC CURRENT OF THE MAIN BRANCH
             self.dut.set_ibias_dacunits(50,1) #500nA OF THE FRONT END THAT PROVIDES AMPLIFICATION
             # IT CONTROLS MAINLY THE RISE TIME
-            #self.dut.set_ibias_dacunits(50,1) #500nA
+            self.dut.set_ibias_dacunits(50,1) #500nA
 
             ############ ENABLE THE DAC CURRENT MONITORING ###########
-            # chip['CONF_SR']['SWCNTL_DACMONI'] = 0
+            # self.dut['CONF_SR']['SWCNTL_DACMONI'] = 0
 
             ########## SET THE BIAS CURRENTS OF THE TWO STAGE SOURCE FOLLOWER THAT BUFFERS THE ANALOG MONITORING VOLTAGES #########
             # CONTROLS THE RESPONSE TIME AND THE LEVEL SHIFT OF THE BUFFER
-            # chip['CONF_SR']['SET_IBUFN_L'] = 0b1001
-            # chip['CONF_SR']['SET_IBUFP_L'] = 0b0101
+            # self.dut['CONF_SR']['SET_IBUFN_L'] = 0b1001
+            # self.dut['CONF_SR']['SET_IBUFP_L'] = 0b0101
 
             self.dut.write_conf()
 
-        elif isinstance(dut, TJMonoPix):
-            self.dut = dut
             
         if filename == None:
             self.working_dir = os.path.join(os.getcwd(), "output_data")
@@ -286,7 +259,6 @@ class ScanBase(object):
         self.logger.addHandler(fh)
         logging.info("Initializing {0}".format(self.__class__.__name__))
 
-
     def start(self, **kwargs):
 
         #### open file
@@ -312,13 +284,13 @@ class ScanBase(object):
         else:
             try:
                 self.socket=online_monitor.sender.init(self.socket)
-                self.logger.info('ScanBase.start:data_send.data_send_init connected=%s'%self.socket)
+                self.logger.info('ScanBase.start:data_send.data_send_init connected')
             except:
                 self.logger.warn('ScanBase.start:data_send.data_send_init failed addr=%s'%self.socket)
                 self.socket=None
 
         ### save kwargs       
-        self.logger.info('Chip Status: %s', str(self.dut.get_power_status()))
+        self.logger.info('self.dut Status: %s', str(self.dut.get_power_status()))
         self.meta_data_table.attrs.kwargs = yaml.dump(kwargs)
 
         ### execute scan       
@@ -329,7 +301,7 @@ class ScanBase(object):
 
         ### execute scan 
         status=self.dut.get_power_status()
-        self.logger.info('Chip Status: %s', str(status))
+        self.logger.info('self.dut Status: %s', str(status))
         self.meta_data_table.attrs.status=yaml.dump(status)
         self.meta_data_table.attrs.status=yaml.dump(self.dut.get_configuration())
 

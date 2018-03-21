@@ -45,12 +45,10 @@ class TJMonoPix(Dut):
     }
 
     def __init__(self, conf=None, **kwargs):
-
-        self.proj_dir = os.path.dirname(
-            os.path.dirname(os.path.abspath(__file__)))
-
         if not conf:
-            conf = os.path.join(self.proj_dir, 'tjmonopix' +
+            proj_dir = os.path.dirname(
+                os.path.dirname(os.path.abspath(__file__)))
+            conf = os.path.join(proj_dir, 'tjmonopix' +
                                 os.sep + 'tjmonopix.yaml')
 
         logger.debug("Loading configuration file from {:s}".format(conf))
@@ -74,7 +72,7 @@ class TJMonoPix(Dut):
 
         self.fw_version, self.board_version = self.get_daq_version()
         #print(self.board_version)
-        #logger.info('Found board %s running firmware version %s' % (self.hw_map[self.board_version], self.fw_version))
+        logger.info('Found board %s running firmware version %s' % (self.board_version, self.fw_version))
 
         # do this before powering up
         self['CONF_SR'].set_size(3925)
@@ -82,11 +80,11 @@ class TJMonoPix(Dut):
         #self['CONF']['AB_SELECT'] = B
         #self['CONF'].write()
 
-        #self['data_rx'].CONF_START_FREEZE = 57  # default 3
-        #self['data_rx'].CONF_STOP_FREEZE = 95  # default 40
-        #self['data_rx'].CONF_START_READ = 60  # default 6
-        #self['data_rx'].CONF_STOP_READ = 62  # default 7
-        #self['data_rx'].CONF_STOP = 100  # default 45
+        #self['data_rx'].CONF_START_FREEZE = 64  # default 3
+        #self['data_rx'].CONF_STOP_FREEZE = 100  # default 40
+        #self['data_rx'].CONF_START_READ = 66  # default 6
+        #self['data_rx'].CONF_STOP_READ = 68  # default 7
+        #self['data_rx'].CONF_STOP = 105  # default 45
 
         #self.power_on()
 
@@ -106,6 +104,7 @@ class TJMonoPix(Dut):
 
         #self.set_icasn_dacunits(0, 0)
         #self.set_vreset_dacunits(35, 0)
+        #self.set_ireset_dacunits(2, 1, 0)
         #self.set_ireset_dacunits(128 + 5, 0)
         #self.set_ithr_dacunits(30, 0)
         #self.set_idb_dacunits(50, 0)
@@ -116,7 +115,7 @@ class TJMonoPix(Dut):
         #self['CONF_SR']['EN_PMOS_NOSF'].setall(False)
         #self['CONF_SR']['EN_TEST_PATTERN'].setall(False)
 
-       # self['CONF_SR']['MASKD'].setall(False)
+        #self['CONF_SR']['MASKD'].setall(False)
         #self['CONF_SR']['MASKH'].setall(False)
         #self['CONF_SR']['MASKV'].setall(False)
 
@@ -196,7 +195,6 @@ class TJMonoPix(Dut):
 	self['CONF_SR']['INJ_IN_MON_L'] = 0
 	self['CONF_SR']['COL_PULSE_SEL'].setall(False)
 
-
     def write_conf(self):
         self['CONF_SR'].write()
         while not self['CONF_SR'].is_ready:
@@ -226,6 +224,7 @@ class TJMonoPix(Dut):
         self['VDDD'].set_enable(True)
 
     def write_conf(self):
+        print self['CONF_SR']['EN_PMOS']
         self['CONF_SR'].write()
         while not self['CONF_SR'].is_ready:
             time.sleep(0.001)
@@ -310,11 +309,9 @@ class TJMonoPix(Dut):
             status[pwr+' [V]'] = self[pwr].get_voltage(unit='V')
             status[pwr+' [mA]'] = 5 * self[pwr].get_current(unit='mA') if pwr in [
                 "VDDP", "VDDD", "VDDA", "VDDA_DAC"] else self[pwr].get_current(unit='mA')
-
         return status
 
     def set_inj_amplitude(self):
-
         self['INJ_LO'].set_voltage(0.2, unit='V')
         self['INJ_HI'].set_voltage(3.6, unit='V')
 
@@ -410,7 +407,7 @@ class TJMonoPix(Dut):
 	self['CONF_SR']['SET_IBIAS'].setall(False)
 	self['CONF_SR']['SET_IBIAS'][high:low] = True
 	if (printen == 1):
-		print 'ibias = ' +str(1400.0*((dacunits+1)/128.0)) + 'nA'
+		logger.info( 'ibias = ' +str(1400.0*((dacunits+1)/128.0)) + 'nA')
 
     def set_idb_dacunits(self, dacunits, printen):
 	assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
@@ -419,7 +416,7 @@ class TJMonoPix(Dut):
 	self['CONF_SR']['SET_IDB'].setall(False)
 	self['CONF_SR']['SET_IDB'][high:low] = True
 	if (printen == 1):
-		print 'idb = ' +str(2240.0*((dacunits+1)/128.0)) + 'nA'
+		logger.info( 'idb = ' +str(2240.0*((dacunits+1)/128.0)) + 'nA')
 
     def set_ithr_dacunits(self, dacunits, printen):
 	assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
@@ -428,7 +425,7 @@ class TJMonoPix(Dut):
 	self['CONF_SR']['SET_ITHR'].setall(False)
 	self['CONF_SR']['SET_ITHR'][high:low] = True
 	if (printen == 1):
-		print 'ithr = ' +str(17.5*((dacunits+1)/128.0)) + 'nA'
+		logger.info('ithr = ' +str(17.5*((dacunits+1)/128.0)) + 'nA')
 
     def set_icasn_dacunits(self, dacunits, printen):
 	assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
@@ -437,7 +434,7 @@ class TJMonoPix(Dut):
 	self['CONF_SR']['SET_ICASN'].setall(False)
 	self['CONF_SR']['SET_ICASN'][high:low] = True
 	if (printen == 1):
-		print 'icasn = ' +str(560.0*((dacunits+1)/128.0)) + 'nA'
+		logger.info( 'icasn = ' +str(560.0*((dacunits+1)/128.0)) + 'nA')
 
     def set_ireset_dacunits(self, dacunits, mode, printen):
 	assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
@@ -449,37 +446,37 @@ class TJMonoPix(Dut):
 	self['CONF_SR']['SET_IRESET'][high:low] = True
 	if (printen == 1):
 		if (mode == 1):
-			print 'ireset = ' +str(4.375*((dacunits+1)/128.0)) + 'nA, high leakage mode'
+			logger.info( 'ireset = ' +str(4.375*((dacunits+1)/128.0)) + 'nA, high leakage mode')
 		else:
-			print 'ireset = ' +str(43.75*((dacunits+1)/128.0)) + 'pA, low leakage mode'
+			logger.info( 'ireset = ' +str(43.75*((dacunits+1)/128.0)) + 'pA, low leakage mode')
 
     def set_vreset_dacunits(self, dacunits, printen):
     	assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
     	self['CONF_SR']['SET_VRESET_P'].setall(False)
    	self['CONF_SR']['SET_VRESET_P'][dacunits] = True
 	if (printen == 1):
-    		print 'vreset = ' +str(((1.8/127.0)*dacunits+0.555)) + 'V'
+    		logger.info( 'vreset = ' +str(((1.8/127.0)*dacunits+0.555)) + 'V')
 
     def set_vh_dacunits(self, dacunits, printen):
     	assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
     	self['CONF_SR']['SET_VH'].setall(False)
    	self['CONF_SR']['SET_VH'][dacunits] = True
 	if (printen == 1):
-    		print 'vh = ' +str(((1.8/127.0)*dacunits+0.385)) + 'V'
+    		logger.info( 'vh = ' +str(((1.8/127.0)*dacunits+0.385)) + 'V')
 
     def set_vl_dacunits(self, dacunits, printen):
     	assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
     	self['CONF_SR']['SET_VL'].setall(False)
    	self['CONF_SR']['SET_VL'][dacunits] = True
 	if (printen == 1):
-    		print 'vl = ' +str(((1.8/127.0)*dacunits+0.385)) + 'V'
+    		logger.info( 'vl = ' +str(((1.8/127.0)*dacunits+0.385)) + 'V')
 
     def set_vcasn_dac_dacunits(self, dacunits, printen):
     	assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
     	self['CONF_SR']['SET_VCASN'].setall(False)
    	self['CONF_SR']['SET_VCASN'][dacunits] = True
 	if (printen == 1):
-    		print 'vcasn = ' +str(((1.8/127.0)*dacunits)) + 'V'
+    		logger.info( 'vcasn = ' +str(((1.8/127.0)*dacunits)) + 'V')
 
 ############################## SET data readout ##############################
     def set_tlu(self,tlu_delay=8):
@@ -523,7 +520,8 @@ class TJMonoPix(Dut):
             logging.warn("stop_timestamp: lost_cnt=%d"%lost_cnt)
         return lost_cnt
 
-    def set_monoread(self, start_freeze=57, start_read=60, stop_read=62, stop_freeze=95, stop=100, en=True):
+    def set_monoread(self, start_freeze=64, start_read=66, stop_read=68, stop_freeze=100, stop=105, en=True):
+    #def set_monoread(self, start_freeze=57, start_read=60, stop_read=62, stop_freeze=95, stop=100, en=True):
         self['data_rx'].CONF_START_FREEZE = start_freeze  # default 3
         self['data_rx'].CONF_STOP_FREEZE = stop_freeze  # default 40
         self['data_rx'].CONF_START_READ = start_read  # default 6

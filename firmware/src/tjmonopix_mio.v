@@ -107,7 +107,7 @@ module tjmonopix_mio (
     output wire RST_N,
     
     output wire INJECTION,
-	 output wire INJECTION_MON,
+	//output wire INJECTION_MON,
     
     output wire CLK_BX,
     output wire CLK_OUT,
