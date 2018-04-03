@@ -69,6 +69,7 @@ class TJMonoPix(Dut):
 
     def init(self, B=True):
         super(TJMonoPix, self).init()
+
         self.fw_version, self.board_version = self.get_daq_version()
         logger.info('Found board %s running firmware version %s' % (self.board_version, self.fw_version))
 

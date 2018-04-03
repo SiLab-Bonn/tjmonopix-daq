@@ -9,6 +9,7 @@ from tjmonopix.scan_base import ScanBase
 from tjmonopix.tjmonopix import TJMonoPix
 from tjmonopix.analysis.interpreter import interpret_h5
 
+
 class SimpleScan(ScanBase):
     scan_id = "simple"
 
