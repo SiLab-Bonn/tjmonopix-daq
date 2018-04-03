@@ -35,6 +35,7 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
             #rx_cnt= (rx_cnt & 0xF)  | ((np.uint32(r) << np.int64(4)) & 0xFFFFFFF0)
             pass
         elif (r & 0xF0000000 == 0x00000000):
+
             col = 2 * (r & 0x3f) + (((r & 0x7FC0) >> 6) // 256)
             row = ((r & 0x7FC0) >> 6) % 256
             te = (r & 0x1F8000) >> 15
@@ -108,6 +109,7 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
                 (np.uint64(r & TS_MASK_DAT) << np.uint64(28))
             # if debug & 0x4 ==0x4:
             #print r_i,hex(r),"timestamp2",hex(ts_timestamp),
+
             if ts_flg == 0x1:
                 ts_flg = 0x2
             else:
@@ -118,6 +120,7 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
                 (np.uint64(r & TS_MASK_DAT) << np.uint64(52))
             # if debug & 0x4 ==0x4:
             #print r_i,hex(r),"timestamp3",hex(ts_timestamp),
+
             if ts_flg == 0x0:
                 ts_flg = 0x1
             else:
@@ -138,6 +141,7 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
             if ts2_flg == 2:
                 ts2_flg = 0
                 if debug & 0x1 == 0x1:
+ 
                     buf[buf_i]["col"] = 0xFD
                     buf[buf_i]["row"] = np.uint16(ts2_cnt & 0xFFFF)
                     buf[buf_i]["le"] = np.uint8(ts2_cnt >> 16)
@@ -219,7 +223,7 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
         ########################
         elif (r & 0x80000000 == 0x80000000):
             tlu = r & 0xFFFF
-            tlu_timestamp = np.uint64(r >> 16) & np.uint64(0x7FFF)
+            tlu_timestamp = np.uint64(r >> 12) & np.uint64(0x7FFF0)
             if debug & 0x2 == 0x2:
                 buf[buf_i]["col"] = 0xFF
                 buf[buf_i]["row"] = 0xFFFF

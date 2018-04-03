@@ -12,9 +12,9 @@ author = 'Tomasz Hemperek'
 author_email = ''
 
 # Requirements
-install_requires = ['basil-daq==2.4.10', 'bitarray>=0.8.1', 'matplotlib',
-                    'numpy', 'online_monitor==0.3.1',
-                    'pixel_clusterizer==3.1.3', 'tables', 'pyyaml', 'pyzmq',
+install_requires = ['basil-daq>=2.4.10',
+                    'bitarray>=0.8.1', 'matplotlib',
+                    'numpy', 'pyyaml', 'tables',
                     'scipy', 'numba', 'tqdm']
 setup(
     name='tjmonopix-daq',

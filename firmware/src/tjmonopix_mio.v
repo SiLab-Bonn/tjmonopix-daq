@@ -24,15 +24,14 @@
 
 `include "gpio/gpio.v"
 
-`include "tdc_s3/tdc_s3.v"
-`include "tdc_s3/tdc_s3_core.v"
-
 `include "tlu/tlu_controller.v"
 `include "tlu/tlu_controller_core.v"
 `include "tlu/tlu_controller_fsm.v"
 
 `include "timestamp/timestamp.v"
 `include "timestamp/timestamp_core.v"
+`include "timestamp_div/timestamp_div.v"
+`include "timestamp_div/timestamp_div_core.v"
 
 //`include "utils/cdc_reset_sync.v"
 `include "utils/fx2_to_bus.v"
@@ -108,7 +107,7 @@ module tjmonopix_mio (
     output wire RST_N,
     
     output wire INJECTION,
-	 output wire INJECTION_MON,
+	//output wire INJECTION_MON,
     
     output wire CLK_BX,
     output wire CLK_OUT,
@@ -179,20 +178,23 @@ localparam DATA_RX_HIGHADDR = 16'h0600-1;
 localparam SPI_BASEADDR = 16'h1000;
 localparam SPI_HIGHADDR = 16'h2000-1;
 
-localparam FIFO_BASEADDR = 16'h8000;
-localparam FIFO_HIGHADDR = 16'h9000-1;
-
 localparam PULSE_GATE_TDC_BASEADDR = 16'h0400;
 localparam PULSE_GATE_TDC_HIGHADDR = 16'h0500-1;
-
-localparam TDC_BASEADDR = 16'h0300;
-localparam TDC_HIGHADDR = 16'h0400-1;
 
 localparam TLU_BASEADDR = 16'h0600;
 localparam TLU_HIGHADDR = 16'h0700-1;
 
 localparam TS_BASEADDR = 16'h0700;
 localparam TS_HIGHADDR = 16'h0800-1;
+
+localparam FIFO_BASEADDR = 16'h8000;
+localparam FIFO_HIGHADDR = 16'h9000-1;
+
+localparam TS_TDC_BASEADDR = 16'h0900;
+localparam TS_TDC_HIGHADDR = 16'h0A00-1;
+
+localparam TS_TLU_BASEADDR = 16'h0A00;
+localparam TS_TLU_HIGHADDR = 16'h0B00-1;
 
 // -------  BUS SYGNALING  ------- //
 wire [15:0] BUS_ADD;
@@ -317,28 +319,29 @@ wire ARB_READY_OUT, ARB_WRITE_OUT;
 wire [31:0] ARB_DATA_OUT;
 
 
-wire FE_FIFO_READ, TS_FIFO_READ, TDC_FIFO_READ, TLU_FIFO_READ;
-wire FE_FIFO_EMPTY, TS_FIFO_EMPTY, TDC_FIFO_EMPTY, TLU_FIFO_EMPTY;
+wire FE_FIFO_READ, TS_FIFO_READ, TLU_FIFO_READ, TS_TDC_FIFO_READ,TS_TLU_FIFO_READ;
+wire FE_FIFO_EMPTY, TS_FIFO_EMPTY, TLU_FIFO_EMPTY,TS_TDC_FIFO_EMPTY,TS_TLU_FIFO_EMPTY;
 wire [31:0] FE_FIFO_DATA;
-wire [31:0] TDC_FIFO_DATA;
 wire [31:0] TS_FIFO_DATA;
 wire [31:0] TLU_FIFO_DATA;
+wire [31:0] TS_TDC_FIFO_DATA;
+wire [31:0] TS_TLU_FIFO_DATA;
 wire TLU_FIFO_PEEMPT_REQ;
 
 wire FIFO_FULL;
 
 rrp_arbiter 
 #( 
-    .WIDTH(4)
+    .WIDTH(5)
 ) rrp_arbiter (
 
     .RST(BUS_RST),
     .CLK(BUS_CLK),
 
-    .WRITE_REQ({~TS_FIFO_EMPTY, ~TDC_FIFO_EMPTY, ~FE_FIFO_EMPTY, ~TLU_FIFO_EMPTY}),
-    .HOLD_REQ({3'b0, TLU_FIFO_PEEMPT_REQ}),
-    .DATA_IN({TS_FIFO_DATA, TDC_FIFO_DATA, FE_FIFO_DATA, TLU_FIFO_DATA}),
-    .READ_GRANT({TS_FIFO_READ, TDC_FIFO_READ, FE_FIFO_READ, TLU_FIFO_READ}),
+    .WRITE_REQ({~TS_TDC_FIFO_EMPTY,~TS_TLU_FIFO_EMPTY, ~TS_FIFO_EMPTY, ~FE_FIFO_EMPTY, ~TLU_FIFO_EMPTY}),
+    .HOLD_REQ({4'b0, TLU_FIFO_PEEMPT_REQ}),
+    .DATA_IN({TS_TDC_FIFO_DATA,TS_TLU_FIFO_DATA,TS_FIFO_DATA,FE_FIFO_DATA, TLU_FIFO_DATA}),
+    .READ_GRANT({TS_TDC_FIFO_READ,TS_TLU_FIFO_READ,TS_FIFO_READ,FE_FIFO_READ, TLU_FIFO_READ}),
 
     .READY_OUT(ARB_READY_OUT),
     .WRITE_OUT(ARB_WRITE_OUT),
@@ -352,41 +355,7 @@ wire [64:0] TIMESTAMP;
 wire TLU_BUSY,TLU_CLOCK;
 wire TRIGGER_ACKNOWLEDGE_FLAG,TRIGGER_ACCEPTED_FLAG;
 
-assign HITOR_AB = (SELECTAB)? HITOR_B : HITOR_A;
-
-tdc_s3 #(
-    .BASEADDR(TDC_BASEADDR),
-    .HIGHADDR(TDC_HIGHADDR),
-    .CLKDV(4),
-    .DATA_IDENTIFIER(4'b0100), 
-    .FAST_TDC(0),
-    .FAST_TRIGGER(0)
-) tdc (
-    .CLK320(CLK320),
-    .CLK160(CLK160),
-    .DV_CLK(CLK40),
-    .TDC_IN(HITOR_AB),
-    .TDC_OUT(TDC_TDC_OUT),
-    //.TRIG_IN(LEMO_RX[0]),
-    .TRIG_IN(RJ45_TRIGGER),
-    .TRIG_OUT(TDC_TRIG_OUT),
-
-    .FIFO_READ(TDC_FIFO_READ),
-    .FIFO_EMPTY(TDC_FIFO_EMPTY),
-    .FIFO_DATA(TDC_FIFO_DATA),
-
-    .BUS_CLK(BUS_CLK),
-    .BUS_RST(BUS_RST),
-    .BUS_ADD(BUS_ADD),
-    .BUS_DATA(BUS_DATA),
-    .BUS_RD(BUS_RD),
-    .BUS_WR(BUS_WR),
-
-    .ARM_TDC(~TLU_BUSY),
-    .EXT_EN(GATE_TDC),
-    
-    .TIMESTAMP(TIMESTAMP[15:0])
-);
+//assign HITOR_AB = (SELECTAB)? HITOR_B : HITOR_A;
 
 //// TLU
 
@@ -394,7 +363,7 @@ tlu_controller #(
     .BASEADDR(TLU_BASEADDR),
     .HIGHADDR(TLU_HIGHADDR),
     .DIVISOR(8),
-	.TIMESTAMP_N_OF_BIT(64)
+    .TIMESTAMP_N_OF_BIT(64)
 ) i_tlu_controller (
     .BUS_CLK(BUS_CLK),
     .BUS_RST(BUS_RST),
@@ -442,7 +411,7 @@ timestamp
     
     .CLK(CLK40),
 	 .DI(LEMO_RX[2]),
-	 .EXT_ENABLE(1'b0),
+	 .EXT_ENABLE(GATE_TDC),
 	 .EXT_TIMESTAMP(TIMESTAMP),
 
     .FIFO_READ(TS_FIFO_READ),
@@ -451,8 +420,59 @@ timestamp
     
 );
 
-
+timestamp_div
+#(
+    .BASEADDR(TS_TDC_BASEADDR),
+    .HIGHADDR(TS_TDC_HIGHADDR),
+    .IDENTIFIER(4'b0110)
+)i_timestamp_div_tdc(
+    .BUS_CLK(BUS_CLK),
+    .BUS_ADD(BUS_ADD),
+    .BUS_DATA(BUS_DATA),
+    .BUS_RST(BUS_RST),
+    .BUS_WR(BUS_WR),
+    .BUS_RD(BUS_RD),
     
+    .CLK40(CLK40),
+    .CLK160(CLK160),
+    .CLK320(CLK320),
+	 .DI(HITOR_B),
+	 //.DI(LEMO_RX[1]),
+	 .EXT_ENABLE(GATE_TDC),
+	 .EXT_TIMESTAMP(TIMESTAMP),
+
+    .FIFO_READ(TS_TDC_FIFO_READ),
+    .FIFO_EMPTY(TS_TDC_FIFO_EMPTY),
+    .FIFO_DATA(TS_TDC_FIFO_DATA)
+    
+);
+
+timestamp_div
+#(
+    .BASEADDR(TS_TLU_BASEADDR),
+    .HIGHADDR(TS_TLU_HIGHADDR),
+    .IDENTIFIER(4'b0111)
+)i_timestamp_div_tlu(
+    .BUS_CLK(BUS_CLK),
+    .BUS_ADD(BUS_ADD),
+    .BUS_DATA(BUS_DATA),
+    .BUS_RST(BUS_RST),
+    .BUS_WR(BUS_WR),
+    .BUS_RD(BUS_RD),
+    
+    .CLK40(CLK40),
+    .CLK160(CLK160),
+    .CLK320(CLK320),
+	 .DI(LEMO_RX[0]),
+	 .EXT_ENABLE(~TLU_BUSY),
+	 .EXT_TIMESTAMP(TIMESTAMP),
+
+    .FIFO_READ(TS_TLU_FIFO_READ),
+    .FIFO_EMPTY(TS_TLU_FIFO_EMPTY),
+    .FIFO_DATA(TS_TLU_FIFO_DATA)
+    
+);
+
 tjmono_data_rx #(
    .BASEADDR(DATA_RX_BASEADDR),
    .HIGHADDR(DATA_RX_HIGHADDR),
@@ -549,7 +569,7 @@ assign LED[4] = 0;
 
 assign LEMO_TX[0] = TLU_CLOCK; // trigger clock; also connected to RJ45 output
 assign LEMO_TX[1] = TLU_BUSY;  // TLU_BUSY signal; also connected to RJ45 output. Asserted when TLU FSM has 
-assign LEMO_TX[2] = EN_HITOR_TX ? HITOR_AB :INJECTION;
+assign LEMO_TX[2] = INJECTION;
 
 assign INJECTION_MON = INJECTION;
 endmodule

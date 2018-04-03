@@ -364,7 +364,8 @@ wire [29:0] fifo_write_data_byte [3:0];
 assign fifo_write_data_byte[3]={2'b00, data_buf[27:0]};
 assign fifo_write_data_byte[2]={2'b01, data_buf[55:28]};
 assign fifo_write_data_byte[1]={2'b10, data_buf[83:56]};
-assign fifo_write_data_byte[0]={2'b11, data_buf[111:84]}; 
+//assign fifo_write_data_byte[0]={2'b11, data_buf[111:84]}; 
+assign fifo_write_data_byte[0]={2'b11, 28'h0000000}; 
 
 wire [29:0] fifo_data_in;
 assign fifo_data_in = fifo_write_data_byte[byte2_cnt];
