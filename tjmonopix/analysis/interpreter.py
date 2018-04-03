@@ -2,18 +2,18 @@ import sys
 import time
 import os
 import numpy as np
-import matplotlib.pyplot as plt
 from numba import njit
 import tables
 
 hit_dtype = np.dtype([("col", "<u1"), ("row", "<u2"), ("le", "<u1"), ("te", "<u1"), ("cnt", "<u4"),
                       ("timestamp", "<u8")])
-
+COL=112
+ROW=224
 
 @njit
 def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt,
                ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt, debug):
-    MASK1_LOWER = np.uint64(0x00000000FFFFFFFF)
+    MASK1_LOWER = np.uint64(0x00000000FFFFFFF0)
     MASK1_UPPER = np.uint64(0x00FFFFFF00000000)
     MASK2 = np.uint64(0x0000000000FFF000)
     NOT_MASK2 = np.uint64(0x000FFFFFFF000FFF)
@@ -35,7 +35,6 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
             #rx_cnt= (rx_cnt & 0xF)  | ((np.uint32(r) << np.int64(4)) & 0xFFFFFFF0)
             pass
         elif (r & 0xF0000000 == 0x00000000):
-
             col = 2 * (r & 0x3f) + (((r & 0x7FC0) >> 6) // 256)
             row = ((r & 0x7FC0) >> 6) % 256
             te = (r & 0x1F8000) >> 15
@@ -109,7 +108,6 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
                 (np.uint64(r & TS_MASK_DAT) << np.uint64(28))
             # if debug & 0x4 ==0x4:
             #print r_i,hex(r),"timestamp2",hex(ts_timestamp),
-
             if ts_flg == 0x1:
                 ts_flg = 0x2
             else:
@@ -120,7 +118,6 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
                 (np.uint64(r & TS_MASK_DAT) << np.uint64(52))
             # if debug & 0x4 ==0x4:
             #print r_i,hex(r),"timestamp3",hex(ts_timestamp),
-
             if ts_flg == 0x0:
                 ts_flg = 0x1
             else:
@@ -141,7 +138,6 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
             if ts2_flg == 2:
                 ts2_flg = 0
                 if debug & 0x1 == 0x1:
- 
                     buf[buf_i]["col"] = 0xFD
                     buf[buf_i]["row"] = np.uint16(ts2_cnt & 0xFFFF)
                     buf[buf_i]["le"] = np.uint8(ts2_cnt >> 16)
@@ -318,7 +314,7 @@ def interpret_h5(fin, fout, data_format=0x43, n=100000000):
 def list2img(dat, delete_noise=True):
     if delete_noise:
         dat = without_noise(dat)
-    return np.histogram2d(dat["col"], dat["row"], bins=[np.arange(0, 37, 1), np.arange(0, 130, 1)])[0]
+    return np.histogram2d(dat["col"], dat["row"], bins=[np.arange(0, COL+1, 1), np.arange(0, ROW+1, 1)])[0]
 
 
 def list2cnt(dat, delete_noise=True):
@@ -335,7 +331,7 @@ def list2cnt(dat, delete_noise=True):
 
 
 def without_noise(dat):
-    return dat[np.bitwise_or(dat["cnt"] == 0, dat["col"] >= 36)]
+    return dat[np.bitwise_or(dat["cnt"] == 0, dat["col"] > COL)]
 
 
 class InterRaw():
