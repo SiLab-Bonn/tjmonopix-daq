@@ -12,7 +12,7 @@ ROW=224
 
 @njit
 def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt,
-               ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt, debug):
+               ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt, idx, debug):
     MASK1_LOWER = np.uint64(0x00000000FFFFFFF0)
     MASK1_UPPER = np.uint64(0x00FFFFFF00000000)
     MASK2 = np.uint64(0x0000000000FFF000)
@@ -47,7 +47,7 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
             if rx_flg == 0x0:
                 rx_flg = 0x1
             else:
-                return 1, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+                return 1, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt, idx
 
         elif (r & 0xF0000000 == 0x10000000):
             timestamp = (timestamp & MASK1_UPPER) | (
@@ -58,7 +58,7 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
             if rx_flg == 0x1:
                 rx_flg = 0x2
             else:
-                return 2, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+                return 2, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt, idx
 
         elif (r & 0xF0000000 == 0x20000000):
             timestamp = (timestamp & MASK1_LOWER) | (
@@ -71,12 +71,15 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
                 buf[buf_i]["col"] = col
                 buf[buf_i]["le"] = le
                 buf[buf_i]["te"] = te
-                buf[buf_i]["timestamp"] = timestamp
+                if debug & 0xF0 == 0xF0:
+                    buf[buf_i]["timestamp"] = idx + r_i
+                else:
+                    buf[buf_i]["timestamp"] = timestamp
                 buf[buf_i]["cnt"] = noise
                 buf_i = buf_i+1
                 rx_flg = 0
             else:
-                return 3, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+                return 3, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt, idx
 
         ########################
         # TIMESTMP (MIMOSA_MKD)
@@ -102,7 +105,7 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
                     buf[buf_i]["cnt"] = ts_cnt
                     buf_i = buf_i+1
             else:
-                return 6, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+                return 6, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt, idx
         elif r & 0xFF000000 == 0x52000000:  # timestamp
             ts_timestamp = (ts_timestamp & TS_MASK2) | \
                 (np.uint64(r & TS_MASK_DAT) << np.uint64(28))
@@ -111,7 +114,7 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
             if ts_flg == 0x1:
                 ts_flg = 0x2
             else:
-                return 5, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+                return 5, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt, idx
         elif r & 0xFF000000 == 0x53000000:  # timestamp
             ts_pre = ts_timestamp
             ts_timestamp = (ts_timestamp & TS_MASK3) | \
@@ -121,7 +124,7 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
             if ts_flg == 0x0:
                 ts_flg = 0x1
             else:
-                return 4, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+                return 4, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt, idx
 
         ########################
         # TIMESTMP_DIV2 (TDC)
@@ -146,7 +149,7 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
                     buf[buf_i]["cnt"] = ts2_tot
                     buf_i = buf_i+1
             else:
-                return 10, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+                return 10, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt, idx
         elif r & 0xFF000000 == 0x62000000:  # timestamp
             ts2_timestamp = (ts2_timestamp & np.uint64(0xFFFF000000FFFFFF)) | \
                 (np.uint64(r & TS_MASK_DAT) << np.uint64(24))
@@ -156,7 +159,7 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
             if ts2_flg == 0x1:
                 ts2_flg = 0x2
             else:
-                return 9, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+                return 9, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt, idx
         elif r & 0xFF000000 == 0x63000000:  # timestamp
             ts2_timestamp = (ts2_timestamp & np.uint64(0x0000FFFFFFFFFFFF)) | \
                 (np.uint64(r & TS_DIV_MASK_DAT) << np.uint64(48))
@@ -167,7 +170,7 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
             if ts2_flg == 0x0:
                 ts2_flg = 0x1
             else:
-                return 8, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+                return 8, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt, idx
 
         ########################
         # TIMESTMP_DIV3 (TLU)
@@ -192,7 +195,7 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
                     buf[buf_i]["cnt"] = ts3_cnt
                     buf_i = buf_i+1
             else:
-                return 10, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+                return 10, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt, idx
 
         elif r & 0xFF000000 == 0x72000000:  # timestamp
             ts3_timestamp = (ts3_timestamp & np.uint64(0xFFFF000000FFFFFF)) | \
@@ -202,7 +205,7 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
             if ts3_flg == 0x1:
                 ts3_flg = 0x2
             else:
-                return 9, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+                return 9, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt, idx
         elif r & 0xFF000000 == 0x73000000:  # timestamp
             ts3_timestamp = (ts3_timestamp & np.uint64(0x0000FFFFFFFFFFFF)) + \
                 (np.uint64(r & TS_MASK_DAT) << np.uint64(48))
@@ -212,7 +215,7 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
             if ts3_flg == 0x0:
                 ts3_flg = 0x1
             else:
-                return 8, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+                return 8, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt, idx
 
         ########################
         # TLU
@@ -233,14 +236,14 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
             # if debug & 0x4 == 0x4:
             #    print r_i,hex(r),"trash"
 
-            return 7, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+            return 7, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt, idx
 
-    return 0, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+    return 0, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt, idx
 
-def interpret_h5(fin, fout, data_format=0x43, n=100000000):
+def interpret_h5(fin, fout, data_format=0x43, n=1000000000):
     buf = np.empty(n, dtype=hit_dtype)
     col = 0xFF
-    row = 0xFF
+    row = 0xFFFF
     le = 0xFF
     te = 0xFF
     noise = 0
@@ -274,10 +277,10 @@ def interpret_h5(fin, fout, data_format=0x43, n=100000000):
                 tmpend = min(end, start+n)
                 raw = f.root.raw_data[start:tmpend]
                 (err, hit_dat, r_i, col, row, le, te, noise, timestamp, rx_flg,
-                 ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+                 ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt, idx
                 ) = _interpret(
                     raw, buf, col, row, le, te, noise, timestamp, rx_flg,
-                    ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt, data_format)
+                    ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt, np.uint64(start), data_format)
                 hit_total = hit_total+len(hit_dat)
                 if err == 0:
                     print "%d %d %.3f%% %.3fs %dhits" % (
@@ -338,7 +341,7 @@ class InterRaw():
     def __init__(self, chunk=100000000, debug=0):
         self.reset()
         self.buf = np.empty(chunk, dtype=hit_dtype)
-        self.n = chunk
+        self.chunk_size = chunk
         self.debug = 0
 
     def reset(self):
@@ -363,23 +366,25 @@ class InterRaw():
         self.ts3_cnt = 0x0
         self.ts3_flg = 0
 
+        self.idx = np.uint64(0x0)
+
     def run(self, raw, data_format=0x43):
         start = 0
         end = len(raw)
         ret = np.empty(0, dtype=hit_dtype)
         while start < end:  # TODO make chunk work
-            tmpend = min(end, start+self.n)
+            tmpend = min(end, start+self.chunk_size)
             (err, hit_dat, r_i,
              self.col, self.row, self.le, self.te, self.noise, self.timestamp, self.rx_flg,
              self.ts_timestamp, self.ts_pre, self.ts_flg, self.ts_cnt,
              self.ts2_timestamp, self.ts2_tot, self.ts2_flg, self.ts2_cnt,
-             self.ts3_timestamp, self.ts3_flg, self.ts3_cnt
+             self.ts3_timestamp, self.ts3_flg, self.ts3_cnt,self.idx,
              ) = _interpret(
                 raw[start:tmpend], self.buf,
                 self.col, self.row, self.le, self.te, self.noise, self.timestamp, self.rx_flg,
                 self.ts_timestamp, self.ts_pre, self.ts_flg, self.ts_cnt,
                 self.ts2_timestamp, self.ts2_tot, self.ts2_flg, self.ts2_cnt,
-                self.ts3_timestamp, self.ts3_flg, self.ts3_cnt,
+                self.ts3_timestamp, self.ts3_flg, self.ts3_cnt,self.idx,
                 data_format)
             if err != 0:
                 self.reset()

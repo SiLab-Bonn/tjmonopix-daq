@@ -99,20 +99,20 @@ if __name__ == "__main__":
     # SET ICASN, THIS CURRENT CONTROLS THE OUTPUT BASELINE, BE CAREFUL NOT TO SET IT TO HIGH
     # ALWAYS MONITOR THE POWER AFTER SETTING ICASN. IF VDDD IS SEVERAL mA, REDUCE IT UNTIL IT RETURNS TO 0
     # ICASN MAINLY CONTROLS THE THRESHOLD
-    #scan.dut.set_icasn_dacunits(0,1) #4.375nA # approx 1.084V at -3V backbias, 600mV at 0V backbias
-    scan.dut.set_icasn_dacunits(1,1) #4.375nA # approx 1.084V at -3V backbias, 600mV at 0V backbias
+    scan.dut.set_icasn_dacunits(0,1) #4.375nA # approx 1.084V at -3V backbias, 600mV at 0V backbias
+    #scan.dut.set_icasn_dacunits(1,1) #4.375nA # approx 1.084V at -3V backbias, 600mV at 0V backbias
 
     # SET IRESET, THIS CURRENT CONTROLS THE RESET RATE OF THE FRONT END INPUT (ALSO THE THRESHOLD)
     scan.dut.set_ireset_dacunits(2,1,1) #270pA, HIGH LEAKAGE MODE, NORMAL SCALING, 0 = LOW LEAKAGE MODE, SCALING*0.01
 
     # SET ITHR, THIS CURRENT CONTROLS THE RESET RATE OF THE OUTPUT (AND THE THRESHOLD)
     #scan.dut.set_ithr_dacunits(29,1)   
-    #scan.dut.set_ithr_dacunits(30,1) #680pA # Use this one!   SETTING 1
-    scan.dut.set_ithr_dacunits(15,1) #680pA 27.03.14:30-       SETTING 2, 3
+    scan.dut.set_ithr_dacunits(25,1) #680pA # Use this one!   SETTING 1
+    #scan.dut.set_ithr_dacunits(15,1) #680pA 27.03.14:30-       SETTING 2, 3
 
     # SET ITHR, THIS CURRENT CONTROLS THE BIASING OF THE DISCRIMINATOR (AND THE THRESHOLD)
-    #scan.dut.set_idb_dacunits(15,1) #500nA                     SETTING 1
-    scan.dut.set_idb_dacunits(20,1) #500nA                      SETTING 2, 3
+    scan.dut.set_idb_dacunits(15,1) #500nA                     SETTING 1
+    #scan.dut.set_idb_dacunits(20,1) #500nA                      SETTING 2, 3
 
     # SET IBIAS, THIS CURRENT IS THE DC CURRENT OF THE MAIN BRANCH
     scan.dut.set_ibias_dacunits(50,1) #500nA OF THE FRONT END THAT PROVIDES AMPLIFICATION
