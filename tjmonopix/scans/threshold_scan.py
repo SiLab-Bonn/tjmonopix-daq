@@ -74,7 +74,6 @@ class ThresholdScan(ScanBase):
         self.dut.write_conf()
 
         scan_range = np.arange(inj_low_limit, inj_high_limit, 1)
-        print scan_range
 
         self.dut['inj'].set_delay(delay)
         self.dut['inj'].set_width(width)
@@ -104,7 +103,6 @@ class ThresholdScan(ScanBase):
             for _ in range(20):
                 self.dut["fifo"].get_data()
 
-            print area
             # TODO Set injected columns and rows here
             self.dut['CONF_SR']['COL_PULSE_SEL'].setall(False)
             self.dut['CONF_SR']['INJ_ROW'].setall(False)
