@@ -412,7 +412,7 @@ def raw2list(raw, delete_noise=True):
 
 def raw2img(raw, delete_noise=True):
     inter = InterRaw()
-    return list2img(inter.run(raw), noise=noise)
+    return list2img(inter.run(raw), delete_noise=delete_noise)
 
 
 def raw2cnt(raw, delete_noise=True):
