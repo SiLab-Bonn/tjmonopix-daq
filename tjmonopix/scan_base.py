@@ -90,8 +90,15 @@ class ScanBase(object):
                 self.socket = online_monitor.sender.init(self.socket)
                 self.logger.info('ScanBase.start:data_send.data_send_init connected')
             except:
-                self.logger.warn('ScanBase.start:data_send.data_send_init failed addr={:s}'.format(self.socket))
-                self.socket = None
+                self.logger.warn('ScanBase.start:data_send.data_send_init failed addr=%s'%self.socket)
+                self.socket=None
+
+        ### save kwargs       
+        self.logger.info('self.dut Status: %s', str(self.dut.get_power_status()))
+        self.meta_data_table.attrs.kwargs = yaml.dump(kwargs)
+        self.meta_data_table.attrs.status_before=yaml.dump(self.dut.get_configuration())
+
+        ### execute scan       
 
         # Execute scan       
         self.fifo_readout = FifoReadout(self.dut)
@@ -144,7 +151,7 @@ class ScanBase(object):
 
         total_words = self.raw_data_earray.nrows
         len_raw_data = data_tuple[0].shape[0]
-
+    
         self.raw_data_earray.append(data_tuple[0])
         self.raw_data_earray.flush()
 

@@ -1,481 +1,427 @@
 import numpy as np
-import numba
-from tqdm import tqdm
+from numba import njit
+import tables
 
-class_spec = [
-    ('chunk_size', numba.uint32),
-    ('tj_data_flag', numba.uint8),
-    ('hitor_timestamp_flag', numba.uint8),
-    ('ext_timestamp_flag', numba.uint8),
-    ('tlu_timestamp_flag', numba.uint8),
-    ('tj_timestamp', numba.int64),
-    ('hitor_timestamp', numba.int64),
-    ('hitor_charge', numba.int16),
-    ('ext_timestamp', numba.int64),
-    ('tlu_timestamp', numba.int64),
-    ('error_cnt', numba.int32),
-    ('col', numba.uint8),
-    ('row', numba.uint16),
-    ('le', numba.uint8),
-    ('te', numba.uint8),
-    ('noise', numba.uint8),
-    ('meta_idx', numba.uint16),
-    ('raw_idx', numba.uint32)
-]
+hit_dtype = np.dtype([("col", "<u1"), ("row", "<u2"), ("le", "<u1"), ("te", "<u1"), ("cnt", "<u4"),
+                      ("timestamp", "<u8")])
 
 
-@numba.njit
-def is_tjmono_data0(word):
-    return word & 0xF0000000 == 0x00000000
+@njit
+def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt,
+               ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt, debug):
+    MASK1_LOWER = np.uint64(0x00000000FFFFFFF0)
+    MASK1_UPPER = np.uint64(0x00FFFFFF00000000)
+    MASK2 = np.uint64(0x0000000000FFF000)
+    NOT_MASK2 = np.uint64(0x000FFFFFFF000FFF)
+    MASK3 = np.uint64(0x000FFFFFFF000000)
+    NOT_MASK3 = np.uint64(0x0000000000FFFFFF)
+    TS_MASK_DAT     = np.uint64(0x0000000000FFFFFF)
+    TS_MASK1        = np.uint64(0xFFFFFFFFF0000000)
+    TS_MASK2        = np.uint64(0xFFF000000FFFFFF0)
+    TS_MASK3        = np.uint64(0x000FFFFFFFFFFFF0)
+    TS_MASK_TOT     = np.uint64(0x0000000000FFFF00)
+    TS_DIV_MASK_DAT = np.uint64(0x00000000000000FF)
+
+    buf_i = 0
+    for r_i, r in enumerate(raw):
+        ########################
+        # TJMONOPIX_RX
+        ########################
+        if (r & 0xF0000000 == 0x30000000):
+            #rx_cnt= (rx_cnt & 0xF)  | ((np.uint32(r) << np.int64(4)) & 0xFFFFFFF0)
+            pass
+        elif (r & 0xF0000000 == 0x00000000):
+            col = 2 * (r & 0x3f) + (((r & 0x7FC0) >> 6) // 256)
+            row = ((r & 0x7FC0) >> 6) % 256
+            te = (r & 0x1F8000) >> 15
+            le = (r & 0x7E00000) >> 21
+            noise = (r & 0x8000000) >> 27
+
+            # if debug & 0x4 ==0x4:
+            #print r_i,hex(r),rx_flg,"ts=",hex(timestamp),col,row,noise
+
+            if rx_flg == 0x0:
+                rx_flg = 0x1
+            else:
+                return 1, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+
+        elif (r & 0xF0000000 == 0x10000000):
+            timestamp = (timestamp & MASK1_UPPER) | (
+                np.uint64(r)<<np.uint64(4) & MASK1_LOWER)
+            # if debug & 0x4 ==0x4:
+            #print r_i,hex(r),rx_flg,"ts=",hex(timestamp),le,te
+            # pass
+            if rx_flg == 0x1:
+                rx_flg = 0x2
+            else:
+                return 2, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+
+        elif (r & 0xF0000000 == 0x20000000):
+            timestamp = (timestamp & MASK1_LOWER) | (
+                (np.uint64(r) << np.uint64(32)) & MASK1_UPPER)
+            # if debug & 0x4 ==0x4:
+            #print r_i,hex(r),rx_flg,"ts=",hex(timestamp)
+
+            if rx_flg == 0x2:
+                buf[buf_i]["row"] = row
+                buf[buf_i]["col"] = col
+                buf[buf_i]["le"] = le
+                buf[buf_i]["te"] = te
+                buf[buf_i]["timestamp"] = timestamp
+                buf[buf_i]["cnt"] = noise
+                buf_i = buf_i+1
+                rx_flg = 0
+            else:
+                return 3, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+
+        ########################
+        # TIMESTMP (MIMOSA_MKD)
+        ########################
+        elif r & 0xFF000000 == 0x50000000:
+            pass  # TODO get count
+        elif r & 0xFF000000 == 0x51000000:  # timestamp
+            ts_timestamp = (ts_timestamp & TS_MASK1) | \
+                (np.uint64( r & TS_MASK_DAT)<< np.uint64(4))
+            ts_cnt = ts_cnt+1
+            # if debug & 0x4 ==0x4:
+            #print r_i,hex(r),"timestamp1",hex(ts_timestamp),ts_cnt
+
+            if ts_flg == 2:
+                ts_flg = 0
+                if debug & 0x1 == 0x1:
+                    ts_inter = (ts_timestamp-ts_pre) & 0xFFFFFFFF
+                    buf[buf_i]["col"] = 0xFE
+                    buf[buf_i]["row"] = np.uint16(ts_inter)
+                    buf[buf_i]["le"] = np.uint8(ts_inter >> np.uint64(8))
+                    buf[buf_i]["te"] = np.uint8(ts_inter >> np.uint64(16))
+                    buf[buf_i]["timestamp"] = ts_timestamp
+                    buf[buf_i]["cnt"] = ts_cnt
+                    buf_i = buf_i+1
+            else:
+                return 6, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+        elif r & 0xFF000000 == 0x52000000:  # timestamp
+            ts_timestamp = (ts_timestamp & TS_MASK2) | \
+                (np.uint64(r & TS_MASK_DAT) << np.uint64(28))
+            # if debug & 0x4 ==0x4:
+            #print r_i,hex(r),"timestamp2",hex(ts_timestamp),
+            if ts_flg == 0x1:
+                ts_flg = 0x2
+            else:
+                return 5, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+        elif r & 0xFF000000 == 0x53000000:  # timestamp
+            ts_pre = ts_timestamp
+            ts_timestamp = (ts_timestamp & TS_MASK3) | \
+                (np.uint64(r & TS_MASK_DAT) << np.uint64(52))
+            # if debug & 0x4 ==0x4:
+            #print r_i,hex(r),"timestamp3",hex(ts_timestamp),
+            if ts_flg == 0x0:
+                ts_flg = 0x1
+            else:
+                return 4, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+
+        ########################
+        # TIMESTMP_DIV2 (TDC)
+        ########################
+        elif r & 0xFF000000 == 0x60000000:
+            pass  # TODO get count
+        elif r & 0xFF000000 == 0x61000000:  # timestamp
+            ts2_timestamp = (ts2_timestamp & np.uint64(0xFFFFFFFFFF000000)) | \
+                np.uint64( r & TS_MASK_DAT )
+            ts2_cnt = ts2_cnt+1
+            # if debug & 0x4 ==0x4:
+            #print r_i,hex(r),"timestamp1",hex(ts_timestamp),ts_cnt
+
+            if ts2_flg == 2:
+                ts2_flg = 0
+                if debug & 0x1 == 0x1:
+                    buf[buf_i]["col"] = 0xFD
+                    buf[buf_i]["row"] = np.uint16(ts2_cnt & 0xFFFF)
+                    buf[buf_i]["le"] = np.uint8(ts2_cnt >> 16)
+                    buf[buf_i]["te"] = np.uint8(ts2_cnt >> 8)
+                    buf[buf_i]["timestamp"] = ts2_timestamp
+                    buf[buf_i]["cnt"] = ts2_tot
+                    buf_i = buf_i+1
+            else:
+                return 10, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+        elif r & 0xFF000000 == 0x62000000:  # timestamp
+            ts2_timestamp = (ts2_timestamp & np.uint64(0xFFFF000000FFFFFF)) | \
+                (np.uint64(r & TS_MASK_DAT) << np.uint64(24))
+            # if debug & 0x4 ==0x4:
+            #print r_i,hex(r),"timestamp1",hex(ts_timestamp)
+
+            if ts2_flg == 0x1:
+                ts2_flg = 0x2
+            else:
+                return 9, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+        elif r & 0xFF000000 == 0x63000000:  # timestamp
+            ts2_timestamp = (ts2_timestamp & np.uint64(0x0000FFFFFFFFFFFF)) | \
+                (np.uint64(r & TS_DIV_MASK_DAT) << np.uint64(48))
+            ts2_tot = (np.uint64(r & TS_MASK_TOT) >> np.uint64(8))
+            # if debug & 0x4 ==0x4:
+            #print r_i,hex(r),"ts2_timestamp",hex(ts_timestamp)
+
+            if ts2_flg == 0x0:
+                ts2_flg = 0x1
+            else:
+                return 8, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+
+        ########################
+        # TIMESTMP_DIV3 (TLU)
+        ########################
+        elif r & 0xFF000000 == 0x70000000:
+            pass  # TODO get count
+        elif r & 0xFF000000 == 0x71000000:  # timestamp
+            ts3_timestamp = (ts3_timestamp & np.uint64(0xFFFFFFFFFF000000)) | \
+                np.uint64( r & TS_MASK_DAT)
+            ts3_cnt = ts3_cnt+1
+            # if debug & 0x4 ==0x4:
+            #print r_i,hex(r),"timestamp1",hex(ts_timestamp),ts_cnt
+
+            if ts3_flg == 2:
+                ts3_flg = 0
+                if debug & 0x1 == 0x1:
+                    buf[buf_i]["col"] = 0xFC
+                    buf[buf_i]["row"] = 0xFFFF
+                    buf[buf_i]["le"] = 0xFF
+                    buf[buf_i]["te"] = 0xFF
+                    buf[buf_i]["timestamp"] = ts3_timestamp
+                    buf[buf_i]["cnt"] = ts3_cnt
+                    buf_i = buf_i+1
+            else:
+                return 10, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+
+        elif r & 0xFF000000 == 0x72000000:  # timestamp
+            ts3_timestamp = (ts3_timestamp & np.uint64(0xFFFF000000FFFFFF)) | \
+                (np.uint64(r & TS_MASK_DAT) << np.uint64(24))
+            # if debug & 0x4 ==0x4:
+            #print r_i,hex(r),"timestamp1",hex(ts_timestamp)
+            if ts3_flg == 0x1:
+                ts3_flg = 0x2
+            else:
+                return 9, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+        elif r & 0xFF000000 == 0x73000000:  # timestamp
+            ts3_timestamp = (ts3_timestamp & np.uint64(0x0000FFFFFFFFFFFF)) + \
+                (np.uint64(r & TS_MASK_DAT) << np.uint64(48))
+            # if debug & 0x4 ==0x4:
+            #print r_i,hex(r),"ts2_timestamp",hex(ts_timestamp)
+
+            if ts3_flg == 0x0:
+                ts3_flg = 0x1
+            else:
+                return 8, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+
+        ########################
+        # TLU
+        ########################
+        elif (r & 0x80000000 == 0x80000000):
+            tlu = r & 0xFFFF
+            tlu_timestamp = np.uint64(r >> 12) & np.uint64(0x7FFF0)
+            if debug & 0x2 == 0x2:
+                buf[buf_i]["col"] = 0xFF
+                buf[buf_i]["row"] = 0xFFFF
+                buf[buf_i]["le"] = 0xFF
+                buf[buf_i]["te"] = 0xFF
+                buf[buf_i]["timestamp"] = tlu_timestamp
+                buf[buf_i]["cnt"] = tlu
+                buf_i = buf_i+1
+
+        else:
+            # if debug & 0x4 == 0x4:
+            #    print r_i,hex(r),"trash"
+
+            return 7, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+
+    return 0, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+
+def interpret_h5(fin, fout, data_format=0x3, n=100000000):
+    buf = np.empty(n, dtype=hit_dtype)
+    col = 0xFF
+    row = 0xFF
+    le = 0xFF
+    te = 0xFF
+    noise = 0
+    timestamp = np.uint64(0x0)
+    rx_flg = 0
+
+    ts_timestamp = np.uint64(0x0)
+    ts_pre = ts_timestamp
+    ts_cnt = 0x0
+    ts_flg = 0
+
+    ts2_timestamp = np.uint64(0x0)
+    ts2_tot = 0
+    ts2_cnt = 0x0
+    ts2_flg = 0
+
+    ts3_timestamp = np.uint64(0x0)
+    ts3_cnt = 0x0
+    ts3_flg = 0
+
+    with tables.open_file(fout, "w") as f_o:
+        description = np.zeros((1,), dtype=hit_dtype).dtype
+        hit_table = f_o.create_table(
+            f_o.root, name="Hits", description=description, title='hit_data')
+        with tables.open_file(fin) as f:
+            end = len(f.root.raw_data)
+            start = 0
+            t0 = time.time()
+            hit_total = 0
+            while start < end:
+                tmpend = min(end, start+n)
+                raw = f.root.raw_data[start:tmpend]
+                (err, hit_dat, r_i, col, row, le, te, noise, timestamp, rx_flg,
+                 ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+                ) = _interpret(
+                    raw, buf, col, row, le, te, noise, timestamp, rx_flg,
+                    ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt, data_format)
+                hit_total = hit_total+len(hit_dat)
+                if err == 0:
+                    print "%d %d %.3f%% %.3fs %dhits" % (
+                        start, r_i, 100.0*(start+r_i+1)/end, time.time()-t0, hit_total)
+                elif err == 1 or err == 2 or err == 3:
+                    print "tjmonopix data broken", err, start, r_i, hex(
+                        raw[r_i]), "flg=", rx_flg
+                    if data_format & 0x8 == 0x8:
+                        for i in range(max(0, r_i-100), min(r_i+100, tmpend-start-6), 6):
+                            print hex(
+                                raw[start+i]), hex(raw[start+i+1]), hex(raw[start+i+2]),
+                            print hex(
+                                raw[start+i+3]), hex(raw[start+i+4]), hex(raw[start+i+5])
+                    rx_flg = 0
+                    timestamp = np.uint64(0x0)
+                elif err == 4 or err == 5 or err == 6:
+                    print "timestamp data broken", err, start, r_i, hex(
+                        raw[r_i]), "flg=", ts_flg, ts_timestamp
+                    ts_flg = 0
+                    ts_timestamp = np.uint64(0x0)
+                    ts_pre = ts_timestamp
+                elif err == 7:
+                    print "trash data", err, start, r_i, hex(raw[r_i])
+                elif err == 8 or err == 9 or err == 10:
+                    print "ts2_timestamp data broken", err, start, r_i, hex(
+                        raw[r_i]), "flg=", ts2_flg, ts2_timestamp
+                hit_table.append(hit_dat)
+                hit_table.flush()
+                start = start+r_i+1
+                # if debug &0x4 ==0x4:
+                #   break
 
 
-@numba.njit
-def is_tjmono_data1(word):
-    return word & 0xF0000000 == 0x10000000
+def list2img(dat, delete_noise=True):
+    if delete_noise:
+        dat = without_noise(dat)
+    return np.histogram2d(dat["col"], dat["row"], bins=[np.arange(0, 37, 1), np.arange(0, 130, 1)])[0]
 
 
-@numba.njit
-def is_tjmono_data2(word):
-    return word & 0xF0000000 == 0x20000000
+def list2cnt(dat, delete_noise=True):
+    if delete_noise:
+        dat = without_noise(dat)
+    uni, cnt = np.unique(dat[["col", "row"]], return_counts=True)
+    ret = np.empty(len(uni), dtype=[
+                   ("col", "<u1"), ("row", "<u2"), ("cnt", "<i8")])
+    print ret.dtype.names
+    ret["col"] = uni["col"]
+    ret["row"] = uni["row"]
+    ret["cnt"] = cnt
+    return ret
 
 
-@numba.njit
-def is_tjmono_data3(word):
-    return word & 0xF0000000 == 0x30000000
+def without_noise(dat):
+    return dat[np.bitwise_or(dat["cnt"] == 0, dat["col"] >= 36)]
 
 
-@numba.njit
-def get_col(word):
-    return 2 * (word & 0x3f) + (((word & 0x7FC0) >> 6) // 256)
-
-
-@numba.njit
-def get_row(word):
-    return ((word & 0x7FC0) >> 6) % 256
-
-
-@numba.njit
-def get_tot(word):
-    return (((word & 0x1F8000) >> 15) - ((word & 0x7E00000) >> 21)) & 0x3F
-
-
-@numba.njit
-def get_tjmono_ts_lower(word):
-    """Timestamp (recorded with 40MHz) is converted to 640 MHz domain
-    """
-    return (word << 4) & 0xFFFFFFF0
-
-
-@numba.njit
-def get_tjmono_ts_upper(word):
-    """Timestamp (recorded with 40MHz) is converted to 640 MHz domain
-    """
-    return (word << 32) & 0xFFFFFF00000000
-
-
-@numba.njit
-def is_hitor_timestamp0(word):
-    return word & 0xFF000000 == 0x60000000
-
-
-@numba.njit
-def is_hitor_timestamp1(word):
-    return word & 0xFF000000 == 0x61000000
-
-
-@numba.njit
-def is_hitor_timestamp2(word):
-    return word & 0xFF000000 == 0x62000000
-
-
-@numba.njit
-def is_hitor_timestamp3(word):
-    return word & 0xFF000000 == 0x63000000
-
-
-@numba.njit
-def get_tdc(word):
-    return (word & 0x0000000000FFFF00) >> 8
-
-
-@numba.njit
-def get_timestamp_div_56bit_ts(word):
-    return (word & 0x00000000000000FF) << 48
-
-
-@numba.njit
-def get_timestamp_div(word):
-    return word & 0x0000000000FFFFFF
-
-
-@numba.njit
-def is_tlu(word):
-    return word & 0x80000000 == 0x80000000
-
-
-@numba.njit
-def get_tlu_word(word):
-    return word & 0xFFFF
-
-
-@numba.njit
-def get_tlu_timestamp(word):
-    return (word >> 12) & 0x7FFF0
-
-
-@numba.njit
-def is_tlu_timestamp0(word):
-    return word & 0xFF000000 == 0x70000000
-
-
-@numba.njit
-def is_tlu_timestamp1(word):
-    return word & 0xFF000000 == 0x71000000
-
-
-@numba.njit
-def is_tlu_timestamp2(word):
-    return word & 0xFF000000 == 0x72000000
-
-
-@numba.njit
-def is_tlu_timestamp3(word):
-    return word & 0xFF000000 == 0x73000000
-
-
-@numba.njit
-def is_ext_timestamp0(word):
-    return word & 0xFF000000 == 0x50000000
-
-
-@numba.njit
-def is_ext_timestamp1(word):
-    return word & 0xFF000000 == 0x51000000
-
-
-@numba.njit
-def is_ext_timestamp2(word):
-    return word & 0xFF000000 == 0x52000000
-
-
-@numba.njit
-def is_ext_timestamp3(word):
-    return word & 0xFF000000 == 0x53000000
-
-
-class Interpreter(object):
-    def __init(self):
+class InterRaw():
+    def __init__(self, chunk=100000000, debug=0):
         self.reset()
-
-    def interpret_data(self, raw_data, meta_data, chunk_size=1000000):
-        hit_dtype = [('col', 'u1'), ('row', '<u2'), ('le', 'u1'), ('te', 'u1'), ('cnt', '<u4'), ('timestamp', '<i8'), ('scan_param_id', '<u4')]
-
-        pbar = tqdm(total=len(raw_data))
-        start = 0
-        data_interpreter = RawDataInterpreter(chunk_size)
-        while start < len(raw_data):
-            tmpend = start + chunk_size
-
-            hit_buffer = np.zeros(shape=chunk_size, dtype=hit_dtype)
-
-            hit_data = data_interpreter.interpret(raw_data[start:tmpend], meta_data, hit_buffer)
-
-            start = tmpend
-            pbar.update(chunk_size)
-        pbar.close()
-
-        return hit_data, data_interpreter.get_error_count()
-
-
-@numba.jitclass(class_spec)
-class RawDataInterpreter(object):
-    def __init__(self, chunk_size):
-        self.chunk_size = chunk_size
-        self.reset()
-        self.error_cnt = 0
-        self.raw_idx = 0
-        self.meta_idx = 0
+        self.buf = np.empty(chunk, dtype=hit_dtype)
+        self.n = chunk
+        self.debug = debug
 
     def reset(self):
-        """ Reset all values that are computed from multiple data words
-        """
-        self.tj_data_flag = 0
-        self.tj_timestamp = 0
-        self.hitor_timestamp_flag = 0
-        self.ext_timestamp_flag = 0
-        self.tlu_timestamp_flag = 0
-        self.hitor_timestamp = 0
-        self.hitor_charge = 0
-        self.ext_timestamp = 0
-        self.tlu_timestamp = 0
+        self.col = 0xFF
+        self.row = 0xFFFF
+        self.le = 0xFF
+        self.te = 0xFF
+        self.noise = 0
+        self.timestamp = np.int64(0x0)
+        self.rx_flg = 0
 
-    def get_error_count(self):
-        return self.error_cnt
+        self.ts_timestamp = np.uint64(0x0)
+        self.ts_pre = self.ts_timestamp
+        self.ts_cnt = 0x0
+        self.ts_flg = 0
+        self.ts2_timestamp = np.uint64(0x0)
+        self.ts2_tot = 0
+        self.ts2_cnt = 0x0
+        self.ts2_flg = 0
 
-    def interpret(self, raw_data, meta_data, hit_data):
-        """ This function is interpreting the data recorded with TJ MonoPix.
-        It consists at minimum of TJ data, but can contain several timestamps (HitOr, TLU, external) and further data
-        (TLU word, TDC charge)
+        self.ts3_timestamp = np.uint64(0x0)
+        self.ts3_cnt = 0x0
+        self.ts3_flg = 0
 
-        tj_data_flag:
-            TJ data is spread across four consecutive data words. This flag stores information about which words have
-            been processed.
-        hitor_timestamp_flag:
-            HitOr timestamp data is spread across three consecutive data words (starting with ID3). This flag stores
-            information about which words have been processed.
-        ext_timestamp_flag:
-            Analog to hitor_timestamp, but corresponds to data from external timestamp
-        tlu_timestamp_flag:
-            Analog to hitor_timestamp, but corresponds to data from 640 MHz tlu timestamp
+    def run(self, raw, data_format=0x3):
+        start = 0
+        end = len(raw)
+        ret = np.empty(0, dtype=hit_dtype)
+        while start < end:  # TODO make chunk work
+            tmpend = min(end, start+self.n)
+            (err, hit_dat, r_i,
+             self.col, self.row, self.le, self.te, self.noise, self.timestamp, self.rx_flg,
+             self.ts_timestamp, self.ts_pre, self.ts_flg, self.ts_cnt,
+             self.ts2_timestamp, self.ts2_tot, self.ts2_flg, self.ts2_cnt,
+             self.ts3_timestamp, self.ts3_flg, self.ts3_cnt
+             ) = _interpret(
+                raw[start:tmpend], self.buf,
+                self.col, self.row, self.le, self.te, self.noise, self.timestamp, self.rx_flg,
+                self.ts_timestamp, self.ts_pre, self.ts_flg, self.ts_cnt,
+                self.ts2_timestamp, self.ts2_tot, self.ts2_flg, self.ts2_cnt,
+                self.ts3_timestamp, self.ts3_flg, self.ts3_cnt,
+                data_format)
+            if err != 0:
+                print "error",start,r_i, err,hex(raw[start+r_i])
+            ret = np.append(ret, hit_dat)
+            start = start+r_i+1
+        return ret
 
-        For additional info about data structure check corresponding modules in basil software package.
+    def mk_list(self, raw, delete_noise=True):
+        dat = self.run(raw)
+        if delete_noise == True:
+            dat = without_noise(dat)
+        return dat
 
-        Parameters:
-        -----------
-        raw_data : np.array
-            The array with the raw data words
-        meta_data : np.array
-            The array with meta information (scan_param_id, data length, ...)
-        hit_data : np.recarray(dtype=[("col", "<u1"), ("row", "<u2"), ("le", "<u1"), ("te", "<u1"), ("cnt", "<u4"),
-                                      ("timestamp", "<i8"), ("scan_param_id", "<u4")])
-            An array prepared to be filled with interpreted data
-        """
+    def mk_img(self, raw, delete_noise=True):
+        dat = self.run(raw)
+        return list2img(dat, delete_noise=True)
 
-        hit_index = 0
+    def mk_cnt(self, raw, delete_noise=True):
+        dat = self.run(raw)
+        return list2cnt(dat, delete_noise=True)
 
-        for raw_data_word in raw_data:
-            #############################
-            # Part 1: interpret TJ data #
-            #############################
 
-            if is_tjmono_data0(raw_data_word):
-                if self.tj_data_flag != 0:
-                    self.reset()
-                    self.error_cnt += 1
-                    continue
+def raw2list(raw, delete_noise=True):
+    inter = InterRaw()
+    dat = inter.run(raw)
+    if delete_noise == True:
+        dat = without_noise(dat)
+    return dat
 
-                self.col = get_col(raw_data_word)
-                self.row = get_row(raw_data_word)
-                self.te = (raw_data_word & 0x1F8000) >> 15
-                self.le = (raw_data_word & 0x7E00000) >> 21
-                self.noise = (raw_data_word & 0x8000000) >> 27
 
-                self.tj_data_flag = 1
-            elif is_tjmono_data1(raw_data_word):
-                if self.tj_data_flag != 1:
-                    self.reset()
-                    self.error_cnt += 1
-                    continue
+def raw2img(raw, delete_noise=True):
+    inter = InterRaw()
+    return list2img(inter.run(raw), noise=noise)
 
-                self.tj_timestamp = get_tjmono_ts_lower(raw_data_word)
-                self.tj_data_flag = 2
-            elif is_tjmono_data2(raw_data_word):
-                if self.tj_data_flag != 2:
-                    self.reset()
-                    self.error_cnt += 1
-                    continue
 
-                # Merge upper and lower part of TJMonoPix timestamp
-                self.tj_timestamp = self.tj_timestamp | get_tjmono_ts_upper(raw_data_word)
+def raw2cnt(raw, delete_noise=True):
+    inter = InterRaw()
+    return list2cnt(inter.run(raw), delete_noise=delete_noise)
 
-                # TODO: token[3:0] is in this data word
-                self.tj_data_flag = 3
-            elif is_tjmono_data3(raw_data_word):
-                if self.tj_data_flag != 3:
-                    self.reset()
-                    self.error_cnt += 1
-                    continue
 
-                # TODO: Get token[31:4] data
-
-                # Data words are complete, write TJ data to output buffer
-                hit_data[hit_index]["row"] = self.row
-                hit_data[hit_index]["col"] = self.col
-                hit_data[hit_index]["le"] = self.le
-                hit_data[hit_index]["te"] = self.te
-                hit_data[hit_index]["cnt"] = self.noise
-                hit_data[hit_index]["timestamp"] = self.tj_timestamp
-                hit_data[hit_index]["scan_param_id"] = self.raw_idx
-                # Prepare for next hit. Increase hit index and reset tj_data flag
-                hit_index += 1
-                self.tj_data_flag = 0
-
-            #####################################
-            # Part 2: interpret HitOr timestamp #
-            #####################################
-
-            elif is_hitor_timestamp0(raw_data_word):
-                pass  # TODO: Used for debug mode only
-
-            # Third word comes first in data
-            elif is_hitor_timestamp3(raw_data_word):
-                if self.hitor_timestamp_flag != 0:
-                    self.reset()
-                    self.error_cnt += 1
-                    continue
-
-                self.hitor_timestamp = (self.hitor_timestamp & 0x0000FFFFFFFFFFFF) | get_timestamp_div_56bit_ts(raw_data_word)
-                self.hitor_charge = get_tdc(raw_data_word)
-
-                self.hitor_timestamp_flag = 1
-
-            elif is_hitor_timestamp2(raw_data_word):
-                if self.hitor_timestamp_flag != 1:
-                    self.reset()
-                    self.error_cnt += 1
-                    continue
-
-                self.hitor_timestamp = (self.hitor_timestamp & 0xFFFF000000FFFFFF) | (get_timestamp_div(raw_data_word) << 24)
-
-                self.hitor_timestamp_flag = 2
-
-            elif is_hitor_timestamp1(raw_data_word):
-                if self.hitor_timestamp_flag != 2:
-                    self.reset()
-                    self.error_cnt += 1
-                    continue
-
-                self.hitor_timestamp = (self.hitor_timestamp & 0xFFFFFFFFFF000000) | get_timestamp_div(raw_data_word)
-
-                hit_data[hit_index]["col"] = 0xFD
-                hit_data[hit_index]["row"] = 0
-                hit_data[hit_index]["le"] = 0
-                hit_data[hit_index]["te"] = 0
-                hit_data[hit_index]["cnt"] = self.hitor_charge
-                hit_data[hit_index]["timestamp"] = np.int64(self.hitor_timestamp & 0x7FFFFFFFFFFFFFFF)  # Make sure it is unsigned
-                hit_data[hit_index]["scan_param_id"] = self.raw_idx
-
-                # Prepare for next data block. Increase hit index and reset hitor_timestamp flag
-                hit_index += 1
-                self.hitor_timestamp_flag = 0
-
-            ########################################
-            # Part 3: interpret external timestamp #
-            ########################################
-
-            elif is_ext_timestamp0(raw_data_word):
-                pass  # TODO: Used for debug mode only
-
-            # Third word comes first in data
-            elif is_ext_timestamp3(raw_data_word):
-                if self.ext_timestamp_flag != 0:
-                    self.reset()
-                    self.error_cnt += 1
-                    continue
-
-                self.ext_timestamp = (self.ext_timestamp & 0x0000FFFFFFFFFFFF) | (get_timestamp_div(raw_data_word) << 48)
-
-                self.ext_timestamp_flag = 1
-
-            elif is_ext_timestamp2(raw_data_word):
-                if self.ext_timestamp_flag != 1:
-                    self.reset()
-                    self.error_cnt += 1
-                    continue
-
-                self.ext_timestamp = (self.ext_timestamp & 0xFFFF000000FFFFFF) | (get_timestamp_div(raw_data_word) << 24)
-
-                self.ext_timestamp_flag = 2
-
-            elif is_ext_timestamp1(raw_data_word):
-                if self.ext_timestamp_flag != 2:
-                    self.reset()
-                    self.error_cnt += 1
-                    continue
-
-                self.ext_timestamp = (self.ext_timestamp & 0xFFFFFFFFFF000000) | get_timestamp_div(raw_data_word)
-
-                hit_data[hit_index]["col"] = 0xFE
-                hit_data[hit_index]["row"] = 0
-                hit_data[hit_index]["le"] = 0
-                hit_data[hit_index]["te"] = 0
-                hit_data[hit_index]["cnt"] = 0
-                hit_data[hit_index]["timestamp"] = self.ext_timestamp
-                hit_data[hit_index]["scan_param_id"] = self.raw_idx
-
-                # Prepare for next data block. Increase hit index and reset ext_timestamp flag
-                hit_index += 1
-                self.ext_timestamp_flag = 0
-
-            #########################################
-            # Part 4: interpret TLU 64bit timestamp #
-            #########################################
-
-            elif is_tlu_timestamp0(raw_data_word):
-                pass  # TODO: Used for debug mode only
-
-            # Third word comes first in data
-            elif is_tlu_timestamp3(raw_data_word):
-                if self.tlu_timestamp_flag != 0:
-                    self.reset()
-                    self.error_cnt += 1
-                    continue
-
-                self.tlu_timestamp = (self.tlu_timestamp & 0x0000FFFFFFFFFFFF) | (get_timestamp_div(raw_data_word) << 48)
-
-                self.tlu_timestamp_flag = 1
-
-            elif is_tlu_timestamp2(raw_data_word):
-                if self.tlu_timestamp_flag != 1:
-                    self.reset()
-                    self.error_cnt += 1
-                    continue
-
-                self.tlu_timestamp = (self.tlu_timestamp & 0xFFFF000000FFFFFF) | (get_timestamp_div(raw_data_word) << 24)
-
-                self.tlu_timestamp_flag = 2
-
-            elif is_tlu_timestamp1(raw_data_word):
-                if self.tlu_timestamp_flag != 2:
-                    self.reset()
-                    self.error_cnt += 1
-                    continue
-
-                self.tlu_timestamp = (self.tlu_timestamp & 0xFFFFFFFFFF000000) | get_timestamp_div(raw_data_word)
-
-                hit_data[hit_index]["col"] = 0xFC
-                hit_data[hit_index]["row"] = 0
-                hit_data[hit_index]["le"] = 0
-                hit_data[hit_index]["te"] = 0
-                hit_data[hit_index]["cnt"] = 0
-                hit_data[hit_index]["timestamp"] = self.tlu_timestamp
-                hit_data[hit_index]["scan_param_id"] = self.raw_idx
-
-                # Prepare for next data block. Increase hit index and reset tlu_timestamp flag
-                hit_index += 1
-                self.tlu_timestamp_flag = 0
-
-            ##############################
-            # Part 5: interpret TLU word #
-            ##############################
-
-            elif is_tlu(raw_data_word):
-                tlu_word = get_tlu_word(raw_data_word)
-                tlu_timestamp_low_res = get_tlu_timestamp(raw_data_word)  # TLU data contains a 16bit timestamp
-
-                hit_data[hit_index]["col"] = 0xFF
-                hit_data[hit_index]["row"] = 0
-                hit_data[hit_index]["le"] = 0
-                hit_data[hit_index]["te"] = 0
-                hit_data[hit_index]["cnt"] = tlu_word
-                hit_data[hit_index]["timestamp"] = tlu_timestamp_low_res
-                hit_data[hit_index]["scan_param_id"] = self.raw_idx
-
-                # Prepare for next data block. Increase hit index
-                hit_index += 1
-
-            # Increase raw_index and move to next data word
-            self.raw_idx += 1
-
-        # Trim hit_data buffer to interpreted data hits
-        hit_data = hit_data[:hit_index]
-
-        # Find correct scan_param_id in meta data and attach to hit
-        for scan_idx, param_id in enumerate(hit_data["scan_param_id"]):
-            while self.meta_idx < len(meta_data):
-                if param_id >= meta_data[self.meta_idx]['index_start'] and param_id < meta_data[self.meta_idx]['index_stop']:
-                    hit_data[scan_idx]['scan_param_id'] = meta_data[self.meta_idx]['scan_param_id']
-                    break
-                elif param_id >= meta_data[self.meta_idx]['index_stop']:
-                    self.meta_idx += 1
-        return hit_data
+if __name__ == "__main__":
+    import sys
+    fin = sys.argv[1]
+    fout = fin[:-3]+"_hit.h5"
+    interpret_h5(fin, fout, debug=3)
+    # debug
+    #
+    # 0x20 correct tlu_timestamp based on timestamp2 0x00 based on timestamp
+    print fout
