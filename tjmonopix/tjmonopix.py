@@ -69,6 +69,7 @@ class TJMonoPix(Dut):
 
     def init(self, B=True):
         super(TJMonoPix, self).init()
+
         self.fw_version, self.board_version = self.get_daq_version()
         logger.info('Found board %s running firmware version %s' % (self.board_version, self.fw_version))
 
@@ -78,11 +79,11 @@ class TJMonoPix(Dut):
         self['CONF']['AB_SELECT'] = B
         self['CONF'].write()
 
-        self['data_rx'].CONF_START_FREEZE = 64  # default 3
-        self['data_rx'].CONF_STOP_FREEZE = 100  # default 40
-        self['data_rx'].CONF_START_READ = 66  # default 6
-        self['data_rx'].CONF_STOP_READ = 68  # default 7
-        self['data_rx'].CONF_STOP = 105  # default 45
+        self['data_rx'].CONF_START_FREEZE = 57  # default 57
+        self['data_rx'].CONF_STOP_FREEZE = 95  # default 95
+        self['data_rx'].CONF_START_READ = 60  # default 60
+        self['data_rx'].CONF_STOP_READ = 62  # default 62
+        self['data_rx'].CONF_STOP = 100  # default 100
 
         self.power_on()
 
@@ -517,13 +518,13 @@ class TJMonoPix(Dut):
             logging.warn("stop_timestamp: lost_cnt=%d"%lost_cnt)
         return lost_cnt
 
-    def set_monoread(self, start_freeze=64, start_read=66, stop_read=68, stop_freeze=100, stop=105, en=True):
-    #def set_monoread(self, start_freeze=57, start_read=60, stop_read=62, stop_freeze=95, stop=100, en=True):
-        self['data_rx'].CONF_START_FREEZE = start_freeze  # default 3
-        self['data_rx'].CONF_STOP_FREEZE = stop_freeze  # default 40
-        self['data_rx'].CONF_START_READ = start_read  # default 6
-        self['data_rx'].CONF_STOP_READ = stop_read  # default 7
-        self['data_rx'].CONF_STOP = stop  # default 45
+    #def set_monoread(self, start_freeze=64, start_read=66, stop_read=68, stop_freeze=100, stop=105, en=True):
+    def set_monoread(self, start_freeze=57, start_read=60, stop_read=62, stop_freeze=95, stop=100, en=True):
+        self['data_rx'].CONF_START_FREEZE = start_freeze  # default 57
+        self['data_rx'].CONF_STOP_FREEZE = stop_freeze  # default 95
+        self['data_rx'].CONF_START_READ = start_read  # default 60
+        self['data_rx'].CONF_STOP_READ = stop_read  # default 62
+        self['data_rx'].CONF_STOP = stop  # default 100
 
         self['fifo'].reset()
         time.sleep(0.1)

@@ -224,7 +224,7 @@ class ScanBase(object):
         if flg==0:
             fh = logging.FileHandler(self.output_filename + '.log')
             fh.setFormatter(logging.Formatter("%(asctime)s [%(levelname)-5.5s] %(message)s"))
-            fh.setLevel(logging.WARNING)
+            fh.setLevel(logging.INFO)
         self.logger.addHandler(fh)
         logging.info("Initializing {0}".format(self.__class__.__name__))
 
@@ -261,6 +261,7 @@ class ScanBase(object):
         ### save kwargs       
         self.logger.info('self.dut Status: %s', str(self.dut.get_power_status()))
         self.meta_data_table.attrs.kwargs = yaml.dump(kwargs)
+        self.meta_data_table.attrs.status_before=yaml.dump(self.dut.get_configuration())
 
         ### execute scan       
 
@@ -316,7 +317,7 @@ class ScanBase(object):
 
         total_words = self.raw_data_earray.nrows
         len_raw_data = data_tuple[0].shape[0]
-
+    
         self.raw_data_earray.append(data_tuple[0])
         self.raw_data_earray.flush()
 

@@ -9,10 +9,12 @@ from tjmonopix.scan_base import ScanBase
 from tjmonopix.tjmonopix import TJMonoPix
 from tjmonopix.analysis.interpreter import interpret_h5
 
+
 class SimpleScan(ScanBase):
     scan_id = "simple"
 
     def scan(self, **kwargs):
+        with_tj = kwargs.pop('with_tj', True)
         with_tlu = kwargs.pop('with_tlu', True)
         with_timestamp = kwargs.pop('with_timestamp', True)
         with_tdc = kwargs.pop('with_tdc', True)
@@ -34,7 +36,8 @@ class SimpleScan(ScanBase):
 
         ####################
         # start readout
-        self.dut.set_monoread()
+        if with_tj:
+            self.dut.set_monoread()
         for _ in range(5): ### reset fifo to clean up.
             time.sleep(0.1)
             self.dut['fifo'].reset()
@@ -60,12 +63,12 @@ class SimpleScan(ScanBase):
                 scanned = time.time()-t0
                 self.logger.info('time=%.0fs dat=%d rate=%.3fk/s' %
                                  (scanned, cnt, (cnt-pre_cnt)/(scanned-pre_scanned)/1024))
-                if scanned+10 > scan_timeout and scan_timeout > 0:
+                if scanned+2 > scan_timeout and scan_timeout > 0:
                     break
                 elif scanned < 30:
                     time.sleep(1)
                 else:
-                    time.sleep(10)
+                    time.sleep(1)
             time.sleep(max(0, scan_timeout-scanned))
         ####################
         # stop readout
@@ -79,7 +82,8 @@ class SimpleScan(ScanBase):
                 self.dut["tlu"].get_configuration())
         if with_tdc:
             self.dut.stop_tdc()
-        self.dut.stop_monoread()
+        if with_tj:
+            self.dut.stop_monoread()
 
     def analyze(self, filename=None):
         if filename == None:
@@ -101,5 +105,5 @@ if __name__ == "__main__":
     args = parser.parse_args()    
 
     scan = SimpleScan(dut=dut,filename=args.data,send_addr="tcp://131.220.162.237:5500")
-    output_filename=scan.start(scan_timeout=args.scan_timeout, with_tdc=False, with_timestamp=False, with_tlu=False)
+    output_filename=scan.start(scan_timeout=args.scan_timeout, with_tdc=True, with_timestamp=True, with_tlu=True, with_tj=True)
     scan.analyze()

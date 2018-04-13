@@ -2,7 +2,6 @@ import sys
 import time
 import os
 import numpy as np
-import matplotlib.pyplot as plt
 from numba import njit
 import tables
 
@@ -13,7 +12,7 @@ hit_dtype = np.dtype([("col", "<u1"), ("row", "<u2"), ("le", "<u1"), ("te", "<u1
 @njit
 def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt,
                ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt, debug):
-    MASK1_LOWER = np.uint64(0x00000000FFFFFFFF)
+    MASK1_LOWER = np.uint64(0x00000000FFFFFFF0)
     MASK1_UPPER = np.uint64(0x00FFFFFF00000000)
     MASK2 = np.uint64(0x0000000000FFF000)
     NOT_MASK2 = np.uint64(0x000FFFFFFF000FFF)
@@ -35,7 +34,6 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
             #rx_cnt= (rx_cnt & 0xF)  | ((np.uint32(r) << np.int64(4)) & 0xFFFFFFF0)
             pass
         elif (r & 0xF0000000 == 0x00000000):
-
             col = 2 * (r & 0x3f) + (((r & 0x7FC0) >> 6) // 256)
             row = ((r & 0x7FC0) >> 6) % 256
             te = (r & 0x1F8000) >> 15
@@ -109,7 +107,6 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
                 (np.uint64(r & TS_MASK_DAT) << np.uint64(28))
             # if debug & 0x4 ==0x4:
             #print r_i,hex(r),"timestamp2",hex(ts_timestamp),
-
             if ts_flg == 0x1:
                 ts_flg = 0x2
             else:
@@ -120,7 +117,6 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
                 (np.uint64(r & TS_MASK_DAT) << np.uint64(52))
             # if debug & 0x4 ==0x4:
             #print r_i,hex(r),"timestamp3",hex(ts_timestamp),
-
             if ts_flg == 0x0:
                 ts_flg = 0x1
             else:
@@ -141,7 +137,6 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
             if ts2_flg == 2:
                 ts2_flg = 0
                 if debug & 0x1 == 0x1:
- 
                     buf[buf_i]["col"] = 0xFD
                     buf[buf_i]["row"] = np.uint16(ts2_cnt & 0xFFFF)
                     buf[buf_i]["le"] = np.uint8(ts2_cnt >> 16)
@@ -241,7 +236,7 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
 
     return 0, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
 
-def interpret_h5(fin, fout, data_format=0x43, n=100000000):
+def interpret_h5(fin, fout, data_format=0x3, n=100000000):
     buf = np.empty(n, dtype=hit_dtype)
     col = 0xFF
     row = 0xFF
@@ -343,7 +338,7 @@ class InterRaw():
         self.reset()
         self.buf = np.empty(chunk, dtype=hit_dtype)
         self.n = chunk
-        self.debug = 0
+        self.debug = debug
 
     def reset(self):
         self.col = 0xFF
@@ -367,7 +362,7 @@ class InterRaw():
         self.ts3_cnt = 0x0
         self.ts3_flg = 0
 
-    def run(self, raw, data_format=0x43):
+    def run(self, raw, data_format=0x3):
         start = 0
         end = len(raw)
         ret = np.empty(0, dtype=hit_dtype)
@@ -386,7 +381,7 @@ class InterRaw():
                 self.ts3_timestamp, self.ts3_flg, self.ts3_cnt,
                 data_format)
             if err != 0:
-                self.reset()
+                print "error",start,r_i, err,hex(raw[start+r_i])
             ret = np.append(ret, hit_dat)
             start = start+r_i+1
         return ret
