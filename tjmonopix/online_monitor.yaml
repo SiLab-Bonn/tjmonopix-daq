@@ -1,28 +1,25 @@
+producer_sim :
+    FE_DAQ :
+        kind : pybar_fei4
+        delay : 0.03
+        backend: tcp://127.0.0.1:5500
+        data_file: /sirrush/silab/Data_Testbeams/2018/20180327_tjmonopix_ELSA/run42/tjmonopix_42_180327-063853.h5
+    DAQ0 :
+        kind : pybar_fei4
+        delay : 0.03
+        backend: tcp://127.0.0.1:6500
+        data_file: /sirrush/silab/Data_Testbeams/2018/20180327_tjmonopix_ELSA/run42/42_module_0_anemone_fei4_scan.h5
+
 converter :
     TJ_Interpreter :
         kind : tjmonopix_converter
         frontend : tcp://127.0.0.1:5500
         backend : tcp://127.0.0.1:5600
-    DUT0_Interpreter :
-        kind : pybar_mimosa26
-        frontend : tcp://127.0.0.1:4500
-        backend : tcp://127.0.0.1:4600
-    DUT1_Interpreter :
+    FE_Interpreter :
         kind : pybar_fei4
         frontend : tcp://127.0.0.1:6500
         backend : tcp://127.0.0.1:6600
-    ANEMONE_Correlator :
-        kind : anemone_correlator
-        frontend : 
-          - tcp://127.0.0.1:4600
-          - tcp://127.0.0.1:6600
-        backend : tcp://127.0.0.1:8700
-        max_n_rows_fei4 : 337 
-        max_n_columns_fei4 : 81
-        max_n_rows_m26 : 576 
-        max_n_columns_m26 : 1152
-        noisy_threshold : 1
-    TJ_Histogrammer :
+    DUT0_Histogrammer :
         kind : tjmonopix_histogrammer
         frontend : tcp://127.0.0.1:5600
         backend : tcp://127.0.0.1:5700
@@ -36,35 +33,24 @@ converter :
         kind : pybar_fei4_histogrammer
         frontend : tcp://127.0.0.1:6600
         backend : tcp://127.0.0.1:6700
-#    Telescope_Status :
-#        kind : telescope_status
-#        frontend : 
-#          - tcp://127.0.0.1:4600
-#          - tcp://127.0.0.1:6600
-#        backend : tcp://127.0.0.1:9700strontium shielding
+    FE_Histogrammer :
+        kind : pybar_fei4_histogrammer
+        frontend : tcp://127.0.0.1:6600
+        backend : tcp://127.0.0.1:6700
+    DUT0_Correlator :
+         kind : tjmonopix_correlator
+         frontend : 
+           - tcp://127.0.0.1:5600
+           - tcp://127.0.0.1:6600
+         backend : tcp://127.0.0.1:5800
 
 receiver :
     TJ :
         kind : tjmonopix_receiver
         frontend : tcp://127.0.0.1:5700
-    M26 :
-        kind : pybar_mimosa26
-        frontend : tcp://127.0.0.1:4700
     FEI4 :
         kind : pybar_fei4
         frontend : tcp://127.0.0.1:6700
-    ANEMONE_Correlator :
-        kind : anemone_correlator
-        frontend : tcp://127.0.0.1:8700
-        devices :
-            - tcp://127.0.0.1:4600
-            - tcp://127.0.0.1:6600
-        max_n_rows_fei4 : 337 
-        max_n_columns_fei4 : 81
-        max_n_rows_m26 : 576 
-        max_n_columns_m26 : 1152
-#    Telescope_Status :
-#        kind : telescope_status
-#        frontend : tcp://127.0.0.1:9700
-
-
+    CORR :
+        kind : tjmonopix_corr_receiver
+        frontend : tcp://127.0.0.1:5800
