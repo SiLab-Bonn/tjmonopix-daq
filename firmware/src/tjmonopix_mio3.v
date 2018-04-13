@@ -25,9 +25,9 @@
 `include "utils/rbcp_to_bus.v"
 
 ////SiTCP
-`include "WRAP_SiTCP_GMII_XC7K_32K.V"
-`include "SiTCP_XC7K_32K_BBT_V80.v"
-`include "TIMER.v"
+`include "SiTCP/WRAP_SiTCP_GMII_XC7K_32K.V"
+`include "SiTCP/SiTCP_XC7K_32K_BBT_V80.v"
+`include "SiTCP/TIMER.v"
 
 ////User core and its modules
 `include "tjmonopix_core.v"

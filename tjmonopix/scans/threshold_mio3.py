@@ -8,7 +8,7 @@ import logging
 from tjmonopix.scan_base import ScanBase
 from tjmonopix.tjmonopix import TJMonoPix
 from tjmonopix.analysis.interpreter import interpret_h5
-from tjmonopix.scans.simple_scan import SimpleScan
+from tjmonopix.scans.threshold_scan import ThresholdScan
 
 
 if __name__ == "__main__":
@@ -24,13 +24,18 @@ if __name__ == "__main__":
     args = parser.parse_args()    
 
     dut = "/home/silab/tjmonopix/tjmonopix-daq/tjmonopix-daq/tjmonopix/tjmonopix_mio3.yaml"
-    scan = SimpleScan(dut=dut,filename=args.data,send_addr="tcp://131.220.162.237:5500")
+    scan = ThresholdScan(dut=dut,filename=args.data,send_addr="tcp://131.220.162.237:5500")
 
     ####### CONFIGURE mask ######
-    scan.dut['CONF_SR']['EN_PMOS'].setall(True)
+    scan.dut['CONF_SR']['EN_PMOS'].setall(False)
+    scan.dut['CONF_SR']['MASKD'].setall(False)
+    scan.dut['CONF_SR']['MASKH'].setall(False)
+    scan.dut['CONF_SR']['MASKV'].setall(False)
+
     scan.dut['CONF_SR']['MASKD'].setall(True)
     scan.dut['CONF_SR']['MASKH'].setall(True)
-    scan.dut['CONF_SR']['MASKV'].setall(True)
+    scan.dut['CONF_SR']['MASKV'][224:112] = True
+    scan.dut['CONF_SR']['EN_PMOS'].setall(True)
 
     # TO USE THE MASK FUNCTION YOU MUST INPUT THE FLAVOR, COLUMN AND ROW
     # THE FLAVOR NUMERS IS: 0 FOR PMOS_NOSF, 1 FOR PMOS, 2 FOR COMP, 3 FOR HV
@@ -73,11 +78,12 @@ if __name__ == "__main__":
     #scan.dut['CONF_SR']['EN_PMOS'][54]= False
     
     #This sets up the hit_or in a single pixel
-    col = 50
-    row = 102
-    scan.dut['CONF_SR']['EN_HITOR_OUT'][1]=False
-    scan.dut.enable_column_hitor(1,col)
-    scan.dut['CONF_SR']['MASKH'][row]=False
+    #col = 50
+    #row = 102
+    #scan.dut['CONF_SR']['EN_HITOR_OUT'][1]=False
+    #scan.dut.enable_column_hitor(1,col)
+    #scan.dut['CONF_SR']['MASKH'][row]=False
+    
     scan.dut.write_conf()
 
     ####### CONFIGURE THE FRONT END ######
@@ -93,25 +99,33 @@ if __name__ == "__main__":
     # SET ICASN, THIS CURRENT CONTROLS THE OUTPUT BASELINE, BE CAREFUL NOT TO SET IT TO HIGH
     # ALWAYS MONITOR THE POWER AFTER SETTING ICASN. IF VDDD IS SEVERAL mA, REDUCE IT UNTIL IT RETURNS TO 0
     # ICASN MAINLY CONTROLS THE THRESHOLD
-    scan.dut.set_icasn_dacunits(0,1) #4.375nA # approx 1.084V at -3V backbias, 600mV at 0V backbias
-    #scan.dut.set_icasn_dacunits(1,1) #4.375nA # approx 1.084V at -3V backbias, 600mV at 0V backbias
+    #scan.dut.set_icasn_dacunits(0,1) #4.375nA # approx 1.084V at -3V backbias, 600mV at 0V backbias
+    scan.dut.set_icasn_dacunits(1,1) #4.375nA # approx 1.084V at -3V backbias, 600mV at 0V backbias
 
     # SET IRESET, THIS CURRENT CONTROLS THE RESET RATE OF THE FRONT END INPUT (ALSO THE THRESHOLD)
     scan.dut.set_ireset_dacunits(2,1,1) #270pA, HIGH LEAKAGE MODE, NORMAL SCALING, 0 = LOW LEAKAGE MODE, SCALING*0.01
 
     # SET ITHR, THIS CURRENT CONTROLS THE RESET RATE OF THE OUTPUT (AND THE THRESHOLD)
-    scan.dut.set_ithr_dacunits(30,1) #680pA
-    #scan.dut.set_ithr_dacunits(15,1) #680pA 27.03.14:30-
+    #scan.dut.set_ithr_dacunits(29,1)   
+    #scan.dut.set_ithr_dacunits(30,1) #680pA # Use this one!   SETTING 1
+    scan.dut.set_ithr_dacunits(15,1) #680pA 27.03.14:30-       SETTING 2, 3
 
     # SET ITHR, THIS CURRENT CONTROLS THE BIASING OF THE DISCRIMINATOR (AND THE THRESHOLD)
-    scan.dut.set_idb_dacunits(15,1) #500nA
-    #scan.dut.set_idb_dacunits(20,1) #500nA
+    #scan.dut.set_idb_dacunits(15,1) #500nA                     SETTING 1
+    scan.dut.set_idb_dacunits(20,1) #500nA                      SETTING 2, 3
 
     # SET IBIAS, THIS CURRENT IS THE DC CURRENT OF THE MAIN BRANCH
     scan.dut.set_ibias_dacunits(50,1) #500nA OF THE FRONT END THAT PROVIDES AMPLIFICATION
     # IT CONTROLS MAINLY THE RISE TIME
     #self.dut.set_ibias_dacunits(50,1) #500nA
     scan.dut.write_conf()
-    
-    output_filename=scan.start(scan_timeout=args.scan_timeout, with_tdc=True, with_timestamp=True, with_tlu=True, with_tj=True)
+    time.sleep(5)
+    #scan.dut.set_ithr_dacunits(30,1)
+    #scan.dut.write_conf()
+    scan.dut.set_monoread()
+    time.sleep(0.1)
+    fifodata=scan.dut["fifo"].get_data()
+    print len(fifodata), fifodata
+
+    output_filename=scan.start(scan_timeout=args.scan_timeout, with_tdc=False, with_timestamp=False, with_tlu=False, with_tj=True)
     #scan.analyze()

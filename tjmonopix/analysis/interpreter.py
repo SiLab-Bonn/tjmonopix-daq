@@ -7,7 +7,8 @@ import tables
 
 hit_dtype = np.dtype([("col", "<u1"), ("row", "<u2"), ("le", "<u1"), ("te", "<u1"), ("cnt", "<u4"),
                       ("timestamp", "<u8")])
-
+COL=112
+ROW=224
 
 @njit
 def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt,
@@ -313,7 +314,7 @@ def interpret_h5(fin, fout, data_format=0x3, n=100000000):
 def list2img(dat, delete_noise=True):
     if delete_noise:
         dat = without_noise(dat)
-    return np.histogram2d(dat["col"], dat["row"], bins=[np.arange(0, 37, 1), np.arange(0, 130, 1)])[0]
+    return np.histogram2d(dat["col"], dat["row"], bins=[np.arange(0, COL+1, 1), np.arange(0, ROW+1, 1)])[0]
 
 
 def list2cnt(dat, delete_noise=True):
@@ -330,7 +331,7 @@ def list2cnt(dat, delete_noise=True):
 
 
 def without_noise(dat):
-    return dat[np.bitwise_or(dat["cnt"] == 0, dat["col"] >= 36)]
+    return dat[np.bitwise_or(dat["cnt"] == 0, dat["col"] > COL)]
 
 
 class InterRaw():
