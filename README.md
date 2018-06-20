@@ -1,10 +1,11 @@
 # tjmonopix-daq
-TJ-MonoPix DAQ
+Data acquisition software for the TJMonoPix pixel detector.
 
-# TEST PROCEDURE
-1) In a board without the chip, check jumper positions, voltages and currents with the MIO and GPAC connected and on.
+# Installation
+You need to have python and the following packages installed:
+`basil-daq>=2.4.10 bitarray>=0.8.1 matplotlib numba numpy pytables pyyaml scipy tqdm`
 
-2) Power-on test of the chip
-	a) Bias PWELL and PSUB to -3V (optimal but can be from 0 to -6)
+Then run `python setup.py develop` from root folder.
 
-3) Monopix.ipynb (jupyter notebook) contains the code to initialize the MIO, GPAC and TJ-Monopix and provides usefull code samples such as injection, s-curve measurement, etc
+# Usage
+tbd

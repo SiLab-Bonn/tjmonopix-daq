@@ -107,11 +107,15 @@ ENV/
 # mypy
 .mypy_cache/
 
+# Firmware
 /firmware/ise/*
 !/firmware/ise/*.xise
 /firmware/vivado/*
 !/firmware/vivado/*.xpr
 
+# Output data
 /output_data/*
 
+# pyDev project files
 .project
+.pydevproject
