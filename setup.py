@@ -4,11 +4,10 @@ from setuptools import setup
 from setuptools import find_packages
 
 import tjmonopix
-from symbol import except_clause
 
 version = tjmonopix.__version__
 
-author = 'Tomasz Hemperek'
+author = 'Christian Bespin, Ivan Caicedo Sierra, Tomasz Hemperek, Toko Hirono, Konstantinos Moustakas'
 author_email = ''
 
 # Requirements
@@ -19,8 +18,8 @@ install_requires = ['basil-daq>=2.4.10',
 setup(
     name='tjmonopix-daq',
     version=version,
-    description='DAQ for tjmonopix prototype',
-    url='https://github.com/SiLab-Bonn/tjmonopix-daq',
+    description='DAQ for TJMonoPix prototype',
+    url='https://github.com/ChristianBesp/tjmonopix-daq',
     license='',
     long_description='',
     author=author,
