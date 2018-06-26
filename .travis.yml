@@ -54,7 +54,7 @@ script:
   #  else
   #    touch $HOME/miniconda/lib/python3.6/site-packages/converage.pth && printf "import coverage; coverage.process_startup()" > $HOME/miniconda/lib/python3.6/site-packages/converage.pth;
   #  fi
-  - travis_wait 30 py.test
+  - travis_wait 30 py.test tjmonopix/tests
  
 # after_success:
 #   - coveralls --data_file .coverage.*
