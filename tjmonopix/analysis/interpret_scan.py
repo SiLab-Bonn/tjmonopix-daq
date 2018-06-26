@@ -1,5 +1,5 @@
 import numpy as np
-from tjmonopix.analysis.interpreter import InterRaw 
+from tjmonopix.analysis.interpreter import Interpreter 
 
 
 def interpret_data(raw_data):
@@ -20,7 +20,7 @@ def interpret_data(raw_data):
 def interpret_rx_data_scan(raw_data, meta_data):
         data_type = {'names':['col','row','le','te','scan_param_id'], 'formats':['uint8','uint16','uint8','uint8','uint16']}
         ret = np.recarray((0), dtype=data_type)
-        inter=InterRaw()        
+        inter=Interpreter()        
         if len(meta_data):
             param, index = np.unique(meta_data['scan_param_id'], return_index=True)
             index = index[1:]

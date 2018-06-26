@@ -32,10 +32,12 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
         # TJMONOPIX_RX
         ########################
         if (r & 0xF0000000 == 0x30000000):
+            # Token data
             #rx_cnt= (rx_cnt & 0xF)  | ((np.uint32(r) << np.int64(4)) & 0xFFFFFFF0)
             pass
         elif (r & 0xF0000000 == 0x00000000):
-            col = 2 * (r & 0x3f) + (((r & 0x7FC0) >> 6) // 256)
+            # TJ data
+            col = 2 * (r & 0x3f) + (((r & 0x7FC0) >> 6) // 256)  # Multiplay by two and, if necessary, add 1, because of double columns (64 double columns with 2 * 223 rows each)
             row = ((r & 0x7FC0) >> 6) % 256
             te = (r & 0x1F8000) >> 15
             le = (r & 0x7E00000) >> 21
@@ -50,6 +52,8 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
                 return 1, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt, idx
 
         elif (r & 0xF0000000 == 0x10000000):
+            # Timestamp data (bit 0 to 27)
+            # Shift by four places (multiply by 16) to get timestamp data in 640 MHz format 
             timestamp = (timestamp & MASK1_UPPER) | (
                 np.uint64(r)<<np.uint64(4) & MASK1_LOWER)
             # if debug & 0x4 ==0x4:
@@ -61,10 +65,12 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
                 return 2, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt, idx
 
         elif (r & 0xF0000000 == 0x20000000):
+            # Timestamp data (bit 28 to 51)
+            # Shift by four places (multiply by 16) to get timestamp data in 640 MHz format 
             timestamp = (timestamp & MASK1_LOWER) | (
                 (np.uint64(r) << np.uint64(32)) & MASK1_UPPER)
             # if debug & 0x4 ==0x4:
-            #print r_i,hex(r),rx_flg,"ts=",hex(timestamp)
+            # print r_i,hex(r),rx_flg,"ts=",hex(timestamp)
 
             if rx_flg == 0x2:
                 buf[buf_i]["row"] = row
@@ -283,30 +289,29 @@ def interpret_h5(fin, fout, data_format=0x43, n=1000000000):
                     ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt, np.uint64(start), data_format)
                 hit_total = hit_total+len(hit_dat)
                 if err == 0:
-                    print "%d %d %.3f%% %.3fs %dhits" % (
-                        start, r_i, 100.0*(start+r_i+1)/end, time.time()-t0, hit_total)
+                    print("{:d} {:d} {:.3f} {:.3f}s {:d} Hits".format(start, r_i, 100.0*(start+r_i+1)/end, time.time()-t0, hit_total))
                 elif err == 1 or err == 2 or err == 3:
-                    print "tjmonopix data broken", err, start, r_i, hex(
-                        raw[r_i]), "flg=", rx_flg
+                    print("tjmonopix data broken", err, start, r_i, hex(
+                        raw[r_i]), "flg=", rx_flg)
                     if data_format & 0x8 == 0x8:
                         for i in range(max(0, r_i-100), min(r_i+100, tmpend-start-6), 6):
-                            print hex(
-                                raw[start+i]), hex(raw[start+i+1]), hex(raw[start+i+2]),
-                            print hex(
-                                raw[start+i+3]), hex(raw[start+i+4]), hex(raw[start+i+5])
+                            print(hex(
+                                raw[start+i]), hex(raw[start+i+1]), hex(raw[start+i+2])),
+                            print(hex(
+                                raw[start+i+3]), hex(raw[start+i+4]), hex(raw[start+i+5]))
                     rx_flg = 0
                     timestamp = np.uint64(0x0)
                 elif err == 4 or err == 5 or err == 6:
-                    print "timestamp data broken", err, start, r_i, hex(
-                        raw[r_i]), "flg=", ts_flg, ts_timestamp
+                    print("timestamp data broken", err, start, r_i, hex(
+                        raw[r_i]), "flg=", ts_flg, ts_timestamp)
                     ts_flg = 0
                     ts_timestamp = np.uint64(0x0)
                     ts_pre = ts_timestamp
                 elif err == 7:
-                    print "trash data", err, start, r_i, hex(raw[r_i])
+                    print("trash data", err, start, r_i, hex(raw[r_i]))
                 elif err == 8 or err == 9 or err == 10:
-                    print "ts2_timestamp data broken", err, start, r_i, hex(
-                        raw[r_i]), "flg=", ts2_flg, ts2_timestamp
+                    print("ts2_timestamp data broken", err, start, r_i, hex(
+                        raw[r_i]), "flg=", ts2_flg, ts2_timestamp)
                 hit_table.append(hit_dat)
                 hit_table.flush()
                 start = start+r_i+1
@@ -326,7 +331,7 @@ def list2cnt(dat, delete_noise=True):
     uni, cnt = np.unique(dat[["col", "row"]], return_counts=True)
     ret = np.empty(len(uni), dtype=[
                    ("col", "<u1"), ("row", "<u2"), ("cnt", "<i8")])
-    print ret.dtype.names
+    print(ret.dtype.names)
     ret["col"] = uni["col"]
     ret["row"] = uni["row"]
     ret["cnt"] = cnt
@@ -337,7 +342,7 @@ def without_noise(dat):
     return dat[np.bitwise_or(dat["cnt"] == 0, dat["col"] > COL)]
 
 
-class InterRaw():
+class Interpreter():
     def __init__(self, chunk=100000000, debug=0):
         self.reset()
         self.buf = np.empty(chunk, dtype=hit_dtype)
@@ -408,7 +413,7 @@ class InterRaw():
 
 
 def raw2list(raw, delete_noise=True):
-    inter = InterRaw()
+    inter = Interpreter()
     dat = inter.run(raw)
     if delete_noise == True:
         dat = without_noise(dat)
@@ -416,12 +421,12 @@ def raw2list(raw, delete_noise=True):
 
 
 def raw2img(raw, delete_noise=True):
-    inter = InterRaw()
+    inter = Interpreter()
     return list2img(inter.run(raw), delete_noise=delete_noise)
 
 
 def raw2cnt(raw, delete_noise=True):
-    inter = InterRaw()
+    inter = Interpreter()
     return list2cnt(inter.run(raw), delete_noise=delete_noise)
 
 
@@ -433,4 +438,4 @@ if __name__ == "__main__":
     # debug
     #
     # 0x20 correct tlu_timestamp based on timestamp2 0x00 based on timestamp
-    print fout
+    print(fout)
