@@ -3,10 +3,10 @@ import numpy as np
 from tjmonopix.analysis import interpreter
 from hypothesis import given, settings
 import hypothesis.strategies as st
-# from hypothesis import reproduce_failure
 
 
 class TestInterpreter(unittest.TestCase):
+
     @settings(deadline=None, max_examples=100)
     @given(st.integers(0, 63),
            st.integers(0, 445),
