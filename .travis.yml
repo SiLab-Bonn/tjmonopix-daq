@@ -1,4 +1,4 @@
-language: generic
+language: python
 
 matrix:
     include:
@@ -10,6 +10,14 @@ matrix:
         osx_image: xcode8
         env:
            - TRAVIS_PYTHON_VERSION=3.6
+      - os: linux
+        dist: trusty
+        env:
+           - TRAVIS_PYTHON_VERSION=2.7
+      - os: osx
+        osx_image: xcode8
+        env:
+           - TRAVIS_PYTHON_VERSION=2.7
 
 notifications:
     email:
