@@ -7,7 +7,7 @@ import hypothesis.strategies as st
 
 
 class TestInterpreter(unittest.TestCase):
-    @settings(deadline=2000, max_examples=100)
+    @settings(deadline=None, max_examples=100)
     @given(st.integers(0, 63),
            st.integers(0, 445),
            st.integers(0, 63),
