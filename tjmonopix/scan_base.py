@@ -56,7 +56,7 @@ class ScanBase(object):
             fh.setFormatter(logging.Formatter("%(asctime)s [%(levelname)-5.5s] %(message)s"))
             fh.setLevel(logging.INFO)
         self.logger.addHandler(fh)
-        logging.info("Initializing {0}".format(self.__class__.__name__))
+        logging.info("Initializing {:s}".format(self.__class__.__name__))
 
     def start(self, **kwargs):
 
@@ -77,7 +77,7 @@ class ScanBase(object):
             filters=tb.Filters(complib='zlib', complevel=5, fletcher32=False))
         self.meta_data_table.attrs.kwargs = yaml.dump(kwargs)
         status = self.dut.get_power_status()
-        self.logger.info('power status: %s', str(status))
+        self.logger.info('power status: {:s}'.format(str(status)))
         self.meta_data_table.attrs.power_before = yaml.dump(status)
         self.meta_data_table.attrs.status_before = yaml.dump(self.dut.get_configuration())
         self.meta_data_table.attrs.SET_before = yaml.dump(self.dut.SET)
@@ -100,7 +100,7 @@ class ScanBase(object):
 
         # Log and save power status and configuration
         status = self.dut.get_power_status()
-        self.logger.info('Power status: {:d}'.format(str(status)))
+        self.logger.info('Power status: {:s}'.format(str(status)))
         self.meta_data_table.attrs.power = yaml.dump(status)
         self.meta_data_table.attrs.status = yaml.dump(self.dut.get_configuration())
         self.meta_data_table.attrs.SET = yaml.dump(self.dut.SET)
