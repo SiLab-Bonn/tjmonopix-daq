@@ -21,7 +21,8 @@ class Analysis():
     def __exit__(self, exc_type, exc_value, traceback):
         pass
 
-    def analyze_data(self, data_format=0x0):
+    def analyze_data(self, data_format=0x0, put_scan_param_id=False):
+        print put_scan_param_id
 
         with tb.open_file(self.raw_data_file) as in_file:
             n_words = in_file.root.raw_data.shape[0]
@@ -31,28 +32,27 @@ class Analysis():
                 self.logger.warning('Data is empty. Skip analysis!')
                 return
 
-        # Set initial values for interpretation and prepare output array for hits
-        (hits, col, row, le, te, noise, timestamp, rx_flag, ts_timestamp, ts_pre, ts_cnt, ts_flg, ts2_timestamp,
-         ts2_tot, ts2_cnt, ts2_flg, ts3_timestamp, ts3_cnt, ts3_flg
-         ) = au.init_outs(n_hits=self.chunk_size * 4)
+            # Set initial values for interpretation and prepare output array for hits
+            (hits, col, row, le, te, noise, timestamp, rx_flag, ts_timestamp, ts_pre, ts_cnt, ts_flg, ts2_timestamp,
+             ts2_tot, ts2_cnt, ts2_flg, ts3_timestamp, ts3_cnt, ts3_flg
+             ) = au.init_outs(n_hits=self.chunk_size * 4)
 
-        with tb.open_file(self.raw_data_file[:-3] + '_interpreted.h5', "w") as out_file:
-            hit_table = out_file.create_table(out_file.root, name="Hits",
-                                              description=hits.dtype,
-                                              expectedrows=self.chunk_size,
-                                              title='hit_data',
-                                              filters=tb.Filters(complib='blosc',
-                                                                 complevel=5,
-                                                                 fletcher32=False))
+            with tb.open_file(self.raw_data_file[:-3] + '_interpreted.h5', "w") as out_file:
+                hit_table = out_file.create_table(out_file.root, name="Hits",
+                                                  description=hits.dtype,
+                                                  expectedrows=self.chunk_size,
+                                                  title='hit_data',
+                                                  filters=tb.Filters(complib='blosc',
+                                                                     complevel=5,
+                                                                     fletcher32=False))
 
-            with tb.open_file(self.raw_data_file) as f:
                 start = 0
                 hit_total = 0
                 pbar = tqdm(total=n_words)
 
                 while start < n_words:
                     tmpend = min(n_words, start + 1000000)
-                    raw_data = f.root.raw_data[start:tmpend]
+                    raw_data = in_file.root.raw_data[start:tmpend]
                     (err, hit_dat, r_i, col, row, le, te, noise, timestamp, rx_flag,
                      ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
                      ) = au.interpret_data(
@@ -75,8 +75,8 @@ class Analysis():
                         rx_flg = 0
                         timestamp = np.uint64(0x0)
                     elif err == 4 or err == 5 or err == 6:
-#                         print "timestamp data broken", err, start, r_i, hex(
-#                             raw[r_i]), "flg=", ts_flg, ts_timestamp
+                        print "timestamp data broken", err, start, r_i, hex(
+                            raw_data[r_i]), "flg=", ts_flg, ts_timestamp
                         ts_flg = 0
                         ts_timestamp = np.uint64(0x0)
                         ts_pre = ts_timestamp
@@ -88,6 +88,10 @@ class Analysis():
                         ts2_flg = 0
                     hit_dat['idx'] = hit_dat['idx'] + start
 
+                    if put_scan_param_id is True:
+                        hit_dat = au.correlate_scan_ids(hit_dat, meta_data)
+
+                    print hit_dat.dtype
                     hit_table.append(hit_dat)
                     hit_table.flush()
                     start = start + r_i + 1

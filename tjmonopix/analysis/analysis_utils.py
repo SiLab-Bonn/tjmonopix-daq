@@ -257,3 +257,18 @@ def interpret_data(rawdata, buf, col, row, le, te, noise, timestamp, rx_flg, ts_
             return 7, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
 
     return 0, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+
+
+@njit
+def correlate_scan_ids(hits, meta_data):
+    meta_i = 0
+
+    for i, d in enumerate(hits["idx"]):
+        while meta_i < len(meta_data):
+            # print d
+            if d >= meta_data[meta_i]['index_start'] and d < meta_data[meta_i]['index_stop']:
+                hits[i]['idx'] = meta_data[meta_i]['scan_param_id']
+                break
+            elif d >= meta_data[meta_i]['index_stop']:
+                meta_i = meta_i + 1
+    return hits
