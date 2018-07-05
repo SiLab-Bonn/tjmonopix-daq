@@ -2,6 +2,35 @@ import numpy as np
 from numba import njit
 
 
+def init_outs(n_hits):
+    hit_dtype = [("col", "<u1"), ("row", "<u2"), ("le", "<u1"), ("te", "<u1"),
+                 ("cnt", "<u4"), ("timestamp", "<u8"), ("idx", "<u8")]
+
+    col = 0xFF
+    row = 0xFF
+    le = 0xFF
+    te = 0xFF
+    noise = 0
+    timestamp = np.uint64(0x0)
+    rx_flg = 0
+
+    ts_timestamp = np.uint64(0x0)
+    ts_pre = ts_timestamp
+    ts_cnt = 0x0
+    ts_flg = 0
+
+    ts2_timestamp = np.uint64(0x0)
+    ts2_tot = 0
+    ts2_cnt = 0x0
+    ts2_flg = 0
+
+    ts3_timestamp = np.uint64(0x0)
+    ts3_cnt = 0x0
+    ts3_flg = 0
+
+    return np.zeros(shape=n_hits, dtype=hit_dtype), col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_cnt, ts_flg, ts2_timestamp, ts2_tot, ts2_cnt, ts2_flg, ts3_timestamp, ts3_cnt, ts3_flg
+
+
 @njit
 def interpret_data(rawdata, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt,
                    ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt, debug):
@@ -31,31 +60,27 @@ def interpret_data(rawdata, buf, col, row, le, te, noise, timestamp, rx_flg, ts_
             le = (word & 0x7E00000) >> 21
             noise = (word & 0x8000000) >> 27
 
-            # if debug & 0x4 ==0x4:
-            #     print r_i,hex(word),rx_flg,"ts=",hex(timestamp),col,row,noise
-
+            # Processed TJMonoPix pixel data, expect TJMonoPix timestamp data next
             if rx_flg == 0x0:
                 rx_flg = 0x1
             else:
+                # Interpreter did not expect TJMonoPix data, return error and data so far
                 return 1, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
 
         elif (word & 0xF0000000 == 0x10000000):
-            # Timestamp data part 1
+            # TJMonoPix timestamp data part 1
+            # Shift by four to convert to 640 MHz timestamp
             timestamp = (timestamp & MASK1_UPPER) | (np.uint64(word) << np.uint64(4) & MASK1_LOWER)
-            # if debug & 0x4 ==0x4:
-            #     print r_i, hex(word), rx_flg, "ts=", hex(timestamp), le, te
-            # pass
+
             if rx_flg == 0x1:
                 rx_flg = 0x2
             else:
                 return 2, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
 
         elif (word & 0xF0000000 == 0x20000000):
-            # Timestamp data part 2
+            # TJMonoPix Timestamp data part 2
             timestamp = (timestamp & MASK1_LOWER) | (
                 (np.uint64(word) << np.uint64(32)) & MASK1_UPPER)
-            # if debug & 0x4 ==0x4:
-            #     print r_i,hex(word),rx_flg,"ts=",hex(timestamp)
 
             if rx_flg == 0x2:
                 buf[buf_i]["row"] = row
@@ -64,8 +89,7 @@ def interpret_data(rawdata, buf, col, row, le, te, noise, timestamp, rx_flg, ts_
                 buf[buf_i]["te"] = te
                 buf[buf_i]["timestamp"] = timestamp
                 buf[buf_i]["cnt"] = noise
-                if (debug & 0x80 == 0x80):
-                    buf[buf_i]["idx"] = r_i
+                buf[buf_i]["idx"] = r_i
                 buf_i = buf_i + 1
                 rx_flg = 0
             else:
@@ -93,8 +117,7 @@ def interpret_data(rawdata, buf, col, row, le, te, noise, timestamp, rx_flg, ts_
                     buf[buf_i]["te"] = np.uint8(ts_inter >> np.uint64(16))
                     buf[buf_i]["timestamp"] = ts_timestamp
                     buf[buf_i]["cnt"] = ts_cnt
-                    if debug & 0x80 == 0x80:
-                        buf[buf_i]["idx"] = r_i
+                    buf[buf_i]["idx"] = r_i
                     buf_i = buf_i + 1
             else:
                 return 6, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
@@ -139,8 +162,7 @@ def interpret_data(rawdata, buf, col, row, le, te, noise, timestamp, rx_flg, ts_
                     buf[buf_i]["te"] = np.uint8(ts2_cnt >> 8)
                     buf[buf_i]["timestamp"] = ts2_timestamp
                     buf[buf_i]["cnt"] = ts2_tot
-                    if debug & 0x80 == 0x80:
-                        buf[buf_i]['idx'] = r_i
+                    buf[buf_i]['idx'] = r_i
                     buf_i = buf_i + 1
             else:
                 return 10, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
@@ -187,8 +209,7 @@ def interpret_data(rawdata, buf, col, row, le, te, noise, timestamp, rx_flg, ts_
                     buf[buf_i]["te"] = 0xFF
                     buf[buf_i]["timestamp"] = ts3_timestamp
                     buf[buf_i]["cnt"] = ts3_cnt
-                    if debug & 0x80 == 0x80:
-                        buf[buf_i]['idx'] = r_i
+                    buf[buf_i]['idx'] = r_i
                     buf_i = buf_i + 1
             else:
                 return 10, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
@@ -226,8 +247,7 @@ def interpret_data(rawdata, buf, col, row, le, te, noise, timestamp, rx_flg, ts_
                 buf[buf_i]["te"] = 0xFF
                 buf[buf_i]["timestamp"] = tlu_timestamp
                 buf[buf_i]["cnt"] = tlu
-                if debug & 0x80 == 0x80:
-                    buf[buf_i]['idx'] = r_i
+                buf[buf_i]['idx'] = r_i
                 buf_i = buf_i + 1
 
         else:
