@@ -22,7 +22,7 @@ class Analysis():
         pass
 
     def analyze_data(self, data_format=0x0, put_scan_param_id=False):
-        print put_scan_param_id
+        self.analyzed_data_file = self.raw_data_file[:-3] + '_interpreted.h5'
 
         with tb.open_file(self.raw_data_file) as in_file:
             n_words = in_file.root.raw_data.shape[0]
@@ -33,11 +33,11 @@ class Analysis():
                 return
 
             # Set initial values for interpretation and prepare output array for hits
-            (hits, col, row, le, te, noise, timestamp, rx_flag, ts_timestamp, ts_pre, ts_cnt, ts_flg, ts2_timestamp,
+            (hits, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_cnt, ts_flg, ts2_timestamp,
              ts2_tot, ts2_cnt, ts2_flg, ts3_timestamp, ts3_cnt, ts3_flg
              ) = au.init_outs(n_hits=self.chunk_size * 4)
 
-            with tb.open_file(self.raw_data_file[:-3] + '_interpreted.h5', "w") as out_file:
+            with tb.open_file(self.analyzed_data_file, "w") as out_file:
                 hit_table = out_file.create_table(out_file.root, name="Hits",
                                                   description=hits.dtype,
                                                   expectedrows=self.chunk_size,
@@ -46,19 +46,20 @@ class Analysis():
                                                                      complevel=5,
                                                                      fletcher32=False))
 
+                # TODO: Copy all attributes properly to output_file, maybe own table
+                out_file.root.Hits.attrs.scan_id = in_file.root.meta_data.attrs.scan_id
+
                 start = 0
-                hit_total = 0
                 pbar = tqdm(total=n_words)
 
                 while start < n_words:
                     tmpend = min(n_words, start + 1000000)
                     raw_data = in_file.root.raw_data[start:tmpend]
-                    (err, hit_dat, r_i, col, row, le, te, noise, timestamp, rx_flag,
+                    (err, hit_dat, r_i, col, row, le, te, noise, timestamp, rx_flg,
                      ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
                      ) = au.interpret_data(
-                        raw_data, hits, col, row, le, te, noise, timestamp, rx_flag,
+                        raw_data, hits, col, row, le, te, noise, timestamp, rx_flg,
                         ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt, data_format)
-                    hit_total = hit_total + len(hit_dat)
                     if err == 0:
                         pass
                     elif err == 1 or err == 2 or err == 3:
@@ -71,7 +72,7 @@ class Analysis():
 #                                 print hex(
 #                                     raw[start + i + 3]), hex(raw[start + i + 4]), hex(raw[start + i + 5])
 
-                        # Error in TJMonoPix data occured, reset rx_flag and timestamp and proceed with next word
+                        # Error in TJMonoPix data occured, reset rx_flg and timestamp and proceed with next word
                         rx_flg = 0
                         timestamp = np.uint64(0x0)
                     elif err == 4 or err == 5 or err == 6:
@@ -91,11 +92,27 @@ class Analysis():
                     if put_scan_param_id is True:
                         hit_dat = au.correlate_scan_ids(hit_dat, meta_data)
 
-                    print hit_dat.dtype
                     hit_table.append(hit_dat)
                     hit_table.flush()
                     start = start + r_i + 1
-                    # if debug & 0x4 == 0x4:
-                    #   break
+
                     pbar.update(r_i)
                 pbar.close()
+
+                self._create_additional_hit_data()
+
+    def _create_additional_hit_data(self):
+        with tb.open_file(self.analyzed_data_file, 'r+') as out_file:
+            hits = out_file.root.Hits[:]
+            scan_id = out_file.root.Hits.attrs["scan_id"]  # TODO: Read from proper dictionary (or similar)
+
+            hist_occ = au.occ_hist2d(hits)
+
+            out_file.create_carray(out_file.root,
+                                   name='HistOcc',
+                                   title='Occupancy Histogram',
+                                   obj=hist_occ,
+                                   filters=tb.Filters(complib='blosc',
+                                                      complevel=5,
+                                                      fletcher32=False))
+            

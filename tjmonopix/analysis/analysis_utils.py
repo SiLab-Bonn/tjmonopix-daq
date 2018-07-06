@@ -272,3 +272,28 @@ def correlate_scan_ids(hits, meta_data):
             elif d >= meta_data[meta_i]['index_stop']:
                 meta_i = meta_i + 1
     return hits
+
+
+@njit
+def occ_hist2d(hits):
+    hist_occ = np.zeros(shape=(112, 224))
+
+    for hit in hits:
+        col = hit['col']
+        row = hit['row']
+        if col >= 0 and col < hist_occ.shape[0] and row >= 0 and row < hist_occ.shape[1]:
+            hist_occ[col, row] += 1
+
+    return hist_occ
+
+
+def param_hist(hits, n_params):
+    hist_params = np.empty(shape=(112, 224, n_params))
+    for hit in hits:
+        col = hit['col']
+        row = hit['row']
+        par = hit['scan_param_id']
+        if col >= 0 and col < hist_params.shape[0] and row >= 0 and row < hist_params.shape[1] and par >= 0 and par < hist_params.shape[2]:
+            hist_params[col, row, par] += 1
+        else:
+            ValueError
