@@ -115,6 +115,7 @@ ENV/
 
 # Output data
 /output_data/*
+/tjmonopix/scans/output_data/*
 
 # pyDev project files
 .project
