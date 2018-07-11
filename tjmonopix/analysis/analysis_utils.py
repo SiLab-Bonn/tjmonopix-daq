@@ -287,6 +287,20 @@ def occ_hist2d(hits):
     return hist_occ
 
 
+@njit
+def scurve_hist3d(hits, scan_param_range):
+    hist_scurves = np.zeros(shape=(112, 224, len(scan_param_range)))
+
+    for hit in hits:
+        col = hit["col"]
+        row = hit["row"]
+        param = hit["idx"]
+        if col >= 0 and col < hist_scurves.shape[0] and row >= 0 and row < hist_scurves.shape[1]:
+            hist_scurves[col, row, param] += 1
+
+    return hist_scurves
+
+
 def param_hist(hits, n_params):
     hist_params = np.empty(shape=(112, 224, n_params))
     for hit in hits:
