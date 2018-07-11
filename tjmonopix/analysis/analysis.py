@@ -5,12 +5,16 @@ from tqdm import tqdm
 
 from tjmonopix.analysis import analysis_utils as au
 
+logging.basicConfig(
+    format="%(asctime)s - [%(name)-8s] - %(levelname)-7s %(message)s")
+loglevel = logging.INFO
+
 
 class Analysis():
     def __init__(self, raw_data_file=None):
 
         self.logger = logging.getLogger(self.__class__.__name__)
-#         self.logger.setLevel(loglevel)
+        self.logger.setLevel(loglevel)
 
         self.raw_data_file = raw_data_file
         self.chunk_size = 1000000
@@ -115,4 +119,19 @@ class Analysis():
                                    filters=tb.Filters(complib='blosc',
                                                       complevel=5,
                                                       fletcher32=False))
-            
+
+            # TODO: ToT Histogram?
+
+            if scan_id in ["threshold_scan"]:
+                n_injections = 100  # TODO: get from run configuration
+                scan_param_range = np.arange(0, 64, 1)  # TODO: get from run configuration
+
+                hist_scurve = au.scurve_hist3d(hits, scan_param_range)
+
+                out_file.create_carray(out_file.root,
+                                       name="HistSCurve",
+                                       title="Scurve Data",
+                                       obj=hist_scurve,
+                                       filters=tb.Filters(complib='blosc',
+                                                          complevel=5,
+                                                          fletcher32=False))
