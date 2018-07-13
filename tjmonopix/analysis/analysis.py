@@ -135,3 +135,13 @@ class Analysis():
                                        filters=tb.Filters(complib='blosc',
                                                           complevel=5,
                                                           fletcher32=False))
+
+                self.threshold_map, self.noise_map, self.chi2_map = au.fit_scurves_multithread(
+                    hist_scurve.reshape(112 * 224, 64), scan_param_range, n_injections=n_injections, invert_x=False)
+
+                out_file.create_carray(out_file.root, name='ThresholdMap', title='Threshold Map', obj=self.threshold_map,
+                                       filters=tb.Filters(complib='blosc', complevel=5, fletcher32=False))
+                out_file.create_carray(out_file.root, name='NoiseMap', title='Noise Map', obj=self.noise_map,
+                                       filters=tb.Filters(complib='blosc', complevel=5, fletcher32=False))
+                out_file.create_carray(out_file.root, name='Chi2Map', title='Chi2 / ndf Map', obj=self.chi2_map,
+                                       filters=tb.Filters(complib='blosc', complevel=5, fletcher32=False))

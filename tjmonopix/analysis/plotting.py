@@ -34,11 +34,18 @@ class Plotting(object):
             self.run_config = dict()
             self.run_config['scan_id'] = in_file.root.Hits.attrs.scan_id  # TODO: Read all attributes from proper dictionary
 
-            if pdf_file is None:
-                self.filename = '.'.join(analyzed_data_file.split('.')[:-1]) + '.pdf'
-            else:
-                self.filename = pdf_file
-            self.out_file = PdfPages(self.filename)
+            if self.run_config['scan_id'] in ['threshold_scan', 'global_threshold_tuning', 'local_threshold_tuning']:
+                self.HistSCurve = in_file.root.HistSCurve[:]
+                self.ThresholdMap = in_file.root.ThresholdMap[:, :]
+                self.Chi2Map = in_file.root.Chi2Map[:, :]
+                self.NoiseMap = in_file.root.NoiseMap[:]
+
+
+        if pdf_file is None:
+            self.filename = '.'.join(analyzed_data_file.split('.')[:-1]) + '.pdf'
+        else:
+            self.filename = pdf_file
+        self.out_file = PdfPages(self.filename)
 
     def __enter__(self):
         return self
@@ -59,9 +66,25 @@ class Plotting(object):
             else:
                 title = 'Occupancy'
 
-            self._plot_occupancy(hist=self.HistOcc[:].T, suffix='occupancy', title=title, z_max=20000)
+            self._plot_occupancy(hist=self.HistOcc[:].T, suffix='occupancy', title=title, z_max=20000)  # TODO: get mask and enable here
         except:
             self.logger.error('Could not create occupancy map!')
+
+    def create_threshold_map(self):
+        try:
+            mask = np.full((112, 224), False)
+            sel = self.Chi2Map[:] > 0.  # Mask not converged fits (chi2 = 0)
+            mask[~sel] = True
+
+            self._plot_occupancy(hist=np.ma.masked_array(self.ThresholdMap, mask).T,
+                                 electron_axis=False,
+                                 z_label='Threshold',
+                                 title='Threshold',
+                                 show_sum=False,
+                                 suffix='threshold_map')
+        except:
+            self.logger.error('Could not create threshold map!')
+
 
     def _plot_occupancy(self, hist, electron_axis=False, title='Occupancy', z_label='# of hits', z_min=None, z_max=None, show_sum=True, suffix=None):
         if z_max == 'median':
@@ -167,7 +190,7 @@ def plot_scurve_hist(scurves, scan_parameter_range, repeat):
     hist = np.empty((param_count, max_occ), dtype=np.uint32)
 
     for param in range(param_count):
-        
+
         hist[param] = np.bincount(scurves[:, param], minlength=max_occ)
 
     cmap = plt.get_cmap('cool')
@@ -187,7 +210,7 @@ def plot_scurve_hist(scurves, scan_parameter_range, repeat):
         norm = colors.LogNorm()
 
     im = ax.pcolormesh(x_bins, y_bins, hist.T, norm=norm, rasterized=True)
-    
+
     if z_max <= 10.0:
         cb = fig.colorbar(im, ticks=np.linspace(start=0.0, stop=z_max, num=min(11, math.ceil(z_max) + 1), endpoint=True), fraction=0.04, pad=0.05)
     else:
