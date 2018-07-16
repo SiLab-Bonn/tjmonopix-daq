@@ -40,7 +40,6 @@ class Plotting(object):
                 self.Chi2Map = in_file.root.Chi2Map[:, :]
                 self.NoiseMap = in_file.root.NoiseMap[:]
 
-
         if pdf_file is None:
             self.filename = '.'.join(analyzed_data_file.split('.')[:-1]) + '.pdf'
         else:
@@ -85,6 +84,31 @@ class Plotting(object):
         except:
             self.logger.error('Could not create threshold map!')
 
+    def create_scurves_plot(self, scan_parameter_name='Scan parameter'):
+        try:
+            if self.run_config['scan_id'] == 'threshold_scan':
+                scan_parameter_name = '$\Delta$ DU'
+                electron_axis = False
+                scan_parameter_range = np.arange(0, 64, 1)  # TODO: get parameters from run_config
+            elif self.run_config['scan_id'] == 'global_threshold_tuning':
+                scan_parameter_name = self.run_config['VTH_name']
+                electron_axis = False
+                scan_parameter_range = range(self.run_config['VTH_start'],
+                                             self.run_config['VTH_stop'],
+                                             -1 * self.run_config['VTH_step'])
+#             elif self.run_config['scan_id'] == 'local_threshold_tuning':
+#                 min_tdac, max_tdac, _ = au.get_tdac_range(
+#                     self.run_config['start_column'], self.run_config['stop_column'])
+#                 scan_parameter_name = 'TDAC'
+#                 electron_axis = False
+#                 scan_parameter_range = range(min_tdac, max_tdac)
+
+            self._plot_scurves(scurves=self.HistSCurve,
+                               scan_parameters=scan_parameter_range,
+                               electron_axis=electron_axis,
+                               scan_parameter_name=scan_parameter_name)
+        except:
+            self.logger.error('Could not create scurve plot!')
 
     def _plot_occupancy(self, hist, electron_axis=False, title='Occupancy', z_label='# of hits', z_min=None, z_max=None, show_sum=True, suffix=None):
         if z_max == 'median':
@@ -122,7 +146,7 @@ class Plotting(object):
         if electron_axis:
             pad = 1.0
         else:
-            pad = 0.6
+            pad = 1.0
         cax = divider.append_axes("right", size="5%", pad=pad)
         cb = fig.colorbar(im, cax=cax, ticks=np.linspace(
             start=z_min, stop=z_max, num=10, endpoint=True), orientation='vertical')
@@ -179,42 +203,70 @@ class Plotting(object):
         if increase_count:
             self.plot_cnt += 1
 
+    def _plot_scurves(self, scurves, scan_parameters, electron_axis=False, max_occ=120, scan_parameter_name=None, title='S-curves', ylabel='Occupancy'):
+        # TODO: get n_pixels and start and stop columns from run_config
+        # start_column = self.run_config['start_column']
+        # stop_column = self.run_config['stop_column']
+        # start_row = self.run_config['start_row']
+        # stop_row = self.run_config['stop_row']
+        x_bins = np.arange(-0.5, max(scan_parameters) + 1.5)
+        y_bins = np.arange(-0.5, max_occ + 0.5)
 
-def plot_scurve_hist(scurves, scan_parameter_range, repeat):
-    max_occ = repeat + 200
-    x_bins = scan_parameter_range
-    y_bins = np.arange(-0.5, max_occ + 0.5, 1)
+        param_count = scurves.shape[2]
+        hist = np.empty([param_count, max_occ], dtype=np.uint32)
 
-    param_count = scan_parameter_range.shape[0]
+        # Reformat scurves array as one long list of scurves
+        # For very noisy or not properly masked devices, ignore all s-curves where any data
+        # is larger than given threshold (max_occ)
+        scurves = scurves.reshape((112 * 224, 64))
+        scurves_masked = scurves[~np.any(scurves > max_occ, axis=1)]
+        n_pixel = scurves_masked.shape[0]
 
-    hist = np.empty((param_count, max_occ), dtype=np.uint32)
+        for param in range(param_count):
+            hist[param] = np.bincount(scurves_masked[:, param], minlength=max_occ)
 
-    for param in range(param_count):
+        fig = Figure()
+        FigureCanvas(fig)
+        ax = fig.add_subplot(111)
 
-        hist[param] = np.bincount(scurves[:, param], minlength=max_occ)
+        fig.patch.set_facecolor('white')
+        cmap = cm.get_cmap('cool')
+        if np.allclose(hist, 0.0) or hist.max() <= 1:
+            z_max = 1.0
+        else:
+            z_max = hist.max()
+        # for small z use linear scale, otherwise log scale
+        if z_max <= 10.0:
+            bounds = np.linspace(start=0.0, stop=z_max, num=255, endpoint=True)
+            norm = colors.BoundaryNorm(bounds, cmap.N)
+        else:
+            bounds = np.linspace(start=1.0, stop=z_max, num=255, endpoint=True)
+            norm = colors.LogNorm()
 
-    cmap = plt.get_cmap('cool')
-    fig, ax = plt.subplots()
-    fig.patch.set_facecolor("white")
+        im = ax.pcolormesh(x_bins, y_bins, hist.T, norm=norm, rasterized=True)
 
-    if np.allclose(hist, 0.0) or hist.max() <= 1:
-        z_max = 1.0
-    else:
-        z_max = hist.max()
-    # for small z use linear scale, otherwise log scale
-    if z_max <= 10.0:
-        bounds = np.linspace(start=0.0, stop=z_max, num=255, endpoint=True)
-        norm = colors.BoundaryNorm(bounds, cmap.N)
-    else:
-        bounds = np.linspace(start=1.0, stop=z_max, num=255, endpoint=True)
-        norm = colors.LogNorm()
+        if z_max <= 10.0:
+            cb = fig.colorbar(im, ticks=np.linspace(start=0.0, stop=z_max, num=min(
+                11, math.ceil(z_max) + 1), endpoint=True), fraction=0.04, pad=0.05)
+        else:
+            cb = fig.colorbar(im, fraction=0.04, pad=0.05)
+        cb.set_label("# of pixels")
+        ax.set_title(title + ' for %d pixel(s)' % (n_pixel), color=TITLE_COLOR)
+        if scan_parameter_name is None:
+            ax.set_xlabel('Scan parameter')
+        else:
+            ax.set_xlabel(scan_parameter_name)
+        ax.set_ylabel(ylabel)
 
-    im = ax.pcolormesh(x_bins, y_bins, hist.T, norm=norm, rasterized=True)
+        if electron_axis:
+            self._add_electron_axis(fig, ax)
 
-    if z_max <= 10.0:
-        cb = fig.colorbar(im, ticks=np.linspace(start=0.0, stop=z_max, num=min(11, math.ceil(z_max) + 1), endpoint=True), fraction=0.04, pad=0.05)
-    else:
-        cb = fig.colorbar(im, fraction=0.04, pad=0.05)
-    cb.set_label("#")
+#         if self.qualitative:
+#             ax.xaxis.set_major_formatter(plt.NullFormatter())
+#             ax.xaxis.set_minor_formatter(plt.NullFormatter())
+#             ax.yaxis.set_major_formatter(plt.NullFormatter())
+#             ax.yaxis.set_minor_formatter(plt.NullFormatter())
+#             cb.formatter = plt.NullFormatter()
+#             cb.update_ticks()
 
-    plt.show()
+        self._save_plots(fig, suffix='scurves')
