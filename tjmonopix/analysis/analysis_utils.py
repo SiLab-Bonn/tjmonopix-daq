@@ -295,7 +295,7 @@ def correlate_scan_ids(hits, meta_data):
 
 @njit
 def occ_hist2d(hits):
-    hist_occ = np.zeros(shape=(112, 224))
+    hist_occ = np.zeros(shape=(112, 224), dtype=np.uint32)
 
     for hit in hits:
         col = hit['col']
@@ -308,7 +308,7 @@ def occ_hist2d(hits):
 
 @njit
 def scurve_hist3d(hits, scan_param_range):
-    hist_scurves = np.zeros(shape=(112, 224, len(scan_param_range)))
+    hist_scurves = np.zeros(shape=(112, 224, len(scan_param_range)), dtype=np.uint16)
 
     for hit in hits:
         col = hit["col"]
