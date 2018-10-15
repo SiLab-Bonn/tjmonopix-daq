@@ -4,7 +4,7 @@ from numba import njit
 import tables
 
 
-# @njit
+@njit
 def interpret_data(rawdata, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt,
                    ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt, debug):
     MASK1_LOWER = np.uint64(0x00000000FFFFFFF0)
