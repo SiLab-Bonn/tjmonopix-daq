@@ -34,6 +34,8 @@ before_install:
       else
         MINICONDA_OS=MacOSX ;
     fi ;
+
+install:
     if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
       wget https://repo.continuum.io/miniconda/Miniconda2-latest-$MINICONDA_OS-x86_64.sh -O miniconda.sh;
     else
@@ -45,9 +47,8 @@ before_install:
   - conda config --set always_yes yes
   # - conda update conda  # https://github.com/travis-ci/travis-ci/issues/8512
   - conda info -a
-  - conda create -q -n tjmono-daq python="$TRAVIS_PYTHON_VERSION" pip
-  - source activate tjmono-daq
-  - conda install --quiet numba numpy pytables pyyaml scipy tqdm hypothesis # https://github.com/conda/conda/issues/6487
+  - conda create --yes -n test-environment python="$TRAVIS_PYTHON_VERSION" pip numba numpy pytables pyyaml scipy tqdm hypothesis matplotlib
+  - source activate test-environment
   - pip install --upgrade pip
   - pip install coverage python-coveralls pixel_clusterizer pylandau pytest
   - python setup.py develop
