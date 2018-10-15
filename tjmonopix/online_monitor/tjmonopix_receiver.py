@@ -120,11 +120,13 @@ class TJMonopixReceiver(Receiver):
         self.convert_checkbox.stateChanged.connect(lambda value: scale_axes(value))
         self.plot_delay = 0
 
-    def deserialze_data(self, data):
+    def deserialize_data(self, data):
 
+        print data
         datar, meta = utils.simple_dec(data)
         if 'occupancies' in meta:
             meta['occupancies'] = datar
+
         return meta
 
         # return jsonapi.loads(data, object_hook=utils.json_numpy_obj_hook)

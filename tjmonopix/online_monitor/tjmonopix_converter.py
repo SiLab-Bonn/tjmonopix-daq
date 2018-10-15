@@ -3,16 +3,17 @@ from zmq.utils import jsonapi
 import numpy as np
 
 from online_monitor.utils import utils
-from tjmonopix.analysis.interpreter import InterRaw
+from tjmonopix.analysis.interpreter import Interpreter
+
 
 class TJMonopixConverter(Transceiver):
 
     def setup_interpretation(self):
         self.n_hits = 0
         self.n_events = 0
-        self.inter=InterRaw()
+        self.inter = Interpreter()
 
-    def deserialze_data(self, data):
+    def deserialize_data(self, data):
         try:
             self.meta_data = jsonapi.loads(data)
         except ValueError:
@@ -34,19 +35,19 @@ class TJMonopixConverter(Transceiver):
             # Add info to meta data
             data[0][1]['meta_data'].update({'n_hits': self.n_hits, 'n_events': self.n_events})
             return [data[0][1]]
-        
-        hits=self.inter.run(data[0][1],data_format=3)
+
+        hits = self.inter.run(data[0][1], data_format=3)
         self.n_hits = hits.shape[0]
-        
+
         interpreted_data = {
             'hits': hits
         }
 
         return [interpreted_data]
 
-    def serialze_data(self, data):
+    def serialize_data(self, data):
         # return jsonapi.dumps(data, cls=utils.NumpyEncoder)
-    
+
         if 'hits' in data:
             hits_data = data['hits']
             data['hits'] = None

@@ -13,12 +13,14 @@ def fill_occupancy_hist(occ, tot, hits, pix):
     for hit_i in range(hits.shape[0]):
         occ[hits[hit_i]['col'], hits[hit_i]['row']] += 1
         if pix[0] == 0xFFFF and pix[1] == 0xFFFF:
-              tot[hits[hit_i]['tot']] += 1
+            tot[hits[hit_i]['tot']] += 1
         elif pix[0] == hits[hit_i]['col'] and pix[1] == hits[hit_i]['row']:
-              tot[hits[hit_i]['tot']] += 1
+            tot[hits[hit_i]['tot']] += 1
+
 
 def apply_noisy_pixel_cut(hists, noisy_threshold):
-     hists = hists[hists < noisy_threshold]
+    hists = hists[hists < noisy_threshold]
+
 
 class TJMonopixHistogrammer(Transceiver):
 
@@ -26,10 +28,10 @@ class TJMonopixHistogrammer(Transceiver):
         self.set_bidirectional_communication()  # We want to be able to change the histogrammmer settings
 
     def setup_interpretation(self):
-        self.occupancy = np.zeros(shape=(112,224), dtype=np.int32)
+        self.occupancy = np.zeros(shape=(112, 224), dtype=np.int32)
         self.tot = np.zeros(64, dtype=np.int32)
         # self.tdc = np.zeros(0xFFF, dtype=np.int32)
-        self.pix= [0xFFFF,0xFFFF] #[25,64] #[0xFFFF,0xFFFF] ########[col,row] for single pixel [0xFFFF,0xFFFF] for all pixel
+        self.pix = [0xFFFF, 0xFFFF] #[25,64] #[0xFFFF,0xFFFF] ########[col,row] for single pixel [0xFFFF,0xFFFF] for all pixel
         # Variables
         self.n_readouts = 0
         self.readout = 0
@@ -45,14 +47,14 @@ class TJMonopixHistogrammer(Transceiver):
         self.plot_delay = 0
         self.total_hits = 0
         self.total_events = 0
-        self.updateTime = 1 # was 0 before adding timestamp_start_fornext
+        self.updateTime = 1  # was 0 before adding timestamp_start_fornext
         self.mask_noisy_pixel = False
         self.timestamp_start_fornext = 0
         # Histogrammes from interpretation stored for summing
 #         self.error_counters = None
 #         self.trigger_error_counters = None
 
-    def deserialze_data(self, data):
+    def deserialize_data(self, data):
         # return jsonapi.loads(data, object_hook=utils.json_numpy_obj_hook)
         datar, meta = utils.simple_dec(data)
         if 'hits' in meta:
@@ -62,9 +64,7 @@ class TJMonopixHistogrammer(Transceiver):
 #            print "-----"
         return meta
 
-
     def interpret_data(self, data):
-        
 #        print "data[0][1]"
 #        print data
 #        print "////////"
@@ -93,14 +93,15 @@ class TJMonopixHistogrammer(Transceiver):
 
         if self.n_readouts != 0:  # 0 for infinite integration
             if self.readout % self.n_readouts == 0:
-                self.occupancy = np.zeros(shape=(112,224), dtype=np.int32)  # Reset occ hists
+                self.occupancy = np.zeros(shape=(112, 224), dtype=np.int32)  # Reset occ hists
                 self.tot = np.zeros(64, dtype=np.int32)  # Reset occ hists
                 self.readout = 0
 
         hit_data = data[0][1]['hits']
-        tmp = hit_data[hit_data["cnt"]==0] ## remove noise
-        tmp = tmp[tmp["col"]<112] ## remove TLU and timestamp
-        hits = np.recarray(len(tmp), dtype=[('col','u2'),('row','u2'),('tot','u1')]) 
+        # tmp = hit_data[hit_data["cnt"]==0] ## remove noise
+        tmp = hit_data  # remove noise
+        tmp = tmp[tmp["col"] < 112]  # remove TLU and timestamp
+        hits = np.recarray(len(tmp), dtype=[('col', 'u2'), ('row', 'u2'), ('tot', 'u1')])
         hits['tot'][:] = (tmp["te"] - tmp["le"]) & 0x3F
         hits['col'][:] = tmp["col"]
         hits['row'][:] = tmp["row"]
@@ -111,10 +112,9 @@ class TJMonopixHistogrammer(Transceiver):
         if hits.shape[0] == 0:  # Empty array
             return
         fill_occupancy_hist(self.occupancy, self.tot, hits, self.pix)
-        #print "occupancy", np.sum(self.occupancy)
-        
+        # print "occupancy", np.sum(self.occupancy)
 
-        if self.mask_noisy_pixel:   #Improve
+        if self.mask_noisy_pixel:  # Improve
             self.occupancy[self.occupancy > np.percentile(self.occupancy, 100 - self.config['noisy_threshold'])] = 0
 
         histogrammed_data = {
@@ -125,7 +125,7 @@ class TJMonopixHistogrammer(Transceiver):
 
         return [histogrammed_data]
 
-    def serialze_data(self, data):
+    def serialize_data(self, data):
         # return jsonapi.dumps(data, cls=utils.NumpyEncoder)
 
         if 'occupancies' in data:
