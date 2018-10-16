@@ -1,44 +1,30 @@
 import time
 import numpy as np
-import matplotlib.pyplot as plt
-
-# import tables after numpy and matplotlib to prevent libpng error
-import tables as tb
 import yaml
 import os
 import logging
 
 from tjmonopix.scan_base import ScanBase
 from tjmonopix.tjmonopix import TJMonoPix
-from tjmonopix.analysis.interpreter import interpret_h5
-from tjmonopix.analysis.interpret_scan import interpret_rx_data_scan
 
-from tjmonopix.analysis.tools import fit_scurve, scurve, fit_scurves_multithread
-from tjmonopix.analysis.plotting import plot_scurve_hist
-from tqdm import tqdm
-
-from numpy.lib.recfunctions import append_fields
-
-from numba import njit
+from tjmonopix.analysis import analysis
+from tjmonopix.analysis import plotting
 
 
 class ThresholdScan(ScanBase):
     scan_id = "threshold_scan"
 
     def scan(self, **kwargs):
-    
-        
+
+        if self.dut.SET["fl"] == "EN_PMOS":
+            fl_n = 1
+        elif self.dut.SET["fl"] == "EN_HV":
+            fl_n = 3
         with_tlu = kwargs.pop('with_tlu', False)
         with_timestamp = kwargs.pop('with_timestamp', False)
         with_tdc = kwargs.pop('with_tdc', False)
         inj_low_limit = kwargs.pop('inj_low_limit', 35)
         inj_high_limit = kwargs.pop('inj_high_limit', 100)
-
-        print self.dut.get_power_status()
-        raw_input("Check power consumption, especially VDDD (should be 0.5mA). Press any key to continue and start scan")
-
-        cnt = 0
-        scanned = 0
 
         ####################
         # stop readout and clean fifo
@@ -48,17 +34,22 @@ class ThresholdScan(ScanBase):
             self.dut.stop_tlu()
         if with_tdc:
             self.dut.stop_tdc()
-        self.dut.stop_monoread()
-        self.dut['fifo'].reset()
+
+        print self.dut.get_power_status()
+
+        cnt = 0
+        scanned = 0
+
+        # Write scan_id (type) to file
+        self.meta_data_table.attrs.scan_id = "threshold_scan"
 
         # Why is this needed?
-        self.dut['data_rx'].set_en(True)
-        self.dut['fifo'].get_data()
-        self.dut['data_rx'].set_en(False)
+        # self.dut['data_rx'].set_en(True)
+        # self.dut['fifo'].get_data()
+        # self.dut['data_rx'].set_en(False)
 
         # Setup injection
         repeat = 100
-        sleeptime = repeat * 0.0001
         delay = 5000
         width = 350
         noise_en = 0
@@ -69,8 +60,9 @@ class ThresholdScan(ScanBase):
         # V = (127/1.8)*#BIT
         # The default values are VL=44, VH=79, VH-VL=35
         # VDAC LSB=14.17mV, Cinj=230aF, 1.43e-/mV, ~710e-
-        self.dut.set_vl_dacunits(35, 1)
-        self.dut.set_vh_dacunits(35, 1)
+        self.dut.set_vl_dacunits(inj_low_limit, 1)
+        self.dut.set_vh_dacunits(inj_low_limit, 1)
+        vh = inj_low_limit
         self.dut.write_conf()
 
         scan_range = np.arange(inj_low_limit, inj_high_limit, 1)
@@ -91,54 +83,57 @@ class ThresholdScan(ScanBase):
         #if with_timestamp:
         #    self.dut.set_timestamp()
 
-        scan_param_id = scan_range[0] - inj_low_limit
+#         scan_param_id = scan_range[0] - inj_low_limit
+        scan_param_id = 0
 
         # Start values for scanning whole flavor  
-        area_coords = [(0, 0), (0, 1), (0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3), (2, 0), (2, 1), (2, 2), (2, 3), (3, 0), (3, 1), (3, 2), (3, 3), (8, 0), (8, 1), (8, 2), (8, 3), (9, 0), (9, 1), (9, 2), (9, 3), (10, 0), (10, 1), (10, 2), (10, 3), (11, 0), (11, 1), (11, 2), (11, 3), (16, 0), (16, 1), (16, 2), (16, 3), (17, 0), (17, 1), (17, 2), (17, 3), (18, 0), (18, 1), (18, 2), (18, 3), (19, 0), (19, 1), (19, 2), (19, 3), (24, 0), (24, 1), (24, 2), (24, 3), (25, 0), (25, 1), (25, 2), (25, 3), (26, 0), (26, 1), (26, 2), (26, 3), (27, 0), (27, 1), (27, 2), (27, 3), (32, 0), (32, 1), (32, 2), (32, 3), (33, 0), (33, 1), (33, 2), (33, 3), (34, 0), (34, 1), (34, 2), (34, 3), (35, 0), (35, 1), (35, 2), (35, 3), (40, 0), (40, 1), (40, 2), (40, 3), (41, 0), (41, 1), (41, 2), (41, 3), (42, 0), (42, 1), (42, 2), (42, 3), (43, 0), (43, 1), (43, 2), (43, 3), (48, 0), (48, 1), (48, 2), (48, 3), (49, 0), (49, 1), (49, 2), (49, 3), (50, 0), (50, 1), (50, 2), (50, 3), (51, 0), (51, 1), (51, 2), (51, 3), (56, 0), (56, 1), (56, 2), (56, 3), (57, 0), (57, 1), (57, 2), (57, 3), (58, 0), (58, 1), (58, 2), (58, 3), (59, 0), (59, 1), (59, 2), (59, 3), (64, 0), (64, 1), (64, 2), (64, 3), (65, 0), (65, 1), (65, 2), (65, 3), (66, 0), (66, 1), (66, 2), (66, 3), (67, 0), (67, 1), (67, 2), (67, 3), (72, 0), (72, 1), (72, 2), (72, 3), (73, 0), (73, 1), (73, 2), (73, 3), (74, 0), (74, 1), (74, 2), (74, 3), (75, 0), (75, 1), (75, 2), (75, 3), (80, 0), (80, 1), (80, 2), (80, 3), (81, 0), (81, 1), (81, 2), (81, 3), (82, 0), (82, 1), (82, 2), (82, 3), (83, 0), (83, 1), (83, 2), (83, 3), (88, 0), (88, 1), (88, 2), (88, 3), (89, 0), (89, 1), (89, 2), (89, 3), (90, 0), (90, 1), (90, 2), (90, 3), (91, 0), (91, 1), (91, 2), (91, 3), (96, 0), (96, 1), (96, 2), (96, 3), (97, 0), (97, 1), (97, 2), (97, 3), (98, 0), (98, 1), (98, 2), (98, 3), (99, 0), (99, 1), (99, 2), (99, 3), (104, 0), (104, 1), (104, 2), (104, 3), (105, 0), (105, 1), (105, 2), (105, 3), (106, 0), (106, 1), (106, 2), (106, 3), (107, 0), (107, 1), (107, 2), (107, 3)]
 
         # Iterate over whole flavor
-        start = timer()
 
-        for area in area_coords:
-            for _ in range(20):
-                self.dut["fifo"].get_data()
-
-            # TODO Set injected columns and rows here
+        injcol_step = 56
+        injrow_step = 4
+        injcol_start = 0
+        injrow_start = 0
+        # set cols to inject
+        for seedi in range(injcol_start, injcol_step):
             self.dut['CONF_SR']['COL_PULSE_SEL'].setall(False)
-            self.dut['CONF_SR']['INJ_ROW'].setall(False)
-
             self.dut.write_conf()
-
-            # Set columns and rows to inject
-            self.dut['CONF_SR']['COL_PULSE_SEL'][112 + area[0]] = 1
-            self.dut['CONF_SR']['COL_PULSE_SEL'][112 + area[0] + 4] = 1
-            for row in (np.arange(0, 221, 4) + area[1]):
-               self.dut['CONF_SR']['INJ_ROW'][row] = 1
-
-            self.dut.write_conf()
-
-            for _ in range(10):
-                self.dut["fifo"].get_data()
-            
-            # Loop over all injection steps
-            for step in scan_range:
-                # Set injection voltage for current step
-                self.dut.set_vh_dacunits(step, 1)
+            for col in range(seedi, self.dut.COL, injcol_step):
+                self.dut['CONF_SR']['COL_PULSE_SEL'][fl_n * 112 + col] = 1
                 self.dut.write_conf()
 
-                self.dut['fifo'].reset()
-                with self.readout(scan_param_id=scan_param_id, fill_buffer=False, clear_buffer=True, readout_interval=0.2, timeout=0.5):
-                    while not self.dut['inj'].is_ready:
-                        time.sleep(0.002)
-                    for _ in range(10):
-                        self.dut['inj'].is_ready
-                    self.dut["inj"].start()
+            # Set rows to inject
+            for seedj in range(injrow_start, injrow_step):
+                self.dut['CONF_SR']['INJ_ROW'].setall(False)
+                self.dut.write_conf()
+                for row in range(seedj, self.dut.ROW - 2, injrow_step):  # -2 : christian's suggestion
+                    self.dut['CONF_SR']['INJ_ROW'][row] = 1
+                    self.dut.write_conf()
+                # readout trash data
+                for _ in range(10):
+                    self.dut["fifo"].reset()
+                    time.sleep(0.02)
 
-                    time.sleep(sleeptime)
-                
-                scan_param_id = step - inj_low_limit
-            stop = timer()
-            print("Time: {}".format(stop - start))
+                scan_param_id = 0
+
+                for step in scan_range:
+                    # Ramp to vh value
+                    if vh > step:
+                        vh_step = -1
+                    else:
+                        vh_step = 1
+                    for vh in range(vh, step, vh_step):
+                        self.dut.set_vh_dacunits(vh, 1)
+                        self.dut.write_conf()
+
+                    with self.readout(scan_param_id=scan_param_id,
+                                      fill_buffer=False, clear_buffer=True, reset_sram_fifo=True):
+
+                        # time.sleep(0.07)  ## might not be needed...
+                        self.dut["inj"].start()
+                        while not self.dut['inj'].is_ready:
+                            time.sleep(0.005)
+                    scan_param_id = scan_param_id + 1
 
         # stop readout
         if with_timestamp:
@@ -152,106 +147,36 @@ class ThresholdScan(ScanBase):
         if with_tdc:
             self.dut.stop_tdc()
         self.dut.stop_monoread()
-        
+
+    @classmethod
+    def analyze(self, data_file=None, scan_param_id=True, create_plots=True):
+        if data_file is None:
+            data_file = self.output_filename + '.h5'
+
+        with analysis.Analysis(raw_data_file=data_file) as a:
+            a.analyze_data(data_format=0x3, put_scan_param_id=True)
+            mean_thr_rdpw = np.median(a.threshold_map[:, 112:220][np.nonzero(a.threshold_map[:, 112:220])])
+            mean_thr_fdpw = np.median(a.threshold_map[:, :112][np.nonzero(a.threshold_map[:, :112])])
+
+            print np.mean(a.threshold_map[:, 112:220][np.nonzero(a.threshold_map[:, 112:220])])
+            print np.mean(a.threshold_map[:, :112][np.nonzero(a.threshold_map[:, :112])])
+
+            logging.info("Mean threshold for removed DPW region is %i DAC units" % (int(mean_thr_rdpw)))
+            logging.info("Mean threshold for full DPW region is %i DAC units" % (int(mean_thr_fdpw)))
+
+        if create_plots:
+            with plotting.Plotting(analyzed_data_file=a.analyzed_data_file) as p:
+                p.create_standard_plots()
+                p.create_threshold_map()
+                p.create_scurves_plot()
+                p.create_threshold_distribution_plot()
+
 
 if __name__ == "__main__":
+    scan = ThresholdScan()
+    scan.scan()
+    scan.analyze()
 
-    def prepare_data(filename):
-        """
-        Prepare data for threshold calculation.
+#     ThresholdScan.analyze("/home/silab/tjmonopix/data/W4_1e15_PMOS/threshold_scan_adapted.h5")
+#     ThresholdScan.analyze("/home/silab/tjmonopix/data/Threshold_scans/threshold_test.h5", create_plots=True)
 
-        Interpret raw data file and correlate scan_param_id to hits.
-        Outputs interpreted data file and file optimized for threshold calculation
-
-        Parameters
-        ----------
-        filename : file name of input file
-        """
-        # The data format flag is needed to save the index in the timestamp field
-        interpret_h5(fin=filename, fout=filename[:-3] + "_hit.h5", data_format=0xF0)
-        with tb.open_file(filename[:-3] + "_hit.h5", "r") as in_file:
-            hits = in_file.root.Hits[:]
-
-        with tb.open_file(filename, "r") as in_file:
-            meta_data = in_file.root.meta_data[:]
-
-        @njit
-        def correlate_scan_ids(hits, meta_data):
-            scan_param_ids = np.empty(len(hits), dtype=np.uint16)
-            scan_i = 0
-            data_i = 0
-
-            while scan_i < len(meta_data) and data_i < len(hits):
-                if hits[data_i]["timestamp"] < meta_data[scan_i]["index_stop"]:
-                    scan_param_ids[data_i] = meta_data[scan_i]["scan_param_id"]
-                    data_i += 1
-                else:
-                    scan_i += 1
-
-            return scan_param_ids
-
-        logging.info("Start correlating scan_parameters")
-        scan_param_ids = correlate_scan_ids(hits, meta_data)
-        logging.info("Done correlating scan_parameters")
-
-        # # Add scan_param_ids to hit_array
-        hits = append_fields(hits, 'scan_param_id', scan_param_ids)
-        # And write all to a file
-        with tb.open_file(filename[:-3] + "_threshold.h5", "w") as out_file:
-            description = np.zeros((1,), dtype=hits.dtype).dtype
-            hit_table = out_file.create_table(
-            out_file.root, name="Hits", description=description, title='hit_data')
-
-            hit_table.append(hits)
-            hit_table.flush()
-
-    def analyze(filename):
-        """
-        Calculate threshold from hit table
-        """
-        n_cols = 112
-        n_rows = 224
-
-        # prepare_data(filename)
-
-        with tb.open_file(filename[:-3] + "_threshold.h5", "r") as in_file:
-            hit_data = in_file.root.Hits[:]
-
-        # Plot occupancy map
-        hist, xedges, yedges = np.histogram2d(hit_data["col"], hit_data["row"], bins=[n_cols, n_rows])
-
-        fig, ax = plt.subplots()
-        im = ax.imshow(hist.T, origin="lower", aspect=0.9)
-        plt.colorbar(im)
-        plt.show()
-
-        hit_data = hit_data[np.logical_and(hit_data["col"] < n_cols, hit_data["row"] < n_rows)]
-        params = np.unique(hit_data["scan_param_id"])
-        param_count = len(params)
-        scan_parameter_range = np.arange(params[0], params[-1] + 1, 1)
-
-
-        @njit
-        def hist_3d(hits, result_hist):
-            for hit in hits:
-                col = hit['col']
-                row = hit['row']
-                par  = hit['scan_param_id']
-                if col >= 0 and col < result_hist.shape[0] and row >= 0 and row < result_hist.shape[1] and par >= 0 and par < result_hist.shape[2]:
-                    result_hist[col, row, par] += 1
-                else:
-                    ValueError
-
-        result_hist = np.zeros(shape=(n_cols, n_rows, param_count), dtype=np.uint16)
-        hist_3d(hit_data, result_hist)
-        scurves = result_hist.reshape((result_hist.shape[0] * result_hist.shape[1], result_hist.shape[2]))
-
-        thr, sig, chi = fit_scurves_multithread(scurves=scurves, scan_param_range=scan_parameter_range, n_injections=100)
-
-        # Plot scurve histogram of all curves
-        plot_scurve_hist(scurves, scan_parameter_range, 100)
-
-        logging.info("Threshold: {}".format(np.mean(thr[thr > 0])))
-
-
-    analyze(filename="/media/data/tj-monopix_threshold_debug/debug/scurve_debug.h5")

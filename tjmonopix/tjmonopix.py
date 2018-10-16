@@ -49,11 +49,15 @@ class TJMonoPix(Dut):
         0: 'SIMULATION',
         1: 'MIO2',
     }
+    
 
     def __init__(self, conf=None, **kwargs):
         if not conf:
             proj_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             conf = os.path.join(proj_dir, 'tjmonopix' + os.sep + 'tjmonopix.yaml')
+
+        self.ROW = 224
+        self.COL = 112
 
         logger.debug("Loading configuration file from {:s}".format(conf))
 
@@ -243,11 +247,6 @@ class TJMonoPix(Dut):
         self['BiasSF'].set_current(BiasSF, unit='uA')
         self.SET["BiasSF"] = BiasSF
 
-        self['VDDA'].set_voltage(VDDA, unit='V')
-        self['VDDA'].set_enable(True)
-        self.SET["VDDA"] = VDDA
-        time.sleep(0.01)
-
         self['VDDP'].set_voltage(VDDP, unit='V')
         self['VDDP'].set_enable(True)
         self.SET["VDDP"] = VDDP
@@ -255,6 +254,10 @@ class TJMonoPix(Dut):
         self['VDDA_DAC'].set_voltage(VDDA_DAC, unit='V')
         self['VDDA_DAC'].set_enable(True)
         self.SET["VDDA_DAC"] = VDDA_DAC
+
+        self['VDDA'].set_voltage(VDDA, unit='V')
+        self['VDDA'].set_enable(True)
+        self.SET["VDDA"] = VDDA
 
         self['VDDD'].set_voltage(VDDD, unit='V')
         self['VDDD'].set_enable(True)
@@ -264,7 +267,7 @@ class TJMonoPix(Dut):
         self.SET["INJ_LO"] = INJ_LO
         self['INJ_HI'].set_voltage(INJ_HI, unit='V')
         self.SET["INJ_HI"] = INJ_HI
-        
+
         DACMON_ICASN = 0
         self['DACMON_ICASN'].set_current(DACMON_ICASN, unit='uA')
         self.SET["DACMON_ICASN"] = DACMON_ICASN
@@ -440,7 +443,7 @@ class TJMonoPix(Dut):
                 logger.info( 'ireset = ' +str( dacunits ) + ' low leakage mode') 
                 logger.info( 'ireset = ' +str(43.75*((dacunits+1)/128.0)) + 'pA, low leakage mode')
 
-    def set_vreset_dacunits(self, dacunits, printen):
+    def set_vreset_dacunits(self, dacunits, printen=1):
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
         self['CONF_SR']['SET_VRESET_P'].setall(False)
         self['CONF_SR']['SET_VRESET_P'][dacunits] = True
@@ -563,6 +566,7 @@ class TJMonoPix(Dut):
 
 ########################## pcb components #####################################
     def get_temperature(self, n=10):
+        # TODO: Why is this needed? Should be handled by basil probably
         vol = self["NTC"].get_voltage()
         if not (vol > 0.5 and vol < 1.5):
             for i in np.arange(2, 200, 2):
@@ -575,6 +579,7 @@ class TJMonoPix(Dut):
                     break
             if abs(i) > 190:
                 logging.warn("temperature() NTC error")
+
         temp = np.empty(n)
         for i in range(len(temp)):
             temp[i] = self["NTC"].get_temperature("C")
