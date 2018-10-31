@@ -1,3 +1,5 @@
+# coding: utf-8
+
 import time
 import numpy as np
 import yaml
@@ -10,10 +12,14 @@ from tjmonopix.tjmonopix import TJMonoPix
 from tjmonopix.analysis import analysis
 from tjmonopix.analysis import plotting
 
+from bitarray import bitarray
+from tqdm import tqdm
+
 
 class ThresholdScan(ScanBase):
     scan_id = "threshold_scan"
 
+    @profile
     def scan(self, **kwargs):
 
         if self.dut.SET["fl"] == "EN_PMOS":
@@ -35,7 +41,12 @@ class ThresholdScan(ScanBase):
         if with_tdc:
             self.dut.stop_tdc()
 
+        self.dut.stop_monoread()
+        self.dut['fifo'].reset()
+
         print self.dut.get_power_status()
+
+#         raw_input("Check power consumption, especially VDDD (should be 0.5mA). Press any key to continue and start scan") 
 
         cnt = 0
         scanned = 0
@@ -44,9 +55,9 @@ class ThresholdScan(ScanBase):
         self.meta_data_table.attrs.scan_id = "threshold_scan"
 
         # Why is this needed?
-        # self.dut['data_rx'].set_en(True)
-        # self.dut['fifo'].get_data()
-        # self.dut['data_rx'].set_en(False)
+        self.dut['data_rx'].set_en(True)
+        self.dut['fifo'].get_data()
+        self.dut['data_rx'].set_en(False)
 
         # Setup injection
         repeat = 100
@@ -95,46 +106,48 @@ class ThresholdScan(ScanBase):
         injcol_start = 0
         injrow_start = 0
         # set cols to inject
-        for seedi in range(injcol_start, injcol_step):
-            self.dut['CONF_SR']['COL_PULSE_SEL'].setall(False)
-            self.dut.write_conf()
-            for col in range(seedi, self.dut.COL, injcol_step):
-                self.dut['CONF_SR']['COL_PULSE_SEL'][fl_n * 112 + col] = 1
+
+        pbar = tqdm(total=injcol_step * injrow_step * len(scan_range))
+        for step in scan_range:
+            # Ramp to vh value
+            if vh > step:
+                vh_step = -5
+            else:
+                vh_step = 1
+            for vh in range(vh, step, vh_step):
+                self.dut.set_vh_dacunits(vh, 1)
                 self.dut.write_conf()
 
-            # Set rows to inject
-            for seedj in range(injrow_start, injrow_step):
-                self.dut['CONF_SR']['INJ_ROW'].setall(False)
-                self.dut.write_conf()
-                for row in range(seedj, self.dut.ROW - 2, injrow_step):  # -2 : christian's suggestion
-                    self.dut['CONF_SR']['INJ_ROW'][row] = 1
+            with self.readout(scan_param_id=scan_param_id, fill_buffer=False, clear_buffer=True, reset_sram_fifo=True):
+                for seed_col in range(injcol_start, injcol_step):
+                    self.dut['CONF_SR']['COL_PULSE_SEL'].setall(False)
                     self.dut.write_conf()
-                # readout trash data
-                for _ in range(10):
-                    self.dut["fifo"].reset()
-                    time.sleep(0.02)
-
-                scan_param_id = 0
-
-                for step in scan_range:
-                    # Ramp to vh value
-                    if vh > step:
-                        vh_step = -1
-                    else:
-                        vh_step = 1
-                    for vh in range(vh, step, vh_step):
-                        self.dut.set_vh_dacunits(vh, 1)
+                    for col in range(seed_col, self.dut.COL, injcol_step):
+                        self.dut['CONF_SR']['COL_PULSE_SEL'][fl_n * 112 + col] = 1
                         self.dut.write_conf()
 
-                    with self.readout(scan_param_id=scan_param_id,
-                                      fill_buffer=False, clear_buffer=True, reset_sram_fifo=True):
+                    # Set rows to inject
+                    for seed_row in range(injrow_start, injrow_step):
+                        self.dut['CONF_SR']['INJ_ROW'].setall(False)
+                        self.dut.write_conf()
+                        time.sleep(0.005)
+                        row_mask = self.dut.ROW * bitarray('0')
+                        row_mask[0 + seed_row:self.dut.ROW:4] = True  # BitLogic masking in array[223:0]
+                        self.dut['CONF_SR']['INJ_ROW'][:] = bitarray(row_mask)
+                        self.dut.write_conf()
+                        time.sleep(0.05)  # This needs to be long enough (0.05 works, maybe less)
 
-                        # time.sleep(0.07)  ## might not be needed...
+                        # readout trash data
+                        for _ in range(5):
+                            self.dut["fifo"].reset()
+                            time.sleep(0.01)
+
                         self.dut["inj"].start()
                         while not self.dut['inj'].is_ready:
-                            time.sleep(0.005)
-                    scan_param_id = scan_param_id + 1
-
+                            time.sleep(0.02)
+                        pbar.update(1)
+            scan_param_id = scan_param_id + 1
+        pbar.close()
         # stop readout
         if with_timestamp:
             self.dut.stop_timestamp()
