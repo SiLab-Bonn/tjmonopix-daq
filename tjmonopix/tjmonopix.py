@@ -9,21 +9,21 @@ import yaml
 import logging
 import os
 import time
-import struct
+# import struct
 import numpy as np
+import pkg_resources
 
-import basil
-from bitarray import bitarray
+
+# import basil
+# from bitarray import bitarray
 from basil.dut import Dut
-from basil.utils.BitLogic import BitLogic
+# from basil.utils.BitLogic import BitLogic
 
 ROW = 224
 COL = 112
 
-DATDIR = os.path.join(os.path.dirname(
-                os.path.dirname(os.path.abspath(__file__))), "output_data")
+DATDIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "output_data")
 
-import pkg_resources
 VERSION = pkg_resources.get_distribution("tjmonopix-daq").version
 
 ''' Set up main logger '''
@@ -49,7 +49,6 @@ class TJMonoPix(Dut):
         0: 'SIMULATION',
         1: 'MIO2',
     }
-    
 
     def __init__(self, conf=None, **kwargs):
         if not conf:
@@ -65,7 +64,7 @@ class TJMonoPix(Dut):
         self.conf_flg = 1
         self.SET = {'VDDA': None, 'VDDP': None, 'VDDA_DAC': None, 'VDDD': None,
                     'VPCSWSF': None, 'VPC': None, 'BiasSF': None, 'INJ_LO': None, 'INJ_HI': None,
-                    'DACMON_ICASN': None, 'fl' : None}
+                    'DACMON_ICASN': None, 'fl': None}
         self.debug = 0
 
     def get_daq_version(self):
@@ -86,7 +85,7 @@ class TJMonoPix(Dut):
         # do this before powering up
         self['CONF_SR'].set_size(3925)
         self['CONF']['DEF_CONF_N'] = 0
-        if fl == "EN_HV" or  fl == 'EN_PMOS':
+        if fl == "EN_HV" or fl == 'EN_PMOS':
             self['CONF']['AB_SELECT'] = True
         else:
             self['CONF']['AB_SELECT'] = True
@@ -140,7 +139,6 @@ class TJMonoPix(Dut):
         logging.info(str(self.get_power_status()))
 
     def default_conf(self):
-
         self['CONF_SR']['nEN_HITOR_OUT'].setall(True)
         self['CONF_SR']['EN_HITOR_OUT'].setall(True)
         self['CONF_SR']['nEN_OUT'].setall(True)
@@ -150,7 +148,7 @@ class TJMonoPix(Dut):
         self['CONF_SR']['EN_PMOS'].setall(True)
         self['CONF_SR']['EN_PMOS_NOSF'].setall(True)
         self['CONF_SR']['EN_TEST_PATTERN'].setall(False)
-    
+
         self['CONF_SR']['SWCNTL_VRESET_P'] = 0
         self['CONF_SR']['SWCNTL_VRESET_D'] = 0
         self['CONF_SR']['SWCNTL_VL'] = 0
@@ -165,14 +163,14 @@ class TJMonoPix(Dut):
         self['CONF_SR']['SWCNTL_IBIAS'] = 0
         self['CONF_SR']['SWCNTL_DACMONV'] = 0
         self['CONF_SR']['SWCNTL_DACMONI'] = 0
-    
+
         self['CONF_SR']['SET_IBUFN_L'] = 0b1001
         self['CONF_SR']['SET_IBUFP_L'] = 0b0101
         self['CONF_SR']['SET_IBUFP_R'] = 0b0101
         self['CONF_SR']['SET_IBUFN_R'] = 0b1001
-    
+
         self['CONF_SR']['SET_IRESET_BIT'] = 1
-    
+
         self['CONF_SR']['SET_VCLIP'].setall(False)
         self['CONF_SR']['SET_VRESET_D'].setall(False)
         self['CONF_SR']['SET_VRESET_D'][45] = 1
@@ -184,8 +182,8 @@ class TJMonoPix(Dut):
         self['CONF_SR']['SET_VH'][79] = 1
         self['CONF_SR']['SET_VRESET_P'].setall(False)
         self['CONF_SR']['SET_VRESET_P'][16] = 1
-    
-        # Be carefull!!! because the type is BitLogic, the slicing is verilog type not python, this means the limits are inclusive. Also MSB must be first in the slice
+
+        # Be careful! Because the type is BitLogic, the slicing is verilog type not python, this means the limits are inclusive. Also MSB must be first in the slice
         self['CONF_SR']['SET_ICASN'].setall(False)
         self['CONF_SR']['SET_ICASN'][82:45] = True
         self['CONF_SR']['SET_IRESET'].setall(False)
@@ -196,13 +194,13 @@ class TJMonoPix(Dut):
         self['CONF_SR']['SET_IDB'][78:50] = True
         self['CONF_SR']['SET_IBIAS'].setall(False)
         self['CONF_SR']['SET_IBIAS'][86:41] = True
-    
+
         self['CONF_SR']['DIG_MON_SEL'].setall(False)
-    
+
         self['CONF_SR']['MASKD'].setall(True)
         self['CONF_SR']['MASKH'].setall(True)
         self['CONF_SR']['MASKV'].setall(True)
-    
+
         self['CONF_SR']['INJ_ROW'].setall(False)
         self['CONF_SR']['INJ_IN_MON_R'] = 0
         self['CONF_SR']['INJ_IN_MON_L'] = 0
@@ -294,7 +292,7 @@ class TJMonoPix(Dut):
         self['INJ_LO'].set_voltage(0.2, unit='V')
         self['INJ_HI'].set_voltage(3.6, unit='V')
 
-    def interprete_raw_data(self, raw_data):
+    def interpret_raw_data(self, raw_data):
         hit_data_sel = ((raw_data & 0xF0000000) == 0)
         hit_data = raw_data[hit_data_sel]
         hit_dtype = np.dtype(
@@ -309,7 +307,7 @@ class TJMonoPix(Dut):
 
         return ret
 
-    def interprete_data(self, raw_data):
+    def interpret_data(self, raw_data):
         hit_data_sel = ((raw_data & 0xF0000000) == 0)
         hit_data = raw_data[hit_data_sel]
         hit_dtype = np.dtype(
@@ -327,7 +325,7 @@ class TJMonoPix(Dut):
 
     def set_all_mask(self, mask=None):
         self.conf_flg = 1
-        if mask == None:
+        if mask is None:
             self['CONF_SR']['MASKD'].setall(False)
             self['CONF_SR']['MASKH'].setall(False)
             self['CONF_SR']['MASKV'].setall(False)
@@ -389,77 +387,77 @@ class TJMonoPix(Dut):
 
     def set_ibias_dacunits(self, dacunits, printen):
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
-        low = (128-(dacunits+1))/2
-        high = ((dacunits+1)/2)+63
+        low = (128 - (dacunits + 1)) / 2
+        high = ((dacunits + 1) / 2) + 63
         self['CONF_SR']['SET_IBIAS'].setall(False)
         self['CONF_SR']['SET_IBIAS'][high:low] = True
         if (printen == 1):
-            logger.info( 'ibias = ' +str(dacunits) )
-            logger.info( 'ibias = ' +str(1400.0*((dacunits+1)/128.0)) + 'nA')
+            logger.info('ibias = ' + str(dacunits))
+            logger.info('ibias = ' + str(1400.0 * ((dacunits + 1) / 128.0)) + 'nA')
 
     def set_idb_dacunits(self, dacunits, printen):
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
-        low = (128-(dacunits+1))/2
-        high = ((dacunits+1)/2)+63
+        low = (128 - (dacunits + 1)) / 2
+        high = ((dacunits + 1) / 2) + 63
         self['CONF_SR']['SET_IDB'].setall(False)
         self['CONF_SR']['SET_IDB'][high:low] = True
         if (printen == 1):
-            logger.info( 'idb = ' +str(dacunits) )
-            logger.info( 'idb = ' +str(2240.0*((dacunits+1)/128.0)) + 'nA')
+            logger.info('idb = ' + str(dacunits))
+            logger.info('idb = ' + str(2240.0 * ((dacunits + 1) / 128.0)) + 'nA')
 
     def set_ithr_dacunits(self, dacunits, printen):
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
-        low = (128-(dacunits+1))/2
-        high = ((dacunits+1)/2)+63
+        low = (128 - (dacunits + 1)) / 2
+        high = ((dacunits + 1) / 2) + 63
         self['CONF_SR']['SET_ITHR'].setall(False)
         self['CONF_SR']['SET_ITHR'][high:low] = True
         if (printen == 1):
-            logger.info('ithr = ' +str(dacunits) )
-            logger.info('ithr = ' +str(17.5*((dacunits+1)/128.0)) + 'nA')
+            logger.info('ithr = ' + str(dacunits))
+            logger.info('ithr = ' + str(17.5 * ((dacunits + 1) / 128.0)) + 'nA')
 
     def set_icasn_dacunits(self, dacunits, printen):
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
-        low = (128-(dacunits+1))/2
-        high = ((dacunits+1)/2)+63
+        low = (128 - (dacunits + 1)) / 2
+        high = ((dacunits + 1) / 2) + 63
         self['CONF_SR']['SET_ICASN'].setall(False)
         self['CONF_SR']['SET_ICASN'][high:low] = True
         if (printen == 1):
-            logger.info( 'icasn = ' +str(dacunits) )
-            logger.info( 'icasn = ' +str(560.0*((dacunits+1)/128.0)) + 'nA')
+            logger.info('icasn = ' + str(dacunits))
+            logger.info('icasn = ' + str(560.0 * ((dacunits + 1) / 128.0)) + 'nA')
 
     def set_ireset_dacunits(self, dacunits, mode, printen):
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
         assert 0 <= mode <= 1, 'Mode must be 0 (low leakage) or 1 (high leakage)'
-        low = (128-(dacunits+1))/2
-        high = ((dacunits+1)/2)+63
+        low = (128 - (dacunits + 1)) / 2
+        high = ((dacunits + 1) / 2) + 63
         self['CONF_SR']['SET_IRESET_BIT'] = mode
         self['CONF_SR']['SET_IRESET'].setall(False)
         self['CONF_SR']['SET_IRESET'][high:low] = True
         if (printen == 1):
             if (mode == 1):
-                logger.info( 'ireset = ' +str( dacunits ) + ' high leakage mode') 
-                logger.info( 'ireset = ' +str(4.375*((dacunits+1)/128.0)) + 'nA, high leakage mode')
+                logger.info('ireset = ' + str(dacunits) + ' high leakage mode')
+                logger.info('ireset = ' + str(4.375 * ((dacunits + 1) / 128.0)) + 'nA, high leakage mode')
             else:
-                logger.info( 'ireset = ' +str( dacunits ) + ' low leakage mode') 
-                logger.info( 'ireset = ' +str(43.75*((dacunits+1)/128.0)) + 'pA, low leakage mode')
+                logger.info('ireset = ' + str(dacunits) + ' low leakage mode')
+                logger.info('ireset = ' + str(43.75 * ((dacunits + 1) / 128.0)) + 'pA, low leakage mode')
 
     def set_vreset_dacunits(self, dacunits, printen=1):
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
         self['CONF_SR']['SET_VRESET_P'].setall(False)
         self['CONF_SR']['SET_VRESET_P'][dacunits] = True
         if (printen == 1):
-                logger.info( 'vreset = ' +str(((1.8/127.0)*dacunits+0.555)) + 'V')
+                logger.info('vreset = ' + str(((1.8 / 127.0) * dacunits + 0.555)) + 'V')
 
-    def set_vh_dacunits(self, dacunits, printen):
+    def set_vh_dacunits(self, dacunits, print_en=False):
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
         self['CONF_SR']['SET_VH'].setall(False)
         self['CONF_SR']['SET_VH'][dacunits] = True
-        if (printen == 1):
-                logger.info( 'vh = ' +str(((1.8/127.0)*dacunits+0.385)) + 'V')
+        if (print_en == 1):
+                logger.info('vh = ' + str(((1.8 / 127.0) * dacunits + 0.385)) + 'V')
 
     def get_vh_dacunits(self):
-        for i in range(0,128):
-            if self['CONF_SR']['SET_VH'][i]==True:
+        for i in range(0, 128):
+            if self['CONF_SR']['SET_VH'][i] is True:
                 return i
         return -1
 
@@ -468,71 +466,71 @@ class TJMonoPix(Dut):
         self['CONF_SR']['SET_VL'].setall(False)
         self['CONF_SR']['SET_VL'][dacunits] = True
         if (printen == 1):
-                logger.info( 'vl = ' +str(((1.8/127.0)*dacunits+0.385)) + 'V')
+                logger.info('vl = ' + str(((1.8 / 127.0) * dacunits + 0.385)) + 'V')
 
     def set_vcasn_dac_dacunits(self, dacunits, printen):
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
         self['CONF_SR']['SET_VCASN'].setall(False)
         self['CONF_SR']['SET_VCASN'][dacunits] = True
         if (printen == 1):
-            logger.info( 'vcasn = ' +str(dacunits) )
-            logger.info( 'vcasn = ' +str(((1.8/127.0)*dacunits)) + 'V')
+            logger.info('vcasn = ' + str(dacunits))
+            logger.info('vcasn = ' + str(((1.8 / 127.0) * dacunits)) + 'V')
 
 ############################## SET data readout ##############################
-    def cleanup_fifo(self,n=20):
+    def cleanup_fifo(self, n=20):
         for _ in range(n):
             time.sleep(0.1)
             self['fifo'].reset()
 
-    def set_tlu(self,tlu_delay=8):
-        self["tlu"]["RESET"]=1
-        self["tlu"]["TRIGGER_MODE"]=3
-        self["tlu"]["EN_TLU_VETO"]=0
-        self["tlu"]["MAX_TRIGGERS"]=0
-        self["tlu"]["TRIGGER_COUNTER"]=0
-        self["tlu"]["TRIGGER_LOW_TIMEOUT"]=0
-        self["tlu"]["TRIGGER_VETO_SELECT"]=0
-        self["tlu"]["TRIGGER_THRESHOLD"]=0
-        self["tlu"]["DATA_FORMAT"]=2
-        self["tlu"]["TRIGGER_HANDSHAKE_ACCEPT_WAIT_CYCLES"]=20
-        self["tlu"]["TRIGGER_DATA_DELAY"]=tlu_delay
-        self["tlu"]["TRIGGER_SELECT"]=0
-        self["timestamp_tlu"]["RESET"]=1
-        self["timestamp_tlu"]["EXT_TIMESTAMP"]=1
-        self["timestamp_tlu"]["ENABLE_TOT"]=0
-        logging.info("set_tlu: tlu_delay=%d"%tlu_delay)
+    def set_tlu(self, tlu_delay=8):
+        self["tlu"]["RESET"] = 1
+        self["tlu"]["TRIGGER_MODE"] = 3
+        self["tlu"]["EN_TLU_VETO"] = 0
+        self["tlu"]["MAX_TRIGGERS"] = 0
+        self["tlu"]["TRIGGER_COUNTER"] = 0
+        self["tlu"]["TRIGGER_LOW_TIMEOUT"] = 0
+        self["tlu"]["TRIGGER_VETO_SELECT"] = 0
+        self["tlu"]["TRIGGER_THRESHOLD"] = 0
+        self["tlu"]["DATA_FORMAT"] = 2
+        self["tlu"]["TRIGGER_HANDSHAKE_ACCEPT_WAIT_CYCLES"] = 20
+        self["tlu"]["TRIGGER_DATA_DELAY"] = tlu_delay
+        self["tlu"]["TRIGGER_SELECT"] = 0
+        self["timestamp_tlu"]["RESET"] = 1
+        self["timestamp_tlu"]["EXT_TIMESTAMP"] = 1
+        self["timestamp_tlu"]["ENABLE_TOT"] = 0
+        logging.info("set_tlu: tlu_delay=%d" % tlu_delay)
 
-        self["timestamp_tlu"]["ENABLE_EXTERN"]=1
-        self["tlu"]["TRIGGER_ENABLE"]=1
+        self["timestamp_tlu"]["ENABLE_EXTERN"] = 1
+        self["tlu"]["TRIGGER_ENABLE"] = 1
 
     def stop_tlu(self):
-        self["tlu"]["TRIGGER_ENABLE"]=0
-        self["timestamp_tlu"]["ENABLE_EXTERN"]=0
-        lost_cnt=self["tdc"]["LOST_COUNT"]
-        if lost_cnt!=0:
-            logging.warn("stop_tdc: error cnt=%d"%lost_cnt)
+        self["tlu"]["TRIGGER_ENABLE"] = 0
+        self["timestamp_tlu"]["ENABLE_EXTERN"] = 0
+        lost_cnt = self["tdc"]["LOST_COUNT"]
+        if lost_cnt != 0:
+            logging.warn("stop_tdc: error cnt=%d" % lost_cnt)
 
-    def set_timestamp(self,src="rx1"):
+    def set_timestamp(self, src="rx1"):
         """ src: rx1 or gate_tdc
         """
-        if src=="rx1":
-            self['CONF']["SEL_TIMESTAMP_DI_RX1"]=True
+        if src == "rx1":
+            self['CONF']["SEL_TIMESTAMP_DI_RX1"] = True
         else:
-            self['CONF']["SEL_TIMESTAMP_DI_RX1"]=False
+            self['CONF']["SEL_TIMESTAMP_DI_RX1"] = False
         self['CONF'].write()
         self["timestamp"].reset()
-        self["timestamp"]["EXT_TIMESTAMP"]=True
-        self["timestamp"]["ENABLE"]=1
-        logging.info("set_timestamp:src=%s"%src)
-        
+        self["timestamp"]["EXT_TIMESTAMP"] = True
+        self["timestamp"]["ENABLE"] = 1
+        logging.info("set_timestamp:src=%s" % src)
+
     def stop_timestamp(self):
-        self["timestamp"]["ENABLE"]=0
-        lost_cnt=self["timestamp"]["LOST_COUNT"]
-        if lost_cnt!=0:
-            logging.warn("stop_timestamp: lost_cnt=%d"%lost_cnt)
+        self["timestamp"]["ENABLE"] = 0
+        lost_cnt = self["timestamp"]["LOST_COUNT"]
+        if lost_cnt != 0:
+            logging.warn("stop_timestamp: lost_cnt=%d" % lost_cnt)
         return lost_cnt
 
-    #def set_monoread(self, start_freeze=64, start_read=66, stop_read=68, stop_freeze=100, stop=105, en=True):
+    # def set_monoread(self, start_freeze=64, start_read=66, stop_read=68, stop_freeze=100, stop=105, en=True):
     def set_monoread(self, start_freeze=57, start_read=60, stop_read=62, stop_freeze=95, stop=100, en=True):
         self['data_rx'].CONF_START_FREEZE = start_freeze  # default 57
         self['data_rx'].CONF_STOP_FREEZE = stop_freeze  # default 95
@@ -552,17 +550,17 @@ class TJMonoPix(Dut):
             logging.warn("stop_monoread: error cnt=%d" % lost_cnt)
 
     def set_tdc(self):
-        self["tdc"]["RESET"]=1
-        self["tdc"]["EXT_TIMESTAMP"]=1
-        self["tdc"]["ENABLE_TOT"]=1
-        self["tdc"]["ENABLE"]=1
+        self["tdc"]["RESET"] = 1
+        self["tdc"]["EXT_TIMESTAMP"] = 1
+        self["tdc"]["ENABLE_TOT"] = 1
+        self["tdc"]["ENABLE"] = 1
         logging.info("set_tdc:")
 
     def stop_tdc(self):
-        self["tdc"]["ENABLE"]=0
-        lost_cnt=self["tdc"]["LOST_COUNT"]
-        if lost_cnt!=0:
-            logging.warn("stop_tdc: error cnt=%d"%lost_cnt)
+        self["tdc"]["ENABLE"] = 0
+        lost_cnt = self["tdc"]["LOST_COUNT"]
+        if lost_cnt != 0:
+            logging.warn("stop_tdc: error cnt=%d" % lost_cnt)
 
 ########################## pcb components #####################################
     def get_temperature(self, n=10):
@@ -584,43 +582,42 @@ class TJMonoPix(Dut):
         for i in range(len(temp)):
             temp[i] = self["NTC"].get_temperature("C")
         return np.average(temp[temp != float("nan")])
-        
+
     def save_config(self, filename=None):
         if filename is None:
-            filename= os.path.join(DATDIR, time.strftime("config_%Y%m%d-%H%M%S.yaml"))
-        conf=self.get_configuration()
-        conf["SET"]= self.SET
+            filename = os.path.join(DATDIR, time.strftime("config_%Y%m%d-%H%M%S.yaml"))
+        conf = self.get_configuration()
+        conf["SET"] = self.SET
         with open(filename, "w") as f:
-            yaml.dump(conf,f)
-        logging.info("save_config filename: %s"%filename )
+            yaml.dump(conf, f)
+        logging.info("save_config filename: %s" % filename)
         return filename
-        
-    def get_disabled_pixel(self, maskV=None, maskH=None, maskD=None, COL=112, ROW=224):
-        if maskV==None:
-            maskV=self['CONF_SR']['MASKV']   
-        if maskH==None:
-            maskH=self['CONF_SR']['MASKH']
-        if maskD==None:
-            maskD=self['CONF_SR']['MASKD']
-            
-        mask = np.ones([COL*4,ROW],dtype=int) * 7
-        for i in range(COL*4):
-            for j in range(ROW):
-                if maskV[i]==False:
-                    mask[i,j]= (mask[i,j] & 0x6)
-                if maskH[j]==False:
-                    mask[i,j]= (mask[i,j] & 0x5)
-                if (i-j) >= 0 and maskD[i-j]==False:
-                    mask[i,j]= (mask[i,j] & 0x3)
-                elif (i-j) < 0 and maskD[448+i-j]==False:
-                    mask[i,j]= (mask[i,j] & 0x3)  
-        return mask    
 
+    def get_disabled_pixel(self, maskV=None, maskH=None, maskD=None):
+        if maskV is None:
+            maskV = self['CONF_SR']['MASKV']
+        if maskH is None:
+            maskH = self['CONF_SR']['MASKH']
+        if maskD is None:
+            maskD = self['CONF_SR']['MASKD']
+
+        mask = np.ones([COL * 4, ROW], dtype=int) * 7
+        for i in range(COL * 4):
+            for j in range(ROW):
+                if maskV[i] is False:
+                    mask[i, j] = (mask[i, j] & 0x6)
+                if maskH[j] is False:
+                    mask[i, j] = (mask[i, j] & 0x5)
+                if (i - j) >= 0 and maskD[i - j] is False:
+                    mask[i, j] = (mask[i, j] & 0x3)
+                elif (i - j) < 0 and maskD[448 + i - j] is False:
+                    mask[i, j] = (mask[i, j] & 0x3)
+        return mask
 
 ########################## scans  #############################################
     def inj_scan_1pix(self, flavor, col, row, VL, VHLrange, start_dif, delay, width, repeat, noise_en, analog_en, sleeptime):
 
-        hits = np.zeros((VHLrange+1), dtype=int)
+        hits = np.zeros((VHLrange + 1), dtype=int)
 
         self['inj'].set_delay(delay)
         self['inj'].set_width(width)
@@ -633,14 +630,14 @@ class TJMonoPix(Dut):
         self['CONF_SR']['COL_PULSE_SEL'].setall(False)
         self.enable_injection(flavor, col, row)
         self.set_vl_dacunits(VL, 0)
-        self.set_vh_dacunits(VL+start_dif, 0)
+        self.set_vh_dacunits(VL + start_dif, 0)
         self.write_conf()
 
         for _ in range(5):
             _ = self['fifo'].get_data()
 
-        for i in range(VHLrange+1):
-            self.set_vh_dacunits(VL+i+start_dif, 0)
+        for i in range(VHLrange + 1):
+            self.set_vh_dacunits(VL + i + start_dif, 0)
             self.write_conf()
 
             while not self['inj'].is_ready:
@@ -651,7 +648,7 @@ class TJMonoPix(Dut):
 
             time.sleep(sleeptime)
             x = self['fifo'].get_data()
-            ix = self.interprete_data(x)
+            ix = self.interpret_data(x)
 
             cnt = 0
             for hit in ix:
@@ -666,273 +663,276 @@ class TJMonoPix(Dut):
 
         return hits
 
+#     def inj_scan_row(self, flavor, col, startrow, rownumber, VL, VHLrange, start_dif, delay, width, repeat, noise_en, analog_en, sleeptime):
+# 
+#         hits = np.zeros((rownumber, VHLrange + 1), dtype=int)
+# 
+#         self['inj'].set_delay(delay)
+#         self['inj'].set_width(width)
+#         self['inj'].set_repeat(repeat)
+#         self['inj'].set_en(0)
+# 
+#         self['CONF_SR']['INJ_ROW'].setall(False)
+#         if analog_en == 1:
+#             self['CONF_SR']['INJ_ROW'][223] = True
+#         self['CONF_SR']['COL_PULSE_SEL'].setall(False)
+#         for i in range(startrow, startrow + rownumber):
+#             self.enable_injection(flavor, col, i)
+#         self.set_vl_dacunits(VL, 0)
+#         self.set_vh_dacunits(VL + start_dif, 0)
+#         self.write_conf()
+# 
+#         for _ in range(5):
+#             _ = self['fifo'].get_data()
+#             time.sleep(0.01)
+# 
+#         for i in range(VHLrange + 1):
+#             if i != 0:
+#                 self.set_vh_dacunits(VL + i + start_dif, 0)
+#                 self.write_conf()
+# 
+#             while not self['inj'].is_ready:
+#                 time.sleep(0.001)
+#             for _ in range(10):
+#                 self['inj'].is_ready
+#             self["inj"].start()
+# 
+#             time.sleep(sleeptime)
+#             x = self['fifo'].get_data()
+#             ix = self.interpret_data(x)
+#             ixd = np.delete(ix, np.where((ix['col'] != col) | (ix['row'] < startrow) | (ix['row'] >= startrow + rownumber))[0])
+#             if noise_en == 1:
+#                 ixd = np.delete(ixd, np.where((ix['noise'] == 1))[0])
+# 
+#             uniquerow, countrow = np.unique(ixd['row'], return_counts=True)
+# 
+#             if (uniquerow.size != 0):
+#                 hits[uniquerow - startrow, i] = countrow
+# 
+#                 # print 'row=%d' %(row+rowstep)
+#                 print('i={:d}'.format(i))        
+#                 hits = self.inj_scan_row(flavor, col, row + rowstep, (row_high % (row + rowstep)) + 1, VL, VHLrange, start_dif, delay, width, repeat, noise_en, analog_en, sleeptime)
+#                 # print hits
+#                 scurve[i:i + ((row_high % (row + rowstep)) + 1)] = hits
+#                 i += (row_high % (row + rowstep)) + 1
+#                 # print (row_high%(row+rowstep))+1
+#                 print('i={:d}'.format(i))
+#                 time.sleep(sleeptime_step)
+# 
+#             # print scurve
+#             np.save('scurvedata' + partname + '.npy', scurve)
+#             logger.info('Injection scan finished successfully, data saved with filename:%s' % ('scurvedata' + partname + '.npy')) 
 
-    def inj_scan_row(self, flavor, col, startrow, rownumber, VL, VHLrange, start_dif, delay, width, repeat, noise_en, analog_en, sleeptime):
-
-        hits = np.zeros((rownumber, VHLrange+1), dtype=int)
-
-        self['inj'].set_delay(delay)
-        self['inj'].set_width(width)
-        self['inj'].set_repeat(repeat)
-        self['inj'].set_en(0)
-
-        self['CONF_SR']['INJ_ROW'].setall(False)
-        if analog_en == 1:
-            self['CONF_SR']['INJ_ROW'][223]=True
-        self['CONF_SR']['COL_PULSE_SEL'].setall(False)
-        for i in range (startrow, startrow+rownumber):
-            self.enable_injection(flavor,col,i)  
-        self.set_vl_dacunits(VL,0)
-        self.set_vh_dacunits(VL+start_dif,0)
-        self.write_conf()
-
-        for _ in range(5):
-            _ = self['fifo'].get_data()
-            time.sleep(0.01)
-
-        for i in range(VHLrange+1):
-            if i!=0:
-                self.set_vh_dacunits(VL+i+start_dif,0)
-                self.write_conf()
-
-            while not self['inj'].is_ready:
-                time.sleep(0.001)
-            for _ in range(10):
-                self['inj'].is_ready
-            self["inj"].start()
-
-            time.sleep(sleeptime)
-            x = self['fifo'].get_data()
-            ix = self.interprete_data(x)
-            ixd=np.delete(ix, np.where((ix['col']!=col)|(ix['row']<startrow)|(ix['row']>=startrow+rownumber))[0])
-            if noise_en == 1:
-                ixd=np.delete(ixd, np.where((ix['noise'] == 1))[0])
-
-            uniquerow, countrow = np.unique(ixd['row'], return_counts=True)
-
-            if (uniquerow.size != 0):
-                hits[uniquerow-startrow,i]=countrow
-
-            
-                #print 'row=%d' %(row+rowstep)
-                print('i={:d}'.format(i))        
-                hits = self.inj_scan_row(flavor, col, row+rowstep, (row_high%(row+rowstep))+1, VL, VHLrange, start_dif, delay, width, repeat, noise_en, analog_en, sleeptime)
-                #print hits
-                scurve[i:i+((row_high%(row+rowstep))+1)] = hits
-                i += (row_high%(row+rowstep))+1
-                #print (row_high%(row+rowstep))+1
-                print('i={:d}'.format(i))
-                time.sleep(sleeptime_step)
-
-            #print scurve
-            np.save('scurvedata'+partname+'.npy',scurve)
-            logger.info('Injection scan finished successfully, data saved with filename:%s' %('scurvedata'+partname+'.npy')) 
-
-                
     def auto_mask(self, th=2, step=10, exp=0.2):
-        logger.info("auto_mask th=%d step=%d exp=%d fl=%s"%(th,step,exp,self.SET['fl']))
+        logger.info("auto_mask th=%d step=%d exp=%d fl=%s" % (th, step, exp, self.SET['fl']))
         self['CONF_SR'][self.SET['fl']].setall(False)
-        if self.SET['fl']=='EN_PMOS':
-            fl_n= 1
-        elif self.SET['fl']=='EN_HV':
-            fl_n= 3
-        self['CONF_SR']['EN_OUT'][fl_n]=False
+        if self.SET['fl'] == 'EN_PMOS':
+            fl_n = 1
+        elif self.SET['fl'] == 'EN_HV':
+            fl_n = 3
+        self['CONF_SR']['EN_OUT'][fl_n] = False
         self['CONF_SR']['MASKD'].setall(False)
         self['CONF_SR']['MASKH'].setall(False)
         self['CONF_SR']['MASKV'].setall(False)
-        self.write_conf() 
-    
+        self.write_conf()
+
         self['CONF_SR'][self.SET['fl']].setall(True)
 
-        #self['CONF_SR']['EN_PMOS'][29]=False ##Specific case PMOS 1e15 2018.05.17
+        # self['CONF_SR']['EN_PMOS'][29]=False ##Specific case PMOS 1e15 2018.05.17
 
-        self.write_conf() 
-           
+        self.write_conf()
+
         for _ in range(10):
             self["fifo"].reset()
-            time.sleep(0.1) 
+            time.sleep(0.1)
 
-        pix=np.empty(ROW*COL,dtype=[('fl', 'u1'),('col', 'u1'), ('row', '<u2')])
-        pix_i=0
-        for i in np.append(range(step, len(self['CONF_SR']['MASKH']),step),223):
+        pix = np.empty(ROW * COL, dtype=[('fl', 'u1'), ('col', 'u1'), ('row', '<u2')])
+        pix_i = 0
+
+        # Iterate over MASKH to find noisy pixels
+        for i in np.append(range(step, len(self['CONF_SR']['MASKH']), step), 223):
             self['CONF_SR']['MASKD'].setall(False)
             self['CONF_SR']['MASKV'].setall(False)
             self['CONF_SR']['MASKH'].setall(False)
-            self['CONF_SR']['MASKH'][i:0]=True
+            self['CONF_SR']['MASKH'][i:0] = True
             for p_i in range(pix_i):
-                self.mask(pix[p_i]["fl"],pix[p_i]['col'],pix[p_i]['row'])
+                self.mask(pix[p_i]["fl"], pix[p_i]['col'], pix[p_i]['row'])
             self['CONF_SR'].write()
             self['fifo'].reset()
             time.sleep(exp)
-            dat = self.interprete_data(self['fifo'].get_data())
+            dat = self.interpret_data(self['fifo'].get_data())
 
-            pix_tmp,cnt=np.unique(dat[['col','row']],return_counts=True)
-            logging.info( "Enable MASKH "+str(i)+" Noise data "+str(len(dat)) )
+            pix_tmp, cnt = np.unique(dat[['col', 'row']], return_counts=True)
+            logging.info("Enable MASKH " + str(i) + " Noise data " + str(len(dat)))
             if len(pix_tmp) > 100:
                 logging.error("Too many noisy pixels, try smaller step.")
-                return 
-            for p_i,p in enumerate(pix_tmp):
-                if cnt[p_i]< th:
+                return
+            for p_i, p in enumerate(pix_tmp):
+                if cnt[p_i] < th:
                     pass
                 else:
-                    pix[pix_i]["col"]=p['col']
-                    pix[pix_i]["row"]=p['row']
-                    pix[pix_i]["fl"]=fl_n
-                    pix_i= pix_i+1
-            logging.info( "Number of noisy pixels: %d"%pix_i )
+                    pix[pix_i]["col"] = p['col']
+                    pix[pix_i]["row"] = p['row']
+                    pix[pix_i]["fl"] = fl_n
+                    pix_i = pix_i + 1
+            logging.info("Number of noisy pixels: %d" % pix_i)
 
-        for i in np.append(range(step,112,step),111):
+        # Iterate over MASKV to find noisy pixels
+        for i in np.append(range(step, 112, step), 111):
             self['CONF_SR']['MASKD'].setall(False)
             self['CONF_SR']['MASKV'].setall(False)
             self['CONF_SR']['MASKH'].setall(True)
-            self['CONF_SR']['MASKV'][i+(fl_n*COL):(fl_n*COL)]=True
+            self['CONF_SR']['MASKV'][i + (fl_n * COL):(fl_n * COL)] = True
             for p_i in range(pix_i):
-                self.mask(pix[p_i]["fl"],pix[p_i]['col'],pix[p_i]['row'])
+                self.mask(pix[p_i]["fl"], pix[p_i]['col'], pix[p_i]['row'])
             self['CONF_SR'].write()
             self['fifo'].reset()
             time.sleep(exp)
-            dat = self.interprete_data(self['fifo'].get_data())
+            dat = self.interpret_data(self['fifo'].get_data())
 
-            pix_tmp,cnt=np.unique(dat[['col','row']],return_counts=True)
-            logging.info( "Enable MASKV "+str(i)+" Noise data "+str(len(dat)) )         
+            pix_tmp, cnt = np.unique(dat[['col', 'row']], return_counts=True)
+            logging.info("Enable MASKV " + str(i) + " Noise data " + str(len(dat)))
             if len(pix_tmp) > 100:
                 logger.error("Too many noisy pixels, try smaller step.")
-                return 
-            for p_i,p in enumerate(pix_tmp):
-                if cnt[p_i]< th:
+                return
+            for p_i, p in enumerate(pix_tmp):
+                if cnt[p_i] < th:
                     pass
                 else:
-                    pix[pix_i]["col"]=p['col']
-                    pix[pix_i]["row"]=p['row']
-                    pix[pix_i]["fl"]=fl_n
-                    pix_i= pix_i+1
-            logging.info( "Number of noisy pixels: %d"%pix_i )
+                    pix[pix_i]["col"] = p['col']
+                    pix[pix_i]["row"] = p['row']
+                    pix[pix_i]["fl"] = fl_n
+                    pix_i = pix_i + 1
+            logging.info("Number of noisy pixels: %d" % pix_i)
 
-        
-        for i in np.append(range(step, len(self['CONF_SR']['MASKD'])-1,step),len(self['CONF_SR']['MASKD'])-1):
+        # Iterate over MASKD to find noisy pixels
+        for i in np.append(range(step, len(self['CONF_SR']['MASKD']) - 1, step), len(self['CONF_SR']['MASKD']) - 1):
             self['CONF_SR']['MASKD'].setall(False)
-            self['CONF_SR']['MASKV'][(fl_n+1)*COL:(fl_n*COL)] = True
+            self['CONF_SR']['MASKV'][(fl_n + 1) * COL:(fl_n * COL)] = True
             self['CONF_SR']['MASKH'].setall(True)
-            self['CONF_SR']['MASKD'][i:0]=True
+            self['CONF_SR']['MASKD'][i:0] = True
             for p_i in range(pix_i):
-                self.mask(pix[p_i]["fl"],pix[p_i]['col'],pix[p_i]['row'])
+                self.mask(pix[p_i]["fl"], pix[p_i]['col'], pix[p_i]['row'])
             self['CONF_SR'].write()
             self['fifo'].reset()
             time.sleep(exp)
-            dat = self.interprete_data(self['fifo'].get_data())
+            dat = self.interpret_data(self['fifo'].get_data())
 
-            pix_tmp,cnt=np.unique(dat[['col','row']],return_counts=True)
-            logging.info( "Enable MASKD "+str(i)+" Noise data "+str(len(dat)) )
+            pix_tmp, cnt = np.unique(dat[['col', 'row']], return_counts=True)
+            logging.info("Enable MASKD " + str(i) + " Noise data " + str(len(dat)))
 
             if len(pix_tmp) > 100:
                 logger.error("Too many noisy pixels, try smaller step.")
-                return 
-            for p_i,p in enumerate(pix_tmp):
-                if cnt[p_i]< th:
+                return
+            for p_i, p in enumerate(pix_tmp):
+                if cnt[p_i] < th:
                     pass
                 else:
-                    pix[pix_i]["col"]=p['col']
-                    pix[pix_i]["row"]=p['row']
-                    pix[pix_i]["fl"]=fl_n
-                    pix_i= pix_i+1
-            logging.info( "Number of noisy pixels: %d"%pix_i )
+                    pix[pix_i]["col"] = p['col']
+                    pix[pix_i]["row"] = p['row']
+                    pix[pix_i]["fl"] = fl_n
+                    pix_i = pix_i + 1
+            logging.info("Number of noisy pixels: %d" % pix_i)
+
+        # Mask all previously found pixels and check again
         for p_i in range(pix_i):
-                self.mask(pix[p_i]["fl"],pix[p_i]['col'],pix[p_i]['row'])          
+            self.mask(pix[p_i]["fl"], pix[p_i]['col'], pix[p_i]['row'])
         self['fifo'].reset()
         time.sleep(exp)
-        dat = self.interprete_data(self['fifo'].get_data())
-        pix_tmp,cnt=np.unique(dat[['col','row']],return_counts=True)
-        logging.info( "Checking noisy pixels after masking..." )
-        logging.info( "Data size: "+str(len(dat)) )
+        dat = self.interpret_data(self['fifo'].get_data())
+        pix_tmp, cnt = np.unique(dat[['col', 'row']], return_counts=True)
+        logging.info("Checking noisy pixels after masking...")
+        logging.info("Data size: " + str(len(dat)))
         if len(pix_tmp) > 100:
             logger.error("Too many noisy pixels, try smaller step.")
-            return 
-        for p_i,p in enumerate(pix_tmp):
-            if cnt[p_i]< th:
+            return
+        for p_i, p in enumerate(pix_tmp):
+            if cnt[p_i] < th:
                 pass
             else:
-                pix[pix_i]["col"]=p['col']
-                pix[pix_i]["row"]=p['row']
-                pix[pix_i]["fl"]=fl_n
-                pix_i= pix_i+1
-        logging.info( "Number of noisy pixels: %d"%pix_i )
+                pix[pix_i]["col"] = p['col']
+                pix[pix_i]["row"] = p['row']
+                pix[pix_i]["fl"] = fl_n
+                pix_i = pix_i + 1
+        logging.info("Number of noisy pixels: %d" % pix_i)
 
+        # Mask additionally found noisy pixels
         for p_i in range(pix_i):
-            self.mask(pix[p_i]["fl"],pix[p_i]['col'],pix[p_i]['row'])
+            self.mask(pix[p_i]["fl"], pix[p_i]['col'], pix[p_i]['row'])
         self['CONF_SR'].write()
         self['fifo'].reset()
         time.sleep(0.3)
-        pix=np.unique(pix[:pix_i])
-        #logging.info( "Temperature: "+ str(self.get_temperature(n=10)) )
-        mask = self.get_disabled_pixel(maskV=self['CONF_SR']['MASKV'],maskH=self['CONF_SR']['MASKH'],maskD= self['CONF_SR']['MASKD'])
-        logging.info( "Noisy pixels: "+ str(pix) )
-        #logging.info( "Disabled pixels: "+ str(pix) )
-        logging.info( "Total number of noisy pixels: "+ str(len(pix)) )
-        total_enabled = np.shape(np.argwhere(mask[(fl_n*112):(fl_n+1)*112,:]!=0))[0]
-        total_disabled = np.shape(np.argwhere(mask[(fl_n*112):(fl_n+1)*112,:]==0))[0]
-        logging.info( "Number of enabled pixels: "+ str(total_enabled) )
-        logging.info( "Number of disabled pixels (Noisy+Ghost): "+ str(total_disabled) )
+        pix = np.unique(pix[:pix_i])
+        logging.info("Noisy pixels: " + str(pix))
+        logging.info("Total number of noisy pixels: " + str(len(pix)))
+
+        # Get mask from register settings
+        mask = self.get_disabled_pixel(maskV=self['CONF_SR']['MASKV'], maskH=self['CONF_SR']['MASKH'], maskD=self['CONF_SR']['MASKD'])
+        total_enabled = np.shape(np.argwhere(mask[(fl_n * 112):(fl_n + 1) * 112, :] != 0))[0]
+        total_disabled = np.shape(np.argwhere(mask[(fl_n * 112):(fl_n + 1) * 112, :] == 0))[0]
+        logging.info("Number of enabled pixels: {}".format(str(total_enabled)))
+        logging.info("Number of disabled pixels (noisy plus unintentionally masked): {}".format(str(total_disabled)))
 
     def en_inflavours(self, fl=1, enable=True, start=0, end=55):
-        if fl==0:
-            self['CONF_SR']['EN_PMOS_NOSF'][end:start]=True
-        elif fl==1:
-            self['CONF_SR']['EN_PMOS'][end:start]=True
-        elif fl==2:
-            self['CONF_SR']['EN_COMP'][end:start]=True
-        elif fl==3: 
-            self['CONF_SR']['EN_HV'][end:start]=True
+        if fl == 0:
+            self['CONF_SR']['EN_PMOS_NOSF'][end:start] = True
+        elif fl == 1:
+            self['CONF_SR']['EN_PMOS'][end:start] = True
+        elif fl == 2:
+            self['CONF_SR']['EN_COMP'][end:start] = True
+        elif fl == 3:
+            self['CONF_SR']['EN_HV'][end:start] = True
         else:
-            logger.warn('The value of flavor given as input ('+ str(fl) + ') is not a valid one. EN_PMOS will be enabled instead.')
-            self['CONF_SR']['EN_PMOS'][end:start]=True
+            logger.warn('The value of flavor given as input (' + str(fl) + ') is not a valid one. EN_PMOS will be enabled instead.')
+            self['CONF_SR']['EN_PMOS'][end:start] = True
 
-        
-    def hitor_inarea(self, hitorpix=[56,102], flav=1, col_rad=5, row_rad=5, first=True):
+    def hitor_inarea(self, hitorpix=[56, 102], flav=1, col_rad=5, row_rad=5, first=True):
 
-        if first==True:
+        if first is True:
             self['CONF_SR']['MASKD'].setall(False)
             self['CONF_SR']['MASKH'].setall(False)
             self['CONF_SR']['MASKV'].setall(False)
-        
+
             self['CONF_SR']['EN_PMOS_NOSF'].setall(False)
             self['CONF_SR']['EN_PMOS'].setall(False)
             self['CONF_SR']['EN_COMP'].setall(False)
             self['CONF_SR']['EN_HV'].setall(False)
-        
+
             self['CONF_SR']['DIG_MON_SEL'].setall(False)
             self['CONF_SR']['EN_HITOR_OUT'].setall(True)
             self['CONF_SR'].write()
         else:
             pass
-            
-        column=hitorpix[0]
-        row=hitorpix[1]
-        
-        first_col = column-col_rad
-        last_col = column+col_rad
-        dcol_start = int(np.floor(first_col/2))
-        dcol_end = int(np.ceil(last_col/2))
+
+        column = hitorpix[0]
+        row = hitorpix[1]
+
+        first_col = column - col_rad
+        last_col = column + col_rad
+        dcol_start = int(np.floor(first_col / 2))
+        dcol_end = int(np.ceil(last_col / 2))
         self.en_inflavours(fl=flav, enable=True, start=dcol_start, end=dcol_end)
 
-        mcol=(flav*112)+column
-        md = mcol-row if (mcol-row) >= 0 else 448+mcol-row
-        diag=(flav*112)-row
-        self['CONF_SR']['EN_HITOR_OUT'][flav]=False
-        self.enable_column_hitor(flav,column)
-        self['CONF_SR']['MASKH'][row]=False
-        
-        for r in range(row-row_rad, row+row_rad+1):
-            if r == row:    
-                self['CONF_SR']['MASKH'][r]=False
+        mcol = (flav * 112) + column
+        md = mcol - row if (mcol - row) >= 0 else 448 + mcol - row
+        # diag = (flav * 112) - row
+        self['CONF_SR']['EN_HITOR_OUT'][flav] = False
+        self.enable_column_hitor(flav, column)
+        self['CONF_SR']['MASKH'][row] = False
+
+        for r in range(row - row_rad, row + row_rad + 1):
+            if r == row:
+                self['CONF_SR']['MASKH'][r] = False
             else:
-                self['CONF_SR']['MASKH'][r]=True
-                    
-        for c in range(first_col, last_col+1):
-                self['CONF_SR']['MASKV'][c]=True
-                
-        for d in range(md-col_rad-1, md+col_rad+2):
-                self['CONF_SR']['MASKD'][d]=True
-        self['CONF_SR'].write()       
+                self['CONF_SR']['MASKH'][r] = True
+
+        for c in range(first_col, last_col + 1):
+                self['CONF_SR']['MASKV'][c] = True
+
+        for d in range(md - col_rad - 1, md + col_rad + 2):
+                self['CONF_SR']['MASKD'][d] = True
+        self['CONF_SR'].write()
+
 
 if __name__ == '__main__':
     chip = TJMonoPix()
