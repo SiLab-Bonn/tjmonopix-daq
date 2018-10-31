@@ -31,7 +31,7 @@ class TJMonopixHistogrammer(Transceiver):
         self.occupancy = np.zeros(shape=(112, 224), dtype=np.int32)
         self.tot = np.zeros(64, dtype=np.int32)
         # self.tdc = np.zeros(0xFFF, dtype=np.int32)
-        self.pix = [0xFFFF, 0xFFFF] #[25,64] #[0xFFFF,0xFFFF] ########[col,row] for single pixel [0xFFFF,0xFFFF] for all pixel
+        self.pix = [0xFFFF, 0xFFFF]  #[25,64] #[0xFFFF,0xFFFF] # [col,row] for single pixel [0xFFFF,0xFFFF] for all pixel
         # Variables
         self.n_readouts = 0
         self.readout = 0
@@ -50,9 +50,9 @@ class TJMonopixHistogrammer(Transceiver):
         self.updateTime = 1  # was 0 before adding timestamp_start_fornext
         self.mask_noisy_pixel = False
         self.timestamp_start_fornext = 0
-        # Histogrammes from interpretation stored for summing
-#         self.error_counters = None
-#         self.trigger_error_counters = None
+        # Histograms from interpretation stored for summing
+        # self.error_counters = None
+        # self.trigger_error_counters = None
 
     def deserialize_data(self, data):
         # return jsonapi.loads(data, object_hook=utils.json_numpy_obj_hook)
@@ -65,9 +65,6 @@ class TJMonopixHistogrammer(Transceiver):
         return meta
 
     def interpret_data(self, data):
-#        print "data[0][1]"
-#        print data
-#        print "////////"
         if 'meta_data' in data[0][1]:  # Meta data is directly forwarded to the receiver, only hit data, event counters are histogramed; 0 from frontend index, 1 for data dict
             meta_data = data[0][1]['meta_data']
             ts_now = float(meta_data['timestamp_stop'])
@@ -137,7 +134,7 @@ class TJMonopixHistogrammer(Transceiver):
 
     def handle_command(self, command):
         if command[0] == 'RESET':
-            self.occupancy = np.zeros(shape=(112,224), dtype=np.int32)  # Reset occ hists
+            self.occupancy = np.zeros(shape=(112, 224), dtype=np.int32)  # Reset occ hists
             self.tot = np.zeros(64, dtype=np.int32)  # Reset occ hists
             self.total_hits = 0
             self.total_events = 0
@@ -146,23 +143,23 @@ class TJMonopixHistogrammer(Transceiver):
                 self.mask_noisy_pixel = False
             else:
                 self.mask_noisy_pixel = True
-        elif 'PIX_X' in command[0]: ### TODO get pixel from command
+        elif 'PIX_X' in command[0]:  # TODO get pixel from command
             self.tot = np.zeros(64, dtype=np.int32)  # Reset occ hists
-            value=command[0].split()[1]
+            value = command[0].split()[1]
             if '-1' in value:
-                self.pix[0]=0xFFFF
-                self.pix[1]=0xFFFF
+                self.pix[0] = 0xFFFF
+                self.pix[1] = 0xFFFF
             else:
-                self.pix[0]=int(value)
-        elif 'PIX_Y' in command[0]: ### TODO get pixel from command
+                self.pix[0] = int(value)
+        elif 'PIX_Y' in command[0]:  # TODO get pixel from command
             self.tot = np.zeros(64, dtype=np.int32)  # Reset occ hists
-            value=command[0].split()[1]
+            value = command[0].split()[1]
             if '-1' in value:
-                self.pix[0]=0xFFFF
-                self.pix[1]=0xFFFF
+                self.pix[0] = 0xFFFF
+                self.pix[1] = 0xFFFF
             else:
-                self.pix[1]=int(value)
+                self.pix[1] = int(value)
         else:
             self.n_readouts = int(command[0])
-            self.occupancy = np.zeros(shape=(112,224), dtype=np.int32)  # Reset occ hists
+            self.occupancy = np.zeros(shape=(112, 224), dtype=np.int32)  # Reset occ hists
             self.tot = np.zeros(64, dtype=np.int32)  # Reset occ hists

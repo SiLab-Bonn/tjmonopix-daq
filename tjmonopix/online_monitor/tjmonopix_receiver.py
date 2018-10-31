@@ -122,7 +122,6 @@ class TJMonopixReceiver(Receiver):
 
     def deserialize_data(self, data):
 
-        print data
         datar, meta = utils.simple_dec(data)
         if 'occupancies' in meta:
             meta['occupancies'] = datar
