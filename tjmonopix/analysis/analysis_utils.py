@@ -50,6 +50,10 @@ def zcurve(x, A, mu, sigma):
     return -0.5 * A * erf((x - mu) / (np.sqrt(2) * sigma)) + 0.5 * A
 
 
+def line(x, m, b):
+    return m * x + b
+
+
 @njit
 def interpret_data(rawdata, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt,
                    ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt, debug):
@@ -546,6 +550,80 @@ def fit_scurves_multithread(scurves, scan_param_range, n_injections=None, invert
     sig2D = np.reshape(sig, (112, 224))
     chi2ndf2D = np.reshape(chi2ndf, (112, 224))
     return thr2D, sig2D, chi2ndf2D
+
+
+def fit_line(y_data, y_err, x_data):
+        """
+            Fit line to x and y data.
+            Returns:
+                (slope, offset, chi2)
+        """
+        y_data = np.array(y_data, dtype=np.float)
+
+        # Select valid data
+        x = x_data[~np.isnan(y_data)]
+        y = y_data[~np.isnan(y_data)]
+        y_err = y_err[~np.isnan(y_data)]
+
+        # Return if not enough data points
+        if len(y) < 3:
+            return (0., 0., 0.)
+
+        # Calculate start values with difference quotient and mean y-intercept
+        p0 = [(y[-1] - y[0]) / (x[-1] - x[0]),
+              np.mean(y - (y[-1] - y[0]) / (x[-1] - x[0]) * x)]
+
+        try:
+            popt = curve_fit(f=line, xdata=x, ydata=y, p0=p0, sigma=y_err,
+                             absolute_sigma=True if np.any(y_err) else False)[0]
+            chi2 = np.sum((y - line(x, *popt))**2)
+        except RuntimeError:
+            return (0., 0., 0.)
+
+        return (popt[0], popt[1], chi2 / y.shape[0] - 2 - 1)
+
+
+def get_mean_from_histogram(counts, bin_positions, axis=0):
+    ''' Compute average of an array that represents a histogram along the specified axis.
+
+        The bin positions are the values and counts the occurences of these values.
+
+        Uses vectorized numpy function without looping and is therefore fast.
+
+        Parameters
+        ----------
+        counts: Array containing occurences of values to be averaged
+        axis: None or int
+        bin_positions: array_like associated with the values in counts.
+                        Shape of count array or 1D array with shape of axis.
+    '''
+    weights = bin_positions
+    return np.average(counts, axis=axis, weights=weights) * weights.sum(axis=min(axis, len(weights.shape) - 1)) / np.nansum(counts, axis=axis)
+
+
+def get_std_from_histogram(counts, bin_positions, axis=0):
+    ''' Compute RMS of an array that represents a histogram along the specified axis.
+
+        The bin positions are the values and counts the occurences of these values.
+
+        Uses vectorized numpy function without looping and is therefore fast.
+
+        Parameters
+        ----------
+        counts: Array containing occurences of values to be averaged
+        axis: None or int
+        bin_positions: array_like associated with the values in counts.
+                        Same shape like count array is needed!
+    '''
+
+    if np.any(bin_positions.sum(axis=axis) == 0):
+        raise ValueError('The bin position are all 0 for at least one axis. Maybe you forgot to transpose the bin position array?')
+
+    mean = get_mean_from_histogram(counts, bin_positions, axis=axis)
+    weights = (bin_positions - np.expand_dims(mean, axis=axis)) ** 2
+    rms_2 = get_mean_from_histogram(counts, bin_positions=weights, axis=axis)
+    return np.sqrt(rms_2)
+
 
 
 
