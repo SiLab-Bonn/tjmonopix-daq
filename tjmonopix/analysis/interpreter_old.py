@@ -5,8 +5,8 @@ import tables
 
 
 @njit
-def interpret_data(rawdata, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt,
-                   ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt, debug):
+def raw_data_interpreter(rawdata, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt,
+                         ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt, debug):
     MASK1_LOWER = np.uint64(0x00000000FFFFFFF0)
     MASK1_UPPER = np.uint64(0x00FFFFFF00000000)
     TS_MASK_DAT = np.uint64(0x0000000000FFFFFF)
@@ -62,7 +62,7 @@ def interpret_data(rawdata, buf, col, row, le, te, noise, timestamp, rx_flg, ts_
                 buf[buf_i]["te"] = te
                 buf[buf_i]["timestamp"] = timestamp
                 buf[buf_i]["cnt"] = noise
-                buf[buf_i]["idx"] = r_i
+                buf[buf_i]["scan_param_id"] = r_i
                 buf_i = buf_i + 1
                 rx_flg = 0
             else:
@@ -90,7 +90,7 @@ def interpret_data(rawdata, buf, col, row, le, te, noise, timestamp, rx_flg, ts_
                     buf[buf_i]["te"] = np.uint8(ts_inter >> np.uint64(16))
                     buf[buf_i]["timestamp"] = ts_timestamp
                     buf[buf_i]["cnt"] = ts_cnt
-                    buf[buf_i]["idx"] = r_i
+                    buf[buf_i]["scan_param_id"] = r_i
                     buf_i = buf_i + 1
             else:
                 return 6, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
@@ -135,7 +135,7 @@ def interpret_data(rawdata, buf, col, row, le, te, noise, timestamp, rx_flg, ts_
                     buf[buf_i]["te"] = np.uint8(ts2_cnt >> 8)
                     buf[buf_i]["timestamp"] = ts2_timestamp
                     buf[buf_i]["cnt"] = ts2_tot
-                    buf[buf_i]['idx'] = r_i
+                    buf[buf_i]['scan_param_id'] = r_i
                     buf_i = buf_i + 1
             else:
                 return 10, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
@@ -182,7 +182,7 @@ def interpret_data(rawdata, buf, col, row, le, te, noise, timestamp, rx_flg, ts_
                     buf[buf_i]["te"] = 0xFF
                     buf[buf_i]["timestamp"] = ts3_timestamp
                     buf[buf_i]["cnt"] = ts3_cnt
-                    buf[buf_i]['idx'] = r_i
+                    buf[buf_i]['scan_param_id'] = r_i
                     buf_i = buf_i + 1
             else:
                 return 10, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
@@ -220,7 +220,7 @@ def interpret_data(rawdata, buf, col, row, le, te, noise, timestamp, rx_flg, ts_
                 buf[buf_i]["te"] = 0xFF
                 buf[buf_i]["timestamp"] = tlu_timestamp
                 buf[buf_i]["cnt"] = tlu
-                buf[buf_i]['idx'] = r_i
+                buf[buf_i]['scan_param_id'] = r_i
                 buf_i = buf_i + 1
 
         else:
@@ -234,9 +234,7 @@ def interpret_data(rawdata, buf, col, row, le, te, noise, timestamp, rx_flg, ts_
 
 def interpret_h5(fin, fout, data_format=0x43, n=100000000):
     hit_dtype = [("col", "<u1"), ("row", "<u2"), ("le", "<u1"), ("te", "<u1"),
-                 ("cnt", "<u4"), ("timestamp", "<u8"), ("idx", "<u8")]
-    if data_format & 0x80 == 0x80:
-        hit_dtype.append(("idx", "<u8"))
+                 ("cnt", "<u4"), ("timestamp", "<u8"), ("scan_param_id", "<i8")]
     buf = np.empty(n, dtype=hit_dtype)
     col = 0xFF
     row = 0xFF
@@ -274,38 +272,38 @@ def interpret_h5(fin, fout, data_format=0x43, n=100000000):
                 raw = f.root.raw_data[start:tmpend]
                 (err, hit_dat, r_i, col, row, le, te, noise, timestamp, rx_flg,
                  ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
-                 ) = interpret_data(
+                 ) = raw_data_interpreter(
                     raw, buf, col, row, le, te, noise, timestamp, rx_flg,
                     ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt, data_format)
                 hit_total = hit_total + len(hit_dat)
                 if err == 0:
-                    print "%d %d %.3f%% %.3fs %dhits" % (
-                        start, r_i, 100.0 * (start + r_i + 1) / end, time.time() - t0, hit_total)
+                    print("%d %d %.3f%% %.3fs %dhits" % (
+                        start, r_i, 100.0 * (start + r_i + 1) / end, time.time() - t0, hit_total))
                 elif err == 1 or err == 2 or err == 3:
-                    print "tjmonopix data broken", err, start, r_i, hex(
-                        raw[r_i]), "flg=", rx_flg
+                    print("tjmonopix data broken", err, start, r_i, hex(
+                        raw[r_i]), "flg=", rx_flg)
                     if data_format & 0x8 == 0x8:
                         for i in range(max(0, r_i - 100), min(r_i + 100, tmpend - start - 6), 6):
-                            print hex(
-                                raw[start + i]), hex(raw[start + i + 1]), hex(raw[start + i + 2]),
-                            print hex(
-                                raw[start + i + 3]), hex(raw[start + i + 4]), hex(raw[start + i + 5])
+                            print(hex(
+                                raw[start + i]), hex(raw[start + i + 1]), hex(raw[start + i + 2])),
+                            print(hex(
+                                raw[start + i + 3]), hex(raw[start + i + 4]), hex(raw[start + i + 5]))
                     rx_flg = 0
                     timestamp = np.uint64(0x0)
                 elif err == 4 or err == 5 or err == 6:
-                    print "timestamp data broken", err, start, r_i, hex(
-                        raw[r_i]), "flg=", ts_flg, ts_timestamp
+                    print("timestamp data broken", err, start, r_i, hex(
+                        raw[r_i]), "flg=", ts_flg, ts_timestamp)
                     ts_flg = 0
                     ts_timestamp = np.uint64(0x0)
                     ts_pre = ts_timestamp
                 elif err == 7:
-                    print "trash data", err, start, r_i, hex(raw[r_i])
+                    print("trash data", err, start, r_i, hex(raw[r_i]))
                 elif err == 8 or err == 9 or err == 10:
-                    print "ts2_timestamp data broken", err, start, r_i, hex(
-                        raw[r_i]), "flg=", ts2_flg, ts2_timestamp
+                    print("ts2_timestamp data broken", err, start, r_i, hex(
+                        raw[r_i]), "flg=", ts2_flg, ts2_timestamp)
                     ts2_flg = 0
                 if data_format & 0x80 == 0x80:
-                    hit_dat['idx'] = hit_dat['idx'] + start
+                    hit_dat['scan_param_id'] = hit_dat['scan_param_id'] + start
 
                 hit_table.append(hit_dat)
                 hit_table.flush()
@@ -341,7 +339,7 @@ def without_noise(dat):
 class Interpreter():
     def __init__(self, chunk=100000000, debug=0):
         self.hit_dtype = [("col", "<u1"), ("row", "<u2"), ("le", "<u1"), ("te", "<u1"),
-                          ("cnt", "<u4"), ("timestamp", "<u8"), ("idx", "<u8")]
+                          ("cnt", "<u4"), ("timestamp", "<u8"), ("scan_param_id", "<u8")]
         self.reset()
         self.buf = np.empty(chunk, dtype=self.hit_dtype)
         self.chunk_size = chunk
@@ -382,7 +380,7 @@ class Interpreter():
              self.ts_timestamp, self.ts_pre, self.ts_flg, self.ts_cnt,
              self.ts2_timestamp, self.ts2_tot, self.ts2_flg, self.ts2_cnt,
              self.ts3_timestamp, self.ts3_flg, self.ts3_cnt,
-             ) = interpret_data(
+             ) = raw_data_interpreter(
                 raw[start:tmpend], self.buf,
                 self.col, self.row, self.le, self.te, self.noise, self.timestamp, self.rx_flg,
                 self.ts_timestamp, self.ts_pre, self.ts_flg, self.ts_cnt,

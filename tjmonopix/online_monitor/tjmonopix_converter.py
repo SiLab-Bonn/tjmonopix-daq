@@ -3,7 +3,7 @@ from zmq.utils import jsonapi
 import numpy as np
 
 from online_monitor.utils import utils
-from tjmonopix.analysis.interpreter import Interpreter
+from tjmonopix.analysis.interpreter_old import Interpreter
 
 
 class TJMonopixConverter(Transceiver):

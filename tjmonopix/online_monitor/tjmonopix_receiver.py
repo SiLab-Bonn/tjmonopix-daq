@@ -26,13 +26,13 @@ class TJMonopixReceiver(Receiver):
         # color occupancy plot
         poss = np.array([0.0, 0.6, 1.0])
         color = np.array([[25, 25, 112, 255], [173, 255, 47, 255], [255, 0, 0, 255]], dtype=np.ubyte)  # [RED,GREEN,BLUE,BLACK/WHITE]
-        mapp = pg.ColorMap(poss, color)
-        lutt = mapp.getLookupTable(0.0, 1.0, 100)
-        #
+        cmap = pg.ColorMap(poss, color)
+        lutt = cmap.getLookupTable(0.0, 1.0, 100)
+
         dock_occcupancy = Dock("Occupancy plane", size=(400, 800))
         dock_tot = Dock("ToT", size=(400, 800))
         dock_area.addDock(dock_occcupancy)
-        dock_area.addDock(dock_tot,"right",dock_occcupancy)
+        dock_area.addDock(dock_tot, "right", dock_occcupancy)
 
         occupancy_graphics = pg.GraphicsLayoutWidget()  # Plot docks
         occupancy_graphics.show()
@@ -45,7 +45,6 @@ class TJMonopixReceiver(Receiver):
         self.plot.addItem(self.occupancy_image)
         dock_occcupancy.addWidget(self.plot)
 
-        
         tot_plot_widget = pg.PlotWidget(background="w")
         self.tot_plot = tot_plot_widget.plot(np.linspace(-0.5, 15.5, 17), np.zeros((16)), stepMode=True)
         tot_plot_widget.showGrid(y=True)
@@ -68,16 +67,21 @@ class TJMonopixReceiver(Receiver):
         self.spin_box = Qt.QSpinBox(value=0)
         self.spin_box.setMaximum(1000000)
         self.spin_box.setSuffix(" Readouts")
-        self.xpixel_label=QtGui.QLabel("Pixel column: (-1 for all)")
-        self.ypixel_label=QtGui.QLabel("Pixel row: (-1 for all)")
-        self.xpixel=Qt.QSpinBox(value=-1)
+
+        # Pixel selection
+        self.xpixel_label = QtGui.QLabel("Pixel column: (-1 for all)")
+        self.ypixel_label = QtGui.QLabel("Pixel row: (-1 for all)")
+
+        self.xpixel = Qt.QSpinBox(value=-1)
         self.xpixel.setMaximum(112)
         self.xpixel.setMinimum(-1)
         self.xpixel.setSingleStep(1)
-        self.ypixel=Qt.QSpinBox(value=-1)
+
+        self.ypixel = Qt.QSpinBox(value=-1)
         self.ypixel.setMaximum(224)
         self.ypixel.setMinimum(-1)
         self.ypixel.setSingleStep(1)
+
         self.reset_button = QtGui.QPushButton('Reset')
         self.noisy_checkbox = QtGui.QCheckBox('Mask noisy pixels')
         self.convert_checkbox = QtGui.QCheckBox('Axes in ' + u'\u03BC' + 'm')
@@ -145,7 +149,7 @@ class TJMonopixReceiver(Receiver):
 
         if 'meta_data' not in data:
             self.occupancy_image.setImage(data['occupancies'], autoDownsample=True)
-            self.tot_plot.setData(x=np.linspace(-0.5, 63.5,65), y=data['tot'], fillLevel=0, brush=(0, 0, 255, 150))
+            self.tot_plot.setData(x=np.linspace(-0.5, 63.5, 65), y=data['tot'], fillLevel=0, brush=(0, 0, 255, 150))
         else:
             update_rate(data['meta_data']['fps'], data['meta_data']['hps'], data['meta_data']['total_hits'], data['meta_data']['eps'], data['meta_data']['total_events'])
             self.timestamp_label.setText("Data Timestamp\n%s" % time.asctime(time.localtime(data['meta_data']['timestamp_stop'])))

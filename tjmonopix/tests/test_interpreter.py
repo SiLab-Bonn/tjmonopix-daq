@@ -1,45 +1,57 @@
 import unittest
 import numpy as np
 from tjmonopix.analysis import interpreter
-from hypothesis import given, settings
-import hypothesis.strategies as st
 
 
 class TestInterpreter(unittest.TestCase):
+    def setUp(self):
+        hit_dtype = [("col", "<u1"), ("row", "<u2"), ("le", "<u1"), ("te", "<u1"), ("cnt", "<u4"),
+                     ("timestamp", "<i8")]
 
-    @settings(deadline=None, max_examples=100)
-    @given(st.integers(0, 63),
-           st.integers(0, 445),
-           st.integers(0, 63),
-           st.integers(0, 63),
-           st.integers(0, 1),
-           st.integers(0, 2 ** 52 - 1),
-           st.integers(0, 2 ** 32 - 1))
-    def test_raw_interpreter(self, col, row, le, te, noise, ts, token):
-        # Generate tj_data array from input
-        tj_data = 0x0
-        tj_data |= (noise << 27) 
-        tj_data |= (le << 21)
-        tj_data |= (te << 15)
-        tj_data |= (row << 6)
-        tj_data |= (col)
-        
-        # Generate timestamp data
-        ts_data_1 = 0x10000000
-        ts_data_1 |= (ts & 0xFFFFFFF)
-        ts_data_2 = 0x20000000
-        ts_data_2 |= ((ts & 0xFFFFFF0000000) >> 28)
-        
-        # Generate token data
-        token_data = 0x30000000
-        token_data |= ((token & 0xFFFFFFF0) >> 4)
-        ts_data_2 |= ((token & 0xF) << 24)
-        
-        raw_data = np.array([tj_data, ts_data_1, ts_data_2, token_data])
+        # Test data contains five TJ data blocks, one TDC data, one TLU data, one TLU timestamp
+        self.correct_raw_data = np.array([119565277, 533409971, 654311425, 805306368, 117615582, 533409971,
+                                          654311425, 805306368, 111038963, 533410220, 671088641, 805306368,
+                                          110957044, 533410220, 671088641, 805306368, 98674900, 533410806, 687865857,
+                                          805306368, 1661002752, 1644167572, 1633608547, 3258017254, 1929379840,
+                                          1912686510, 1902803753])
 
-        my_interpreter = interpreter.Interpreter()
-        data = my_interpreter.run(raw_data)
-        self.assertListEqual(data.tolist(), [(2 * col + row // 256, row % 256, le, te, noise, ts << 4)])
+        # Test data is missing one TJ and one TLU timestamp data word
+        self.broken_raw_data = np.array([119565277, 654311425, 805306368, 117615582, 533409971,
+                                        654311425, 805306368, 111038963, 533410220, 671088641, 805306368,
+                                        110957044, 533410220, 671088641, 805306368, 98674900, 533410806, 687865857,
+                                        805306368, 1661002752, 1644167572, 1633608547, 3258017254, 1929379840])
+
+        self.expected_correct_hit_data = np.array([(59, 175, 57, 0, 0, 8534559536),
+                                                   (60, 175, 56, 5, 0, 8534559536),
+                                                   (103, 71, 52, 60, 0, 8534563520),
+                                                   (104, 71, 52, 58, 0, 8534563520),
+                                                   (40, 163, 47, 3, 0, 8534572896),
+                                                   (253, 0, 0, 0, 228, 6784213859),
+                                                   (255, 0, 0, 0, 26086, 271120),
+                                                   (252, 0, 0, 0, 0, 1407380519721)],
+                                                  dtype=hit_dtype)
+
+        self.expected_broken_hit_data = np.array([(60, 175, 56, 5, 0, 8534559536),
+                                                  (103, 71, 52, 60, 0, 8534563520),
+                                                  (104, 71, 52, 58, 0, 8534563520),
+                                                  (40, 163, 47, 3, 0, 8534572896),
+                                                  (253, 0, 0, 0, 228, 6784213859),
+                                                  (255, 0, 0, 0, 26086, 271120)],
+                                                 dtype=hit_dtype)
+
+    def test_correct_data(self):
+        my_interpreter = interpreter.RawDataInterpreter()
+        hit_data, errors = my_interpreter.interpret_data(self.correct_raw_data)
+
+        np.testing.assert_array_equal(hit_data, self.expected_hit_data)
+        self.assertEqual(errors, 0)
+
+    def test_broken_data(self):
+        my_interpreter = interpreter.RawDataInterpreter()
+        hit_data, errors = my_interpreter.interpret_data(self.broken_raw_data)
+
+        np.testing.assert_array_equal(hit_data, self.expected_hit_data_from_broken)
+        self.assertEqual(errors, 2)
 
 
 if __name__ == "__main__":
