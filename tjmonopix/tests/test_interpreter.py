@@ -43,14 +43,14 @@ class TestInterpreter(unittest.TestCase):
         my_interpreter = interpreter.RawDataInterpreter()
         hit_data, errors = my_interpreter.interpret_data(self.correct_raw_data)
 
-        np.testing.assert_array_equal(hit_data, self.expected_hit_data)
+        np.testing.assert_array_equal(hit_data, self.expected_correct_hit_data)
         self.assertEqual(errors, 0)
 
     def test_broken_data(self):
         my_interpreter = interpreter.RawDataInterpreter()
         hit_data, errors = my_interpreter.interpret_data(self.broken_raw_data)
 
-        np.testing.assert_array_equal(hit_data, self.expected_hit_data_from_broken)
+        np.testing.assert_array_equal(hit_data, self.expected_broken_hit_data)
         self.assertEqual(errors, 2)
 
 
