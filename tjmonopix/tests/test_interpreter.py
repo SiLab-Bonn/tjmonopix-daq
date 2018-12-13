@@ -6,7 +6,12 @@ from tjmonopix.analysis import interpreter
 class TestInterpreter(unittest.TestCase):
     def setUp(self):
         hit_dtype = [("col", "<u1"), ("row", "<u2"), ("le", "<u1"), ("te", "<u1"), ("cnt", "<u4"),
-                     ("timestamp", "<i8")]
+                     ("timestamp", "<i8"), ("scan_param_id", "<u4")]
+        meta_dtype = [("index_start", "<u4"), ("index_stop", "<u4"), ("scan_param_id", "<u4")]
+
+        # Meta data
+        self.meta_data_for_correct = np.array([(0, 4, 0), (4, 8, 1), (8, 20, 2), (20, 27, 3)], dtype=meta_dtype)
+        self.meta_data_for_broken = np.array([(0, 3, 0), (3, 7, 1), (7, 19, 2), (19, 25, 3)], dtype=meta_dtype)
 
         # Test data contains five TJ data blocks, one TDC data, one TLU data, one TLU timestamp
         self.correct_raw_data = np.array([119565277, 533409971, 654311425, 805306368, 117615582, 533409971,
@@ -21,34 +26,34 @@ class TestInterpreter(unittest.TestCase):
                                         110957044, 533410220, 671088641, 805306368, 98674900, 533410806, 687865857,
                                         805306368, 1661002752, 1644167572, 1633608547, 3258017254, 1929379840])
 
-        self.expected_correct_hit_data = np.array([(59, 175, 57, 0, 0, 8534559536),
-                                                   (60, 175, 56, 5, 0, 8534559536),
-                                                   (103, 71, 52, 60, 0, 8534563520),
-                                                   (104, 71, 52, 58, 0, 8534563520),
-                                                   (40, 163, 47, 3, 0, 8534572896),
-                                                   (253, 0, 0, 0, 228, 6784213859),
-                                                   (255, 0, 0, 0, 26086, 271120),
-                                                   (252, 0, 0, 0, 0, 1407380519721)],
+        self.expected_correct_hit_data = np.array([(59, 175, 57, 0, 0, 8534559536, 0),
+                                                   (60, 175, 56, 5, 0, 8534559536, 1),
+                                                   (103, 71, 52, 60, 0, 8534563520, 2),
+                                                   (104, 71, 52, 58, 0, 8534563520, 2),
+                                                   (40, 163, 47, 3, 0, 8534572896, 2),
+                                                   (253, 0, 0, 0, 228, 6784213859, 3),
+                                                   (255, 0, 0, 0, 26086, 271120, 3),
+                                                   (252, 0, 0, 0, 0, 1407380519721, 3)],
                                                   dtype=hit_dtype)
 
-        self.expected_broken_hit_data = np.array([(60, 175, 56, 5, 0, 8534559536),
-                                                  (103, 71, 52, 60, 0, 8534563520),
-                                                  (104, 71, 52, 58, 0, 8534563520),
-                                                  (40, 163, 47, 3, 0, 8534572896),
-                                                  (253, 0, 0, 0, 228, 6784213859),
-                                                  (255, 0, 0, 0, 26086, 271120)],
+        self.expected_broken_hit_data = np.array([(60, 175, 56, 5, 0, 8534559536, 1),
+                                                  (103, 71, 52, 60, 0, 8534563520, 2),
+                                                  (104, 71, 52, 58, 0, 8534563520, 2),
+                                                  (40, 163, 47, 3, 0, 8534572896, 2),
+                                                  (253, 0, 0, 0, 228, 6784213859, 3),
+                                                  (255, 0, 0, 0, 26086, 271120, 3)],
                                                  dtype=hit_dtype)
 
     def test_correct_data(self):
-        my_interpreter = interpreter.RawDataInterpreter()
-        hit_data, errors = my_interpreter.interpret_data(self.correct_raw_data)
+        my_interpreter = interpreter.Interpreter()
+        hit_data, errors = my_interpreter.interpret_data(self.correct_raw_data, self.meta_data_for_correct)
 
         np.testing.assert_array_equal(hit_data, self.expected_correct_hit_data)
         self.assertEqual(errors, 0)
 
     def test_broken_data(self):
-        my_interpreter = interpreter.RawDataInterpreter()
-        hit_data, errors = my_interpreter.interpret_data(self.broken_raw_data)
+        my_interpreter = interpreter.Interpreter()
+        hit_data, errors = my_interpreter.interpret_data(self.broken_raw_data, self.meta_data_for_broken)
 
         np.testing.assert_array_equal(hit_data, self.expected_broken_hit_data)
         self.assertEqual(errors, 2)
