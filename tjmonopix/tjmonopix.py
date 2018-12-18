@@ -22,7 +22,10 @@ from basil.dut import Dut
 ROW = 224
 COL = 112
 
+# Directory for log file. Create if it does not exist
 DATDIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "output_data")
+if not os.path.exists(DATDIR):
+    os.makedirs(DATDIR)
 
 VERSION = pkg_resources.get_distribution("tjmonopix-daq").version
 
@@ -58,7 +61,7 @@ class TJMonoPix(Dut):
         self.ROW = 224
         self.COL = 112
 
-        logger.debug("Loading configuration file from {:s}".format(conf))
+        logger.debug("Loading configuration file from {}".format(conf))
 
         super(TJMonoPix, self).__init__(conf)
         self.conf_flg = 1
@@ -76,7 +79,7 @@ class TJMonoPix(Dut):
 
         return fw_version, board_version
 
-    def init(self, fl="EN_HV"):  # "EN_PMOS"
+    def init(self, fl="EN_PMOS"):  # "EN_HV"
         super(TJMonoPix, self).init()
 
         self.fw_version, self.board_version = self.get_daq_version()
@@ -88,7 +91,7 @@ class TJMonoPix(Dut):
         if fl == "EN_HV" or fl == 'EN_PMOS':
             self['CONF']['AB_SELECT'] = True
         else:
-            self['CONF']['AB_SELECT'] = True
+            self['CONF']['AB_SELECT'] = False
         self.SET['fl'] = fl
         self['CONF'].write()
 
@@ -279,7 +282,7 @@ class TJMonoPix(Dut):
         for pwr in ['VDDP', 'VDDD', 'VDDA', 'VDDA_DAC']:
             self[pwr].set_enable(False)
 
-    def get_power_status(self, log=False):
+    def get_power_status(self):
         status = {}
 
         for pwr in ['VDDP', 'VDDD', 'VDDA', 'VDDA_DAC', 'VPCSWSF', 'VPC', 'BiasSF']:
@@ -373,19 +376,45 @@ class TJMonoPix(Dut):
         self['CONF_SR']['MASKH'][row] = False
 
     def enable_injection(self, flavor, col, row):
-        assert 0 <= flavor <= 3, 'Flavor must be between 0 and 3'
-        assert 0 <= col <= 111, 'Column must be between 0 and 111'
-        assert 0 <= row <= 223, 'Row must be between 0 and 223'
+        """ Enables injection in one selected pixel
+
+        Parameters:
+        -----------
+        flavor: int
+            Flavor number (PMOS: 1, HV: 3)
+        col: int
+        row: int
+        """
+        if flavor > 3 or flavor < 0:
+            raise ValueError("Flavor number must be between 0 and 3")
+        if col < 0 or col > 112:
+            raise ValueError("Column number must be between 0 and 111")
+        if row < 0 or row > 223:
+            raise ValueError("Row number must be between 0 and 223")
+
         self['CONF_SR']['COL_PULSE_SEL'][(flavor * 112) + col] = 1
         self['CONF_SR']['INJ_ROW'][row] = 1
 
     def enable_column_hitor(self, flavor, col):
-        assert 0 <= flavor <= 3, 'Flavor must be between 0 and 3'
+        """ Enables hit or in given column for given flavor
+
+        Parameters:
+        -----------
+        flavor: int
+            Flavor number (PMOS:1, HV: 3)
+        col: int
+            Column number to activate hitor for
+        """
+        if flavor > 3 or flavor < 0:
+            raise ValueError("Flavor number must be between 0 and 3")
+        if col < 0 or col > 112:
+            raise ValueError("Column number must be between 0 and 111")
+
         self['CONF_SR']['DIG_MON_SEL'][(flavor * 112) + col] = 1
 
 ############################## SET BIAS CURRENTS AND VOLTAGES ##############################
 
-    def set_ibias_dacunits(self, dacunits, printen):
+    def set_ibias_dacunits(self, dacunits, printen=False):
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
         low = (128 - (dacunits + 1)) / 2
         high = ((dacunits + 1) / 2) + 63
@@ -395,7 +424,7 @@ class TJMonoPix(Dut):
             logger.info('ibias = ' + str(dacunits))
             logger.info('ibias = ' + str(1400.0 * ((dacunits + 1) / 128.0)) + 'nA')
 
-    def set_idb_dacunits(self, dacunits, printen):
+    def set_idb_dacunits(self, dacunits, printen=False):
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
         low = (128 - (dacunits + 1)) / 2
         high = ((dacunits + 1) / 2) + 63
@@ -405,17 +434,17 @@ class TJMonoPix(Dut):
             logger.info('idb = ' + str(dacunits))
             logger.info('idb = ' + str(2240.0 * ((dacunits + 1) / 128.0)) + 'nA')
 
-    def set_ithr_dacunits(self, dacunits, printen):
+    def set_ithr_dacunits(self, dacunits, printen=False):
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
         low = (128 - (dacunits + 1)) / 2
         high = ((dacunits + 1) / 2) + 63
         self['CONF_SR']['SET_ITHR'].setall(False)
         self['CONF_SR']['SET_ITHR'][high:low] = True
-        if (printen == 1):
+        if printen:
             logger.info('ithr = ' + str(dacunits))
             logger.info('ithr = ' + str(17.5 * ((dacunits + 1) / 128.0)) + 'nA')
 
-    def set_icasn_dacunits(self, dacunits, printen):
+    def set_icasn_dacunits(self, dacunits, printen=False):
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
         low = (128 - (dacunits + 1)) / 2
         high = ((dacunits + 1) / 2) + 63
@@ -425,7 +454,7 @@ class TJMonoPix(Dut):
             logger.info('icasn = ' + str(dacunits))
             logger.info('icasn = ' + str(560.0 * ((dacunits + 1) / 128.0)) + 'nA')
 
-    def set_ireset_dacunits(self, dacunits, mode, printen):
+    def set_ireset_dacunits(self, dacunits, mode, printen=False):
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
         assert 0 <= mode <= 1, 'Mode must be 0 (low leakage) or 1 (high leakage)'
         low = (128 - (dacunits + 1)) / 2
@@ -441,11 +470,11 @@ class TJMonoPix(Dut):
                 logger.info('ireset = ' + str(dacunits) + ' low leakage mode')
                 logger.info('ireset = ' + str(43.75 * ((dacunits + 1) / 128.0)) + 'pA, low leakage mode')
 
-    def set_vreset_dacunits(self, dacunits, printen=1):
+    def set_vreset_dacunits(self, dacunits, printen=False):
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
         self['CONF_SR']['SET_VRESET_P'].setall(False)
         self['CONF_SR']['SET_VRESET_P'][dacunits] = True
-        if (printen == 1):
+        if printen:
                 logger.info('vreset = ' + str(((1.8 / 127.0) * dacunits + 0.555)) + 'V')
 
     def set_vh_dacunits(self, dacunits, print_en=False):
@@ -461,14 +490,14 @@ class TJMonoPix(Dut):
                 return i
         return -1
 
-    def set_vl_dacunits(self, dacunits, printen):
+    def set_vl_dacunits(self, dacunits, printen=False):
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
         self['CONF_SR']['SET_VL'].setall(False)
         self['CONF_SR']['SET_VL'][dacunits] = True
         if (printen == 1):
                 logger.info('vl = ' + str(((1.8 / 127.0) * dacunits + 0.385)) + 'V')
 
-    def set_vcasn_dac_dacunits(self, dacunits, printen):
+    def set_vcasn_dac_dacunits(self, dacunits, printen=False):
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
         self['CONF_SR']['SET_VCASN'].setall(False)
         self['CONF_SR']['SET_VCASN'][dacunits] = True
@@ -723,6 +752,15 @@ class TJMonoPix(Dut):
 #             np.save('scurvedata' + partname + '.npy', scurve)
 #             logger.info('Injection scan finished successfully, data saved with filename:%s' % ('scurvedata' + partname + '.npy')) 
 
+    def reset_ibias(self):
+        """ To eliminate oscillations, set ibias to 0 and back to previous value
+        """
+        ibias = self['CONF_SR']['SET_IBIAS'][:]
+        self.set_ibias_dacunits(0, 0)
+        self.write_conf()
+        self['CONF_SR']['SET_IBIAS'][:] = ibias
+        self.write_conf()
+
     def auto_mask(self, th=2, step=10, exp=0.2):
         logger.info("auto_mask th=%d step=%d exp=%d fl=%s" % (th, step, exp, self.SET['fl']))
         self['CONF_SR'][self.SET['fl']].setall(False)
@@ -758,6 +796,11 @@ class TJMonoPix(Dut):
             for p_i in range(pix_i):
                 self.mask(pix[p_i]["fl"], pix[p_i]['col'], pix[p_i]['row'])
             self['CONF_SR'].write()
+
+            # Set ibias to zero and back again to eliminate oscillations from mask switching
+            ibias = self['CONF_SR']['SET_IBIAS'][:]
+            self.reset_ibias()
+            self.reset_ibias()
             self['fifo'].reset()
             time.sleep(exp)
             dat = self.interpret_data(self['fifo'].get_data())
@@ -786,6 +829,11 @@ class TJMonoPix(Dut):
             for p_i in range(pix_i):
                 self.mask(pix[p_i]["fl"], pix[p_i]['col'], pix[p_i]['row'])
             self['CONF_SR'].write()
+
+            # Set ibias to zero and back again to eliminate oscillations from mask switching
+            self.reset_ibias()
+            self.reset_ibias()
+
             self['fifo'].reset()
             time.sleep(exp)
             dat = self.interpret_data(self['fifo'].get_data())
@@ -814,6 +862,11 @@ class TJMonoPix(Dut):
             for p_i in range(pix_i):
                 self.mask(pix[p_i]["fl"], pix[p_i]['col'], pix[p_i]['row'])
             self['CONF_SR'].write()
+
+            # Set ibias to zero and back again to eliminate oscillations from mask switching
+            self.reset_ibias()
+            self.reset_ibias()
+
             self['fifo'].reset()
             time.sleep(exp)
             dat = self.interpret_data(self['fifo'].get_data())
@@ -837,6 +890,12 @@ class TJMonoPix(Dut):
         # Mask all previously found pixels and check again
         for p_i in range(pix_i):
             self.mask(pix[p_i]["fl"], pix[p_i]['col'], pix[p_i]['row'])
+        self['CONF_SR'].write()
+
+        # Set ibias to zero and back again to eliminate oscillations from mask switching
+        self.reset_ibias()
+        self.reset_ibias()
+
         self['fifo'].reset()
         time.sleep(exp)
         dat = self.interpret_data(self['fifo'].get_data())
@@ -865,6 +924,8 @@ class TJMonoPix(Dut):
         pix = np.unique(pix[:pix_i])
         logging.info("Noisy pixels: " + str(pix))
         logging.info("Total number of noisy pixels: " + str(len(pix)))
+
+        self.reset_ibias()
 
         # Get mask from register settings
         mask = self.get_disabled_pixel(maskV=self['CONF_SR']['MASKV'], maskH=self['CONF_SR']['MASKH'], maskD=self['CONF_SR']['MASKD'])
