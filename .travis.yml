@@ -45,7 +45,7 @@ install:
   - conda update --yes conda
 
     # Install dependencies
-  - conda install pip numba numpy pytables pyyaml scipy tqdm matplotlib pytest
+  - conda install --yes pip numba numpy pytables pyyaml scipy tqdm matplotlib pytest
   - pip install --upgrade pip
   - pip install coverage python-coveralls pixel_clusterizer pylandau cocotb
 
