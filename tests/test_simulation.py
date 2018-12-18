@@ -104,7 +104,6 @@ class TestSimulation(unittest.TestCase):
             self.dut['inj'].is_ready
 
         hit_data = self.dut.interpret_data(self.dut['fifo'].get_data())
-        print hit_data
         self.assertListEqual(hit_data["col"].tolist(), [0, 1, 0, 1, 0, 1, 0, 1])
         self.assertListEqual(hit_data["row"].tolist(), [100, 100, 200, 200, 100, 100, 200, 200])
         self.assertListEqual((hit_data["te"] - hit_data["le"]).tolist(), [4, 4, 4, 4, 4, 4, 4, 4])

@@ -198,7 +198,7 @@ module MONOPIX(
     //
     
     t_conf default_conf;
-    always_comb begin
+    always@(*) begin
 
         //****DEFAULT CONFIGURATION****//
         //----------TEST PATTERN-------//
