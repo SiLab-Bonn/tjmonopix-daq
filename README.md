@@ -1,5 +1,5 @@
 # tjmonopix-daq
-[![Build Status](https://travis-ci.org/SiLab-Bonn/tjmonopix-daq.svg?branch=master)](https://travis-ci.org/ChristianBesp/tjmonopix-daq)
+[![Build Status](https://travis-ci.org/SiLab-Bonn/tjmonopix-daq.svg?branch=development)](https://travis-ci.org/SiLab-Bonn/tjmonopix-daq)
 
 Data acquisition software for the TJMonoPix pixel detector.
 
