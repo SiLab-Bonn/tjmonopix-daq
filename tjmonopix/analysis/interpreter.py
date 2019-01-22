@@ -193,6 +193,8 @@ class RawDataInterpreter(object):
         self.error_cnt = 0
 
     def reset(self):
+        """ Reset all values that are computed from multiple data words
+        """
         self.tj_data_flag = 0
         self.tj_timestamp = 0
         self.hitor_timestamp_flag = 0
@@ -225,7 +227,7 @@ class RawDataInterpreter(object):
         For additional info about data structure check corresponding modules in basil software package.
 
         Parameters:
-        ----------
+        -----------
         raw_data : np.array
             The array with the raw data words
         meta_data : np.array
@@ -336,7 +338,7 @@ class RawDataInterpreter(object):
                 hit_data[hit_index]["le"] = 0
                 hit_data[hit_index]["te"] = 0
                 hit_data[hit_index]["cnt"] = self.hitor_charge
-                hit_data[hit_index]["timestamp"] = np.int64(self.hitor_timestamp & 0x7FFFFFFFFFFFFFFF)
+                hit_data[hit_index]["timestamp"] = np.int64(self.hitor_timestamp & 0x7FFFFFFFFFFFFFFF)  # Make sure it is unsigned
                 hit_data[hit_index]["scan_param_id"] = raw_idx
 
                 # Prepare for next data block. Increase hit index and reset hitor_timestamp flag
