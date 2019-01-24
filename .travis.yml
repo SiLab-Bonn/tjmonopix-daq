@@ -47,21 +47,17 @@ install:
     # Install dependencies
   - conda install --yes pip numba numpy pytables pyyaml scipy tqdm matplotlib pytest
   - pip install --upgrade pip
-  - pip install coverage python-coveralls pixel_clusterizer pylandau cocotb
+  - pip install coverage python-coveralls pixel_clusterizer pylandau cocotb==1.0.dev3
 
     # Install basil
-  - git clone -b v2.4.13 https://github.com/SiLab-Bonn/basil; cd basil; python setup.py develop; cd ..;
+  - git clone -b development https://github.com/SiLab-Bonn/basil; cd basil; python setup.py develop; cd ..;
 
     # Install tjmonopix-daq
   - python setup.py develop
   - printenv | sort
-    # Create environment for test
-  #- conda create --yes -n test-environment python="$TRAVIS_PYTHON_VERSION" pip numba numpy pytables pyyaml scipy tqdm matplotlib
-  #- source activate test-environment
+
   #- pip install --upgrade pip
-  #- pip install coverage python-coveralls pixel_clusterizer pylandau pytest
-  #- python setup.py develop
-  #- printenv | sort
+  #- pip install coverage python-coveralls
 
 # Run test
 script:
@@ -72,7 +68,7 @@ script:
   #  else
   #    touch $HOME/miniconda/lib/python3.6/site-packages/converage.pth && printf "import coverage; coverage.process_startup()" > $HOME/miniconda/lib/python3.6/site-packages/converage.pth;
   #  fi
-  - cd tests; travis_wait 10 py.test -s
+  - cd tests; travis_wait 5 py.test -s
  
 # after_success:
 #   - coveralls --data_file .coverage.*

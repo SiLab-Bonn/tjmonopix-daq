@@ -27,7 +27,7 @@ class TestSimulation(unittest.TestCase):
             extra_defines=extra_defines,
             sim_bus='basil.utils.sim.SiLibUsbBusDriver',
             include_dirs=(root_dir, root_dir + "/firmware/src", root_dir + "/tests/hdl"),
-            extra='VSIM_ARGS += -wlf /tmp/tjmonopix.wlf'
+            extra='VSIM_ARGS += -wlf /tmp/tjmonopix.wlf \n EXTRA_ARGS += -g2012'
         )
 
         with open(root_dir + '/tjmonopix/tjmonopix.yaml', 'r') as f:
