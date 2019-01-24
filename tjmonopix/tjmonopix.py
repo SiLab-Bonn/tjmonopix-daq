@@ -416,40 +416,40 @@ class TJMonoPix(Dut):
 
     def set_ibias_dacunits(self, dacunits, printen=False):
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
-        low = (128 - (dacunits + 1)) / 2
-        high = ((dacunits + 1) / 2) + 63
+        low = (128 - (dacunits + 1)) // 2
+        high = ((dacunits + 1) // 2) + (128 // 2)
         self['CONF_SR']['SET_IBIAS'].setall(False)
-        self['CONF_SR']['SET_IBIAS'][high:low] = True
+        self['CONF_SR']['SET_IBIAS'][high:low] = 2 ** (high - low) - 1
         if (printen == 1):
             logger.info('ibias = ' + str(dacunits))
             logger.info('ibias = ' + str(1400.0 * ((dacunits + 1) / 128.0)) + 'nA')
 
     def set_idb_dacunits(self, dacunits, printen=False):
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
-        low = (128 - (dacunits + 1)) / 2
-        high = ((dacunits + 1) / 2) + 63
+        low = (128 - (dacunits + 1)) // 2
+        high = ((dacunits + 1) // 2) + (128 // 2)
         self['CONF_SR']['SET_IDB'].setall(False)
-        self['CONF_SR']['SET_IDB'][high:low] = True
+        self['CONF_SR']['SET_IDB'][high:low] = 2 ** (high - low) - 1
         if (printen == 1):
             logger.info('idb = ' + str(dacunits))
             logger.info('idb = ' + str(2240.0 * ((dacunits + 1) / 128.0)) + 'nA')
 
     def set_ithr_dacunits(self, dacunits, printen=False):
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
-        low = (128 - (dacunits + 1)) / 2
-        high = ((dacunits + 1) / 2) + 63
+        low = (128 - (dacunits + 1)) // 2
+        high = ((dacunits + 1) // 2) + (128 // 2)
         self['CONF_SR']['SET_ITHR'].setall(False)
-        self['CONF_SR']['SET_ITHR'][high:low] = True
+        self['CONF_SR']['SET_ITHR'][high:low] = 2 ** (high - low) - 1
         if printen:
             logger.info('ithr = ' + str(dacunits))
             logger.info('ithr = ' + str(17.5 * ((dacunits + 1) / 128.0)) + 'nA')
 
     def set_icasn_dacunits(self, dacunits, printen=False):
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
-        low = (128 - (dacunits + 1)) / 2
-        high = ((dacunits + 1) / 2) + 63
+        low = (128 - (dacunits + 1)) // 2
+        high = ((dacunits + 1) // 2) + (128 // 2)
         self['CONF_SR']['SET_ICASN'].setall(False)
-        self['CONF_SR']['SET_ICASN'][high:low] = True
+        self['CONF_SR']['SET_ICASN'][high:low] = 2 ** (high - low) - 1
         if (printen == 1):
             logger.info('icasn = ' + str(dacunits))
             logger.info('icasn = ' + str(560.0 * ((dacunits + 1) / 128.0)) + 'nA')
@@ -457,11 +457,11 @@ class TJMonoPix(Dut):
     def set_ireset_dacunits(self, dacunits, mode, printen=False):
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
         assert 0 <= mode <= 1, 'Mode must be 0 (low leakage) or 1 (high leakage)'
-        low = (128 - (dacunits + 1)) / 2
-        high = ((dacunits + 1) / 2) + 63
+        low = (128 - (dacunits + 1)) // 2
+        high = ((dacunits + 1) // 2) + (128 // 2)
         self['CONF_SR']['SET_IRESET_BIT'] = mode
         self['CONF_SR']['SET_IRESET'].setall(False)
-        self['CONF_SR']['SET_IRESET'][high:low] = True
+        self['CONF_SR']['SET_IRESET'][high:low] = 2 ** (high - low) - 1
         if (printen == 1):
             if (mode == 1):
                 logger.info('ireset = ' + str(dacunits) + ' high leakage mode')
