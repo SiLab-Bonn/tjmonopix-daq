@@ -18,7 +18,9 @@ class_spec = [
     ('row', numba.uint16),
     ('le', numba.uint8),
     ('te', numba.uint8),
-    ('noise', numba.uint8)
+    ('noise', numba.uint8),
+    ('meta_idx', numba.uint16),
+    ('raw_idx', numba.uint32)
 ]
 
 
@@ -191,6 +193,8 @@ class RawDataInterpreter(object):
         self.chunk_size = chunk_size
         self.reset()
         self.error_cnt = 0
+        self.raw_idx = 0
+        self.meta_idx = 0
 
     def reset(self):
         """ Reset all values that are computed from multiple data words
@@ -239,7 +243,7 @@ class RawDataInterpreter(object):
 
         hit_index = 0
 
-        for raw_idx, raw_data_word in enumerate(raw_data):
+        for raw_data_word in raw_data:
             #############################
             # Part 1: interpret TJ data #
             #############################
@@ -291,7 +295,7 @@ class RawDataInterpreter(object):
                 hit_data[hit_index]["te"] = self.te
                 hit_data[hit_index]["cnt"] = self.noise
                 hit_data[hit_index]["timestamp"] = self.tj_timestamp
-                hit_data[hit_index]["scan_param_id"] = raw_idx
+                hit_data[hit_index]["scan_param_id"] = self.raw_idx
                 # Prepare for next hit. Increase hit index and reset tj_data flag
                 hit_index += 1
                 self.tj_data_flag = 0
@@ -339,7 +343,7 @@ class RawDataInterpreter(object):
                 hit_data[hit_index]["te"] = 0
                 hit_data[hit_index]["cnt"] = self.hitor_charge
                 hit_data[hit_index]["timestamp"] = np.int64(self.hitor_timestamp & 0x7FFFFFFFFFFFFFFF)  # Make sure it is unsigned
-                hit_data[hit_index]["scan_param_id"] = raw_idx
+                hit_data[hit_index]["scan_param_id"] = self.raw_idx
 
                 # Prepare for next data block. Increase hit index and reset hitor_timestamp flag
                 hit_index += 1
@@ -387,7 +391,7 @@ class RawDataInterpreter(object):
                 hit_data[hit_index]["te"] = 0
                 hit_data[hit_index]["cnt"] = 0
                 hit_data[hit_index]["timestamp"] = self.ext_timestamp
-                hit_data[hit_index]["scan_param_id"] = raw_idx
+                hit_data[hit_index]["scan_param_id"] = self.raw_idx
 
                 # Prepare for next data block. Increase hit index and reset ext_timestamp flag
                 hit_index += 1
@@ -435,7 +439,7 @@ class RawDataInterpreter(object):
                 hit_data[hit_index]["te"] = 0
                 hit_data[hit_index]["cnt"] = 0
                 hit_data[hit_index]["timestamp"] = self.tlu_timestamp
-                hit_data[hit_index]["scan_param_id"] = raw_idx
+                hit_data[hit_index]["scan_param_id"] = self.raw_idx
 
                 # Prepare for next data block. Increase hit index and reset tlu_timestamp flag
                 hit_index += 1
@@ -455,23 +459,23 @@ class RawDataInterpreter(object):
                 hit_data[hit_index]["te"] = 0
                 hit_data[hit_index]["cnt"] = tlu_word
                 hit_data[hit_index]["timestamp"] = tlu_timestamp_low_res
-                hit_data[hit_index]["scan_param_id"] = raw_idx
+                hit_data[hit_index]["scan_param_id"] = self.raw_idx
 
                 # Prepare for next data block. Increase hit index
                 hit_index += 1
+
+            # Increase raw_index and move to next data word
+            self.raw_idx += 1
 
         # Trim hit_data buffer to interpreted data hits
         hit_data = hit_data[:hit_index]
 
         # Find correct scan_param_id in meta data and attach to hit
-        meta_idx = 0
-
-        for hit_idx, param_id in enumerate(hit_data["scan_param_id"]):
-            while meta_idx < len(meta_data):
-                if param_id >= meta_data[meta_idx]['index_start'] and param_id < meta_data[meta_idx]['index_stop']:
-                    hit_data[hit_idx]['scan_param_id'] = meta_data[meta_idx]['scan_param_id']
+        for scan_idx, param_id in enumerate(hit_data["scan_param_id"]):
+            while self.meta_idx < len(meta_data):
+                if param_id >= meta_data[self.meta_idx]['index_start'] and param_id < meta_data[self.meta_idx]['index_stop']:
+                    hit_data[scan_idx]['scan_param_id'] = meta_data[self.meta_idx]['scan_param_id']
                     break
-                elif param_id >= meta_data[meta_idx]['index_stop']:
-                    meta_idx += 1
-
+                elif param_id >= meta_data[self.meta_idx]['index_stop']:
+                    self.meta_idx += 1
         return hit_data
