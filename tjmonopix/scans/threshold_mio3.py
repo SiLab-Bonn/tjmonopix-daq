@@ -1,131 +1,98 @@
 import time
-import tables as tb
 import numpy as np
 import yaml
-import os
 import logging
 
-from tjmonopix.scan_base import ScanBase
 from tjmonopix.tjmonopix import TJMonoPix
-from tjmonopix.analysis.interpreter import interpret_h5
 from tjmonopix.scans.threshold_scan import ThresholdScan
-
 
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(
         description='TJ-MONOPIX simple scan \n example: simple_scan --scan_time 10 --data simple_0', formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('-d', '--data',  type=str, default=None,
-                        help='Name of data file without extension')
-    parser.add_argument('--scan_timeout', type=int, default=10,
-                        help="Scan time in seconds. Default=10, disable=0")
-    #parser.add_argument('--config_file', type=str, default=None,
-    #                    help="Name of config file(yaml)")
-    args = parser.parse_args()    
+    parser.add_argument('-c', '--config', type=str, default=None, help='Name of scan configuration file')
+    parser.add_argument('-d', '--data', type=str, default=None, help='Name of data file without extension')
+    parser.add_argument('--scan_timeout', type=int, default=10, help="Scan time in seconds. Default=10, disable=0")
 
-    dut = "/home/silab/tjmonopix/tjmonopix-daq/tjmonopix-daq/tjmonopix/tjmonopix_mio3.yaml"
-    scan = ThresholdScan(dut=dut,filename=args.data,send_addr="tcp://131.220.162.237:5500")
+    args = parser.parse_args()
 
-    ####### CONFIGURE mask ######
-    scan.dut['CONF_SR']['EN_PMOS'].setall(False)
-    scan.dut['CONF_SR']['MASKD'].setall(False)
-    scan.dut['CONF_SR']['MASKH'].setall(False)
-    scan.dut['CONF_SR']['MASKV'].setall(False)
+    # Load configuration file
+    with open(args.config, "r") as config_file:
+        configuration = yaml.safe_load(config_file)
+        dut_config = configuration["dut"]
 
-    scan.dut['CONF_SR']['MASKD'].setall(True)
-    scan.dut['CONF_SR']['MASKH'].setall(True)
-    scan.dut['CONF_SR']['MASKV'][224:112] = True
-    scan.dut['CONF_SR']['EN_PMOS'].setall(True)
+    # TESTBEAM: dut = "/home/silab/tjmonopix/tjmonopix-daq/tjmonopix-testbeam-april/tjmonopix/tjmonopix_mio3.yaml"
+    dut = '/home/silab/git/tjmonopix-redo/tjmonopix/tjmonopix_mio3.yaml'
+    dut = TJMonoPix(conf=dut)
+    dut.init(fl="EN_" + dut_config["flavor"])
 
-    # TO USE THE MASK FUNCTION YOU MUST INPUT THE FLAVOR, COLUMN AND ROW
-    # THE FLAVOR NUMERS IS: 0 FOR PMOS_NOSF, 1 FOR PMOS, 2 FOR COMP, 3 FOR HV
-    scan.dut.mask(1, 33, 72)
-    scan.dut.mask(1, 17, 30)
-    scan.dut.mask(1, 19, 31)
-    scan.dut.mask(1, 41, 66)
-    scan.dut.mask(1, 97, 94)
-    scan.dut.mask(1, 34, 151)
-    scan.dut.mask(1, 40, 123)
-    scan.dut.mask(1, 82, 193)
-    scan.dut.mask(1, 71, 31)
-    scan.dut.mask(1, 71, 111)
-    scan.dut.mask(1, 38, 188)
-    scan.dut.mask(1, 97, 214)
-    scan.dut.mask(1, 86, 104)
-    scan.dut.mask(1, 35, 212)
-    scan.dut.mask(1, 35, 88)
-    scan.dut.mask(1, 43, 14)
-    scan.dut.mask(1, 38, 177)
-    scan.dut.mask(1, 17, 57)
-    scan.dut.mask(1, 54, 1)
-    scan.dut.mask(1, 38, 21)
-    scan.dut.mask(1, 71, 9)
-    scan.dut.mask(1, 58, 46)
-    scan.dut.mask(1, 74, 84)
-    scan.dut.mask(1, 53, 167)
-    scan.dut.mask(1, 35, 158)
-    scan.dut.mask(1, 72, 77)
-    scan.dut.mask(1, 14, 54)
-    scan.dut.mask(1, 78, 196)
-    scan.dut.mask(1, 88, 96)
-    scan.dut.mask(1, 78, 209)
-    scan.dut.mask(1, 62, 66)
-    scan.dut.mask(1, 53, 117)
+    # dut.set_monoread()
+    maskedpix_file = 'auto'
+#     maskedpix_file = "/media/silab/Maxtor/tjmonopix-data/measurements/source_scan/modified_process/pmos/W04R08_-6_-6_idb30_conf.yaml"
+    if maskedpix_file == '':
+            logging.warn("A masked pixel file was not specified. The device will probably show noisy pixels.")
+    elif maskedpix_file == 'auto':
+        pass  # execute later
+    elif maskedpix_file == 'hitor':
+        dut.hitor_inarea(hitorpix=[50, 102], flav=3, col_rad=5, row_rad=5, first=True)
+        dut.hitor_inarea(hitorpix=[50, 132], flav=3, col_rad=5, row_rad=5, first=False)
+        dut.write_conf()
+    else:
+        with open(maskedpix_file, 'r') as f:
+            conf = yaml.load(f)
+            logging.info("Loading pixel masks from: " + str(maskedpix_file))
+            dut.set_all_mask(conf['CONF_SR'])
+            disabledpix = dut.get_disabled_pixel()
 
-    scan.dut.mask(1, 103, 132) #8:19 28.03
-    scan.dut.mask(1, 109, 58) #8:19 28.03
-    scan.dut.mask(1, 21, 147) #8:19 28.03
-    #scan.dut['CONF_SR']['EN_PMOS'][54]= False
-    
-    #This sets up the hit_or in a single pixel
-    #col = 50
-    #row = 102
-    #scan.dut['CONF_SR']['EN_HITOR_OUT'][1]=False
-    #scan.dut.enable_column_hitor(1,col)
-    #scan.dut['CONF_SR']['MASKH'][row]=False
-    
-    scan.dut.write_conf()
+            logging.info("Number of disabled pixels (Noisy+Ghost): " + str(np.shape(np.argwhere(disabledpix[(dut.fl_n * 112):(dut.fl_n + 1) * 112, :] == 0))[0]))
 
-    ####### CONFIGURE THE FRONT END ######
+    # CONFIGURE THE FRONT END #
     # SET VRESET_P, THIS IS THE BASELINE OF THE FRONT END INPUT, ONE HOT ENCODING
-    scan.dut.set_vreset_dacunits(35,1) #1V
+    dut.set_vreset_dacunits(dut_config["vreset_dacunits"], 1)  # 1V
 
-    ## 128-bit DAC (7-bit binary equivalent)
-    ## SET THE CURRENTS USING THERMOMETER ENCODING, I = #BITS_ACTIVE*140nA*SCALING, SCALING IS DIFFERENT FOR EACH CURRENT
-    ## SCALING: IBIAS=10, IDB=16, ITHR=0.125, ICASN=4, IRESET=0.03125
-    ## ACTIVE BITS SHOULD BE SET STARTING FROM THE MIDDLE e.g. for 15 active bits, (128-15)/2=56,5 so 56zeros,15ones,57zeros
-    ## Thus, Ix[71:57] = True
+    # 128-bit DAC (7-bit binary equivalent)
+    # SET THE CURRENTS USING THERMOMETER ENCODING, I = #BITS_ACTIVE*140nA*SCALING, SCALING IS DIFFERENT FOR EACH CURRENT
+    # SCALING: IBIAS=10, IDB=16, ITHR=0.125, ICASN=4, IRESET=0.03125
+    # ACTIVE BITS SHOULD BE SET STARTING FROM THE MIDDLE e.g. for 15 active bits, (128-15)/2=56,5 so 56zeros,15ones,57zeros
+    # Thus, Ix[71:57] = True
 
     # SET ICASN, THIS CURRENT CONTROLS THE OUTPUT BASELINE, BE CAREFUL NOT TO SET IT TO HIGH
     # ALWAYS MONITOR THE POWER AFTER SETTING ICASN. IF VDDD IS SEVERAL mA, REDUCE IT UNTIL IT RETURNS TO 0
     # ICASN MAINLY CONTROLS THE THRESHOLD
-    scan.dut.set_icasn_dacunits(0,1) #4.375nA # approx 1.084V at -3V backbias, 600mV at 0V backbias
-    #scan.dut.set_icasn_dacunits(1,1) #4.375nA # approx 1.084V at -3V backbias, 600mV at 0V backbias
+    # dut.set_icasn_dacunits(0,1) #4.375nA # approx 1.084V at -3V backbias, 600mV at 0V backbias
+    dut.set_icasn_dacunits(dut_config["icasn_dacunits"], 1)  # 4.375nA # approx 1.084V at -3V backbias, 600mV at 0V backbias
 
     # SET IRESET, THIS CURRENT CONTROLS THE RESET RATE OF THE FRONT END INPUT (ALSO THE THRESHOLD)
-    scan.dut.set_ireset_dacunits(2,1,1) #270pA, HIGH LEAKAGE MODE, NORMAL SCALING, 0 = LOW LEAKAGE MODE, SCALING*0.01
+    dut.set_ireset_dacunits(dut_config["ireset_dacunits"]["value"], dut_config["ireset_dacunits"]["mode"], 1)  # 270pA, HIGH LEAKAGE MODE, NORMAL SCALING, 0 = LOW LEAKAGE MODE, SCALING*0.01
 
     # SET ITHR, THIS CURRENT CONTROLS THE RESET RATE OF THE OUTPUT (AND THE THRESHOLD)
-    #scan.dut.set_ithr_dacunits(29,1)   
-    scan.dut.set_ithr_dacunits(25,1) #680pA # Use this one!   SETTING 1
-    #scan.dut.set_ithr_dacunits(15,1) #680pA 27.03.14:30-       SETTING 2, 3
+    # scan.dut.set_ithr_dacunits(30,1) #680pA
+    dut.set_ithr_dacunits(dut_config["ithr_dacunits"], 1)  # 680pA 27.03.14:30-
 
     # SET ITHR, THIS CURRENT CONTROLS THE BIASING OF THE DISCRIMINATOR (AND THE THRESHOLD)
-    scan.dut.set_idb_dacunits(15,1) #500nA                     SETTING 1
-    #scan.dut.set_idb_dacunits(20,1) #500nA                      SETTING 2, 3
+    # scan.dut.set_idb_dacunits(15,1) #500nA
+    # scan.dut.set_idb_dacunits(20,1) #500nA
+    dut.set_idb_dacunits(dut_config["idb_dacunits"], 1)  # 500nA
 
     # SET IBIAS, THIS CURRENT IS THE DC CURRENT OF THE MAIN BRANCH
-    scan.dut.set_ibias_dacunits(50,1) #500nA OF THE FRONT END THAT PROVIDES AMPLIFICATION
+    dut.set_ibias_dacunits(dut_config["ibias_dacunits"], 1)  # 500nA OF THE FRONT END THAT PROVIDES AMPLIFICATION
     # IT CONTROLS MAINLY THE RISE TIME
-    #self.dut.set_ibias_dacunits(50,1) #500nA
-    scan.dut.write_conf()
-    time.sleep(5)
-    #scan.dut.set_ithr_dacunits(30,1)
-    #scan.dut.write_conf()
-    scan.dut.set_monoread()
-    time.sleep(0.1)
-    fifodata=scan.dut["fifo"].get_data()
-    print len(fifodata), fifodata
+    # self.dut.set_ibias_dacunits(50,1) #500nA
+    dut.write_conf()
 
-    output_filename=scan.start(scan_timeout=args.scan_timeout, with_tdc=False, with_timestamp=False, with_tlu=False, with_tj=True)
-    #scan.analyze()
+    time.sleep(1)
+    dut.set_monoread()
+    dut.cleanup_fifo(10)
+
+    if maskedpix_file == 'auto':
+        dut.auto_mask(th=2, step=3, exp=0.5)
+        dut.cleanup_fifo(15)
+
+    for mask_pix in configuration["mask"]:
+        dut.mask(*mask_pix)
+
+    scan = ThresholdScan(dut=dut, filename=args.data, send_addr="tcp://131.220.162.239:5500")
+    dut.save_config(scan.output_filename + '.yaml')
+    output_filename = scan.start(scan_timeout=args.scan_timeout, with_tdc=False, with_timestamp=False, with_tlu=False, with_tj=True)
+    scan.analyze(data_file=output_filename)
+    # scan.analyze()

@@ -19,7 +19,7 @@ class ScanBase(object):
         # If DUT instance is not passed as argument, initialize it
         if isinstance(dut, TJMonoPix):
             self.dut = dut
-        else:
+        elif dut:
             self.dut = TJMonoPix(conf=dut)
             # Initialize self.dut and power up
             self.dut.init()
@@ -32,7 +32,7 @@ class ScanBase(object):
             self.dut.set_ibias_dacunits(50, 1)  # 500nA. Current of the front end that provides amplification
             self.dut.write_conf()
 
-        if filename == None:
+        if filename is None:
             self.working_dir = os.path.join(os.getcwd(), "output_data")
             self.run_name = time.strftime("%Y%m%d_%H%M%S_") + self.scan_id
         else:
@@ -60,8 +60,8 @@ class ScanBase(object):
 
     def start(self, **kwargs):
 
-        #### open file
-        self.h5_file = tb.open_file(self.output_filename + '.h5' , mode="w", title="")
+        # create and open data file
+        self.h5_file = tb.open_file(self.output_filename + '.h5', mode="w", title="")
         self.raw_data_earray = self.h5_file.create_earray(
             self.h5_file.root,
             name="raw_data",
@@ -83,17 +83,17 @@ class ScanBase(object):
         self.meta_data_table.attrs.SET_before = yaml.dump(self.dut.SET)
 
         # Setup socket for Online Monitor
-        if (self.socket == ""): 
+        if self.socket == "":
             self.socket = None
         else:
             try:
                 self.socket = online_monitor.sender.init(self.socket)
                 self.logger.info('ScanBase.start:data_send.data_send_init connected')
-            except:
+            except Exception:
                 self.logger.warn('ScanBase.start:data_send.data_send_init failed addr={:s}'.format(self.socket))
                 self.socket = None
 
-        # Execute scan       
+        # Execute scan
         self.fifo_readout = FifoReadout(self.dut)
         self.scan(**kwargs)
         self.fifo_readout.print_readout_status()
@@ -109,12 +109,12 @@ class ScanBase(object):
         self.h5_file.close()
 
         # Close socket from Online Monitor
-        if self.socket != None:
+        if self.socket is not None:
             try:
                 online_monitor.sender.close(self.socket)
-            except:
+            except Exception:
                 pass
-        return self.output_filename 
+        return self.output_filename + '.h5'
 
     @contextmanager
     def readout(self, *args, **kwargs):
@@ -159,14 +159,14 @@ class ScanBase(object):
         self.meta_data_table.row.append()
         self.meta_data_table.flush()
 
-        if self.socket != None:
+        if self.socket is not None:
             try:
                 online_monitor.sender.send_data(self.socket, data_tuple)
-            except:
-                self.logger.warn('ScanBase.hadle_data:sender.send_data failed')
+            except Exception:
+                self.logger.warn('ScanBase.handle_data:sender.send_data failed')
                 try:
                     online_monitor.sender.close(self.socket)
-                except:
+                except Exception:
                     pass
                 self.socket = None
 
@@ -176,7 +176,7 @@ class ScanBase(object):
             self.logger.error(msg)
         else:
             self.logger.error("Aborting run...")
-            
+
 
 class MetaTable(tb.IsDescription):
     index_start = tb.UInt32Col(pos=0)

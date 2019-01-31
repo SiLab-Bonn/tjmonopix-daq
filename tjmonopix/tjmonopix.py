@@ -9,15 +9,11 @@ import yaml
 import logging
 import os
 import time
-# import struct
 import numpy as np
 import pkg_resources
 
-
-# import basil
-# from bitarray import bitarray
+from bitarray import bitarray
 from basil.dut import Dut
-# from basil.utils.BitLogic import BitLogic
 
 ROW = 224
 COL = 112
@@ -53,7 +49,7 @@ class TJMonoPix(Dut):
         1: 'MIO2',
     }
 
-    def __init__(self, conf=None, **kwargs):
+    def __init__(self, conf=None):
         if not conf:
             proj_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             conf = os.path.join(proj_dir, 'tjmonopix' + os.sep + 'tjmonopix.yaml')
@@ -79,7 +75,7 @@ class TJMonoPix(Dut):
 
         return fw_version, board_version
 
-    def init(self, fl="EN_PMOS"):  # "EN_HV"
+    def init(self, fl="EN_PMOS"):
         super(TJMonoPix, self).init()
 
         self.fw_version, self.board_version = self.get_daq_version()
@@ -92,7 +88,17 @@ class TJMonoPix(Dut):
             self['CONF']['AB_SELECT'] = True
         else:
             self['CONF']['AB_SELECT'] = False
+
         self.SET['fl'] = fl
+        if fl == "EN_PMOS_NOSF":
+            self.fl_n = 0
+        elif fl == "EN_PMOS":
+            self.fl_n = 1
+        elif fl == "EN_COMP":
+            self.fl_n = 2
+        elif fl == "EN_HV":
+            self.fl_n = 3
+
         self['CONF'].write()
 
         self['data_rx'].CONF_START_FREEZE = 57  # default 57
@@ -363,13 +369,12 @@ class TJMonoPix(Dut):
                 for i in range(0, len(self['CONF_SR'][m]), 1):
                     self['CONF_SR'][m][i] = mask[m][i]
                     self.write_conf()
-                    # print "---------------------",m,i
 
     def mask(self, flavor, col, row):
         assert 0 <= flavor <= 3, 'Flavor must be between 0 and 3'
         assert 0 <= col <= 111, 'Column must be between 0 and 111'
         assert 0 <= row <= 223, 'Row must be between 0 and 223'
-        mcol = (flavor) * 112 + col
+        mcol = flavor * 112 + col
         md = mcol - row if (mcol - row) >= 0 else 448 + mcol - row
         self['CONF_SR']['MASKD'][md] = False
         self['CONF_SR']['MASKV'][mcol] = False
@@ -412,44 +417,44 @@ class TJMonoPix(Dut):
 
         self['CONF_SR']['DIG_MON_SEL'][(flavor * 112) + col] = 1
 
-############################## SET BIAS CURRENTS AND VOLTAGES ##############################
+    # SET BIAS CURRENTS AND VOLTAGES
 
     def set_ibias_dacunits(self, dacunits, printen=False):
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
-        low = (128 - (dacunits + 1)) // 2
-        high = ((dacunits + 1) // 2) + (128 // 2)
+        low = (128 - dacunits) // 2
+        high = (dacunits // 2) + (128 // 2)
         self['CONF_SR']['SET_IBIAS'].setall(False)
-        self['CONF_SR']['SET_IBIAS'][high:low] = 2 ** (high - low) - 1
+        self['CONF_SR']['SET_IBIAS'][high:low] = (high - low + 1) * bitarray([True])
         if (printen == 1):
             logger.info('ibias = ' + str(dacunits))
             logger.info('ibias = ' + str(1400.0 * ((dacunits + 1) / 128.0)) + 'nA')
 
     def set_idb_dacunits(self, dacunits, printen=False):
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
-        low = (128 - (dacunits + 1)) // 2
-        high = ((dacunits + 1) // 2) + (128 // 2)
+        low = (128 - dacunits) // 2
+        high = (dacunits // 2) + (128 // 2)
         self['CONF_SR']['SET_IDB'].setall(False)
-        self['CONF_SR']['SET_IDB'][high:low] = 2 ** (high - low) - 1
+        self['CONF_SR']['SET_IDB'][high:low] = (high - low + 1) * bitarray([True])
         if (printen == 1):
             logger.info('idb = ' + str(dacunits))
             logger.info('idb = ' + str(2240.0 * ((dacunits + 1) / 128.0)) + 'nA')
 
     def set_ithr_dacunits(self, dacunits, printen=False):
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
-        low = (128 - (dacunits + 1)) // 2
-        high = ((dacunits + 1) // 2) + (128 // 2)
+        low = (128 - dacunits) // 2
+        high = (dacunits // 2) + (128 // 2)
         self['CONF_SR']['SET_ITHR'].setall(False)
-        self['CONF_SR']['SET_ITHR'][high:low] = 2 ** (high - low) - 1
+        self['CONF_SR']['SET_ITHR'][high:low] = (high - low + 1) * bitarray([True])
         if printen:
             logger.info('ithr = ' + str(dacunits))
             logger.info('ithr = ' + str(17.5 * ((dacunits + 1) / 128.0)) + 'nA')
 
     def set_icasn_dacunits(self, dacunits, printen=False):
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
-        low = (128 - (dacunits + 1)) // 2
-        high = ((dacunits + 1) // 2) + (128 // 2)
+        low = (128 - dacunits) // 2
+        high = (dacunits // 2) + (128 // 2)
         self['CONF_SR']['SET_ICASN'].setall(False)
-        self['CONF_SR']['SET_ICASN'][high:low] = 2 ** (high - low) - 1
+        self['CONF_SR']['SET_ICASN'][high:low] = (high - low + 1) * bitarray([True])
         if (printen == 1):
             logger.info('icasn = ' + str(dacunits))
             logger.info('icasn = ' + str(560.0 * ((dacunits + 1) / 128.0)) + 'nA')
@@ -457,11 +462,11 @@ class TJMonoPix(Dut):
     def set_ireset_dacunits(self, dacunits, mode, printen=False):
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
         assert 0 <= mode <= 1, 'Mode must be 0 (low leakage) or 1 (high leakage)'
-        low = (128 - (dacunits + 1)) // 2
-        high = ((dacunits + 1) // 2) + (128 // 2)
+        low = (128 - dacunits) // 2
+        high = (dacunits // 2) + (128 // 2)
         self['CONF_SR']['SET_IRESET_BIT'] = mode
         self['CONF_SR']['SET_IRESET'].setall(False)
-        self['CONF_SR']['SET_IRESET'][high:low] = 2 ** (high - low) - 1
+        self['CONF_SR']['SET_IRESET'][high:low] = (high - low + 1) * bitarray([True])
         if (printen == 1):
             if (mode == 1):
                 logger.info('ireset = ' + str(dacunits) + ' high leakage mode')
@@ -506,7 +511,8 @@ class TJMonoPix(Dut):
             logger.info('vcasn = ' + str(((1.8 / 127.0) * dacunits)) + 'V')
 
 ############################## SET data readout ##############################
-    def cleanup_fifo(self, n=20):
+
+    def cleanup_fifo(self, n=10):
         for _ in range(n):
             time.sleep(0.1)
             self['fifo'].reset()
@@ -567,9 +573,7 @@ class TJMonoPix(Dut):
         self['data_rx'].CONF_STOP_READ = stop_read  # default 62
         self['data_rx'].CONF_STOP = stop  # default 100
 
-        self['fifo'].reset()
-        time.sleep(0.1)
-        self['fifo'].reset()
+        self.cleanup_fifo(2)
         self['data_rx'].set_en(en)
 
     def stop_monoread(self):
@@ -692,66 +696,6 @@ class TJMonoPix(Dut):
 
         return hits
 
-#     def inj_scan_row(self, flavor, col, startrow, rownumber, VL, VHLrange, start_dif, delay, width, repeat, noise_en, analog_en, sleeptime):
-# 
-#         hits = np.zeros((rownumber, VHLrange + 1), dtype=int)
-# 
-#         self['inj'].set_delay(delay)
-#         self['inj'].set_width(width)
-#         self['inj'].set_repeat(repeat)
-#         self['inj'].set_en(0)
-# 
-#         self['CONF_SR']['INJ_ROW'].setall(False)
-#         if analog_en == 1:
-#             self['CONF_SR']['INJ_ROW'][223] = True
-#         self['CONF_SR']['COL_PULSE_SEL'].setall(False)
-#         for i in range(startrow, startrow + rownumber):
-#             self.enable_injection(flavor, col, i)
-#         self.set_vl_dacunits(VL, 0)
-#         self.set_vh_dacunits(VL + start_dif, 0)
-#         self.write_conf()
-# 
-#         for _ in range(5):
-#             _ = self['fifo'].get_data()
-#             time.sleep(0.01)
-# 
-#         for i in range(VHLrange + 1):
-#             if i != 0:
-#                 self.set_vh_dacunits(VL + i + start_dif, 0)
-#                 self.write_conf()
-# 
-#             while not self['inj'].is_ready:
-#                 time.sleep(0.001)
-#             for _ in range(10):
-#                 self['inj'].is_ready
-#             self["inj"].start()
-# 
-#             time.sleep(sleeptime)
-#             x = self['fifo'].get_data()
-#             ix = self.interpret_data(x)
-#             ixd = np.delete(ix, np.where((ix['col'] != col) | (ix['row'] < startrow) | (ix['row'] >= startrow + rownumber))[0])
-#             if noise_en == 1:
-#                 ixd = np.delete(ixd, np.where((ix['noise'] == 1))[0])
-# 
-#             uniquerow, countrow = np.unique(ixd['row'], return_counts=True)
-# 
-#             if (uniquerow.size != 0):
-#                 hits[uniquerow - startrow, i] = countrow
-# 
-#                 # print 'row=%d' %(row+rowstep)
-#                 print('i={:d}'.format(i))        
-#                 hits = self.inj_scan_row(flavor, col, row + rowstep, (row_high % (row + rowstep)) + 1, VL, VHLrange, start_dif, delay, width, repeat, noise_en, analog_en, sleeptime)
-#                 # print hits
-#                 scurve[i:i + ((row_high % (row + rowstep)) + 1)] = hits
-#                 i += (row_high % (row + rowstep)) + 1
-#                 # print (row_high%(row+rowstep))+1
-#                 print('i={:d}'.format(i))
-#                 time.sleep(sleeptime_step)
-# 
-#             # print scurve
-#             np.save('scurvedata' + partname + '.npy', scurve)
-#             logger.info('Injection scan finished successfully, data saved with filename:%s' % ('scurvedata' + partname + '.npy')) 
-
     def reset_ibias(self):
         """ To eliminate oscillations, set ibias to 0 and back to previous value
         """
@@ -775,9 +719,6 @@ class TJMonoPix(Dut):
         self.write_conf()
 
         self['CONF_SR'][self.SET['fl']].setall(True)
-
-        # self['CONF_SR']['EN_PMOS'][29]=False ##Specific case PMOS 1e15 2018.05.17
-
         self.write_conf()
 
         for _ in range(10):
@@ -792,13 +733,12 @@ class TJMonoPix(Dut):
             self['CONF_SR']['MASKD'].setall(False)
             self['CONF_SR']['MASKV'].setall(False)
             self['CONF_SR']['MASKH'].setall(False)
-            self['CONF_SR']['MASKH'][i:0] = True
+            self['CONF_SR']['MASKH'][i:0] = (int(i) + 1) * bitarray('1')
             for p_i in range(pix_i):
                 self.mask(pix[p_i]["fl"], pix[p_i]['col'], pix[p_i]['row'])
             self['CONF_SR'].write()
 
             # Set ibias to zero and back again to eliminate oscillations from mask switching
-            ibias = self['CONF_SR']['SET_IBIAS'][:]
             self.reset_ibias()
             self.reset_ibias()
             self['fifo'].reset()
@@ -825,7 +765,7 @@ class TJMonoPix(Dut):
             self['CONF_SR']['MASKD'].setall(False)
             self['CONF_SR']['MASKV'].setall(False)
             self['CONF_SR']['MASKH'].setall(True)
-            self['CONF_SR']['MASKV'][i + (fl_n * COL):(fl_n * COL)] = True
+            self['CONF_SR']['MASKV'][i + (fl_n * COL):(fl_n * COL)] = (int(i) + 1) * bitarray('1')
             for p_i in range(pix_i):
                 self.mask(pix[p_i]["fl"], pix[p_i]['col'], pix[p_i]['row'])
             self['CONF_SR'].write()
@@ -856,7 +796,7 @@ class TJMonoPix(Dut):
         # Iterate over MASKD to find noisy pixels
         for i in np.append(range(step, len(self['CONF_SR']['MASKD']) - 1, step), len(self['CONF_SR']['MASKD']) - 1):
             self['CONF_SR']['MASKD'].setall(False)
-            self['CONF_SR']['MASKV'][(fl_n + 1) * COL:(fl_n * COL)] = True
+            self['CONF_SR']['MASKV'][(fl_n + 1) * COL:(fl_n * COL)] = (int(COL) + 1) * bitarray('1')
             self['CONF_SR']['MASKH'].setall(True)
             self['CONF_SR']['MASKD'][i:0] = True
             for p_i in range(pix_i):
