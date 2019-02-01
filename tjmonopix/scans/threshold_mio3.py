@@ -12,7 +12,6 @@ if __name__ == "__main__":
         description='TJ-MONOPIX simple scan \n example: simple_scan --scan_time 10 --data simple_0', formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('-c', '--config', type=str, default=None, help='Name of scan configuration file')
     parser.add_argument('-d', '--data', type=str, default=None, help='Name of data file without extension')
-    parser.add_argument('--scan_timeout', type=int, default=10, help="Scan time in seconds. Default=10, disable=0")
 
     args = parser.parse_args()
 
@@ -20,27 +19,27 @@ if __name__ == "__main__":
     with open(args.config, "r") as config_file:
         configuration = yaml.safe_load(config_file)
         dut_config = configuration["dut"]
+        scan_config = configuration["scan"]
 
     # TESTBEAM: dut = "/home/silab/tjmonopix/tjmonopix-daq/tjmonopix-testbeam-april/tjmonopix/tjmonopix_mio3.yaml"
     dut = '/home/silab/git/tjmonopix-redo/tjmonopix/tjmonopix_mio3.yaml'
     dut = TJMonoPix(conf=dut)
     dut.init(fl="EN_" + dut_config["flavor"])
 
-    # dut.set_monoread()
-    maskedpix_file = 'auto'
-#     maskedpix_file = "/media/silab/Maxtor/tjmonopix-data/measurements/source_scan/modified_process/pmos/W04R08_-6_-6_idb30_conf.yaml"
-    if maskedpix_file == '':
+    mask = 'auto'
+    # maskedpix_file = "/media/silab/Maxtor/tjmonopix-data/measurements/source_scan/modified_process/pmos/W04R08_-6_-6_idb30_conf.yaml"
+    if mask == '':
             logging.warn("A masked pixel file was not specified. The device will probably show noisy pixels.")
-    elif maskedpix_file == 'auto':
+    elif mask == 'auto':
         pass  # execute later
-    elif maskedpix_file == 'hitor':
+    elif mask == 'hitor':
         dut.hitor_inarea(hitorpix=[50, 102], flav=3, col_rad=5, row_rad=5, first=True)
         dut.hitor_inarea(hitorpix=[50, 132], flav=3, col_rad=5, row_rad=5, first=False)
         dut.write_conf()
     else:
-        with open(maskedpix_file, 'r') as f:
+        with open(mask, 'r') as f:
             conf = yaml.load(f)
-            logging.info("Loading pixel masks from: " + str(maskedpix_file))
+            logging.info("Loading pixel masks from: " + str(mask))
             dut.set_all_mask(conf['CONF_SR'])
             disabledpix = dut.get_disabled_pixel()
 
@@ -84,15 +83,14 @@ if __name__ == "__main__":
     dut.set_monoread()
     dut.cleanup_fifo(10)
 
-    if maskedpix_file == 'auto':
-        dut.auto_mask(th=2, step=3, exp=0.5)
+    if mask == 'auto':
+        dut.auto_mask(th=2, step=5, exp=0.5)
         dut.cleanup_fifo(15)
 
     for mask_pix in configuration["mask"]:
         dut.mask(*mask_pix)
 
-    scan = ThresholdScan(dut=dut, filename=args.data, send_addr="tcp://131.220.162.239:5500")
+    scan = ThresholdScan(dut=dut, filename=args.data, send_addr=scan_config["online_monitor"])
     dut.save_config(scan.output_filename + '.yaml')
-    output_filename = scan.start(scan_timeout=args.scan_timeout, with_tdc=False, with_timestamp=False, with_tlu=False, with_tj=True)
-    scan.analyze(data_file=output_filename)
-    # scan.analyze()
+    scan.start(with_tdc=False, with_timestamp=False, with_tlu=False, with_tj=True)
+    scan.analyze(scan.output_filename + '.h5')

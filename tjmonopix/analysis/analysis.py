@@ -215,9 +215,6 @@ class Analysis():
             with tb.open_file(self.analyzed_data_file, "w") as out_file:
                 hit_table = None
 
-                # TODO: Copy all attributes properly to output_file, maybe own table
-#                 out_file.root.Hits.attrs.scan_id = in_file.root.meta_data.attrs.scan_id
-
                 if self.cluster_hits:
                     cluster_table = out_file.create_table(
                         out_file.root, name='Cluster',
@@ -286,6 +283,9 @@ class Analysis():
                     pbar.update(tmp_end - start)
                     start = tmp_end
                 pbar.close()
+                # TODO: Copy all attributes properly to output_file, maybe own table
+                out_file.root.Hits.attrs.scan_id = in_file.root.meta_data.attrs.scan_id
+                self._create_additional_hit_data()
                 print data_interpreter.get_error_count()
 
 #                 self._create_additional_hit_data()
