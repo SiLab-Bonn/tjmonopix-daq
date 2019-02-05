@@ -75,7 +75,11 @@ class ScanBase(object):
             description=MetaTable,
             title='meta_data',
             filters=tb.Filters(complib='zlib', complevel=5, fletcher32=False))
-        self.meta_data_table.attrs.kwargs = yaml.dump(kwargs)
+        self.kwargs = self.h5_file.create_vlarray(
+            self.h5_file.root, 'kwargs', tb.VLStringAtom(), 'kwargs', 
+            filters=tb.Filters(complib='zlib', complevel=5, fletcher32=False)
+        self.kwargs.append("kwargs")
+        self.kwargs.append(yaml.dump(kwargs))
         status = self.dut.get_power_status()
         self.logger.info('power status: {:s}'.format(str(status)))
         self.meta_data_table.attrs.power_before = yaml.dump(status)

@@ -49,7 +49,7 @@ module tjmono_data_rx_core
     output wire LOST_ERROR
 );
 
-localparam VERSION = 2;
+localparam VERSION = 3;
 
 wire SOFT_RST;
 assign SOFT_RST = (BUS_ADD==0 && BUS_WR);
@@ -65,8 +65,7 @@ reg [7:0] CONF_STOP_FREEZE;
 reg [7:0] CONF_START_READ;
 reg [7:0] CONF_STOP_READ;
 reg [7:0] CONF_STOP;
-reg [63:0] CONF_EXPOSURE_TIME;
-reg CONF_EXPOSURE_TIME_RST;
+reg [7:0] CONF_READ_SHIFT;
 
 always @(posedge BUS_CLK) begin
     if(RST) begin
@@ -77,6 +76,7 @@ always @(posedge BUS_CLK) begin
         CONF_STOP_READ <= 7;
         CONF_STOP_FREEZE <= 40;
         CONF_STOP <= 45;
+        CONF_READ_SHIFT<=52; //26<<1
     end
     else if(BUS_WR) begin
         if(BUS_ADD == 2) begin
@@ -93,8 +93,8 @@ always @(posedge BUS_CLK) begin
             CONF_STOP_READ <= BUS_DATA_IN;
           else if(BUS_ADD == 8)
             CONF_STOP <= BUS_DATA_IN;
-		  else if (BUS_ADD == 9)  // BUS_ADD== 10~16 reserved
-		      CONF_EXPOSURE_TIME_RST=BUS_DATA_IN[0];
+          else if(BUS_ADD == 9)
+              CONF_READ_SHIFT <= BUS_DATA_IN;
     end
 end
 
@@ -119,22 +119,8 @@ always @(posedge BUS_CLK) begin
             BUS_DATA_OUT <= CONF_STOP_READ;
         else if(BUS_ADD == 8)
             BUS_DATA_OUT <= CONF_STOP;
-		  	else if(BUS_ADD == 9)
-            BUS_DATA_OUT <= CONF_EXPOSURE_TIME[7:0];
-         else if(BUS_ADD == 10) 
-            BUS_DATA_OUT <= CONF_EXPOSURE_TIME[15:8];
-         else if(BUS_ADD == 11) 
-            BUS_DATA_OUT <= CONF_EXPOSURE_TIME[23:16];
-         else if(BUS_ADD == 12) 
-            BUS_DATA_OUT <= CONF_EXPOSURE_TIME[31:24];
-         else if(BUS_ADD == 13) 
-            BUS_DATA_OUT <= CONF_EXPOSURE_TIME[39:32];
-         else if(BUS_ADD == 14) 
-            BUS_DATA_OUT <= CONF_EXPOSURE_TIME[47:40];
-         else if(BUS_ADD == 15) 
-            BUS_DATA_OUT <= CONF_EXPOSURE_TIME[55:48];
-         else if(BUS_ADD == 16) 
-            BUS_DATA_OUT <= CONF_EXPOSURE_TIME[63:56];
+		else if(BUS_ADD == 9)
+            BUS_DATA_OUT <= CONF_READ_SHIFT[7:0];
          else if(BUS_ADD == 17)
             BUS_DATA_OUT <= {7'b0,READY};
          else if (BUS_ADD ==18)  ///debug
@@ -155,11 +141,6 @@ wire CONF_EN_SYNC;
 assign CONF_EN_SYNC  = CONF_EN;
 
 assign READY = ~RX_FREEZE & CONF_EN;
-always@(posedge CLK_BX)
-    if (RST_SYNC | CONF_EXPOSURE_TIME_RST) //TODO this is not right
-	     CONF_EXPOSURE_TIME <= 64'b0;
-    else if ( READY )
-        CONF_EXPOSURE_TIME <= CONF_EXPOSURE_TIME+1;
 
 reg [3:0] TOKEN_FF;
 always@(posedge RX_CLK)
@@ -280,7 +261,7 @@ always@(posedge RX_CLK)
     ser <= {ser[25:0], RX_DATA};
 
 wire store_data;
-assign store_data = (cnt == 26);
+assign store_data = (cnt == CONF_READ_SHIFT[7:1]);
 
 reg [26:0] data_out;
 wire [111:0] data_to_cdc;   // [82:0] data_to_cdc;
