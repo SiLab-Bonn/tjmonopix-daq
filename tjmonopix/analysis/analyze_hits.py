@@ -86,8 +86,7 @@ class AnalyzeHits():
                 cnt_dtype.pop(i)
                 break
         cnt_dtype = cnt_dtype + [
-                    ('col', "<i2"),('row', "<i2"),('inj', "<f4"),('tof', "<u1"),
-                    ('th', "<f4"),('phase', "<i4")]
+                    ('col', "<i2"),('row', "<i2"),('inj', "<f4"),('tof', "<u1"),('phase', "<i4")]
 
         self.res["le_cnts"]=list(np.zeros(0,dtype=cnt_dtype).dtype.names)
         with tb.open_file(self.fhit,"a") as f:
@@ -123,8 +122,7 @@ class AnalyzeHits():
                 cnt_dtype.pop(i)
                 break
         cnt_dtype = cnt_dtype + [
-                    ('col', "<i2"),('row', "<i2"),('inj', "<f4"),
-                    ('th', "<f4"),('phase', "<i4"),('cnt',"<i4")]
+                    ('col', "<i2"),('row', "<i2"),('inj', "<f4"),('phase', "<i4"),('cnt',"<i4")]
 
         self.res["cnts"]=list(np.zeros(0,dtype=cnt_dtype).dtype.names)[:-1]
         with tb.open_file(self.fhit,"a") as f:
@@ -219,10 +217,10 @@ class AnalyzeHits():
             except:
                 pass
             dat_dtype=[('scan_param_id', '<i4'),('col', 'u1'),
-                       ('row', 'u1'), ('inj', '<f4'), ('th', '<f4')]
+                       ('row', 'u1'), ('inj', '<f4')]
             t=f_o.create_table(
                 f_o.root,name="LEHist",
-                description=np.empty(0,dtype=dat_dtype+[('LE','u1',(len(phaselist),256))]),
+                description=np.empty(0,dtype=dat_dtype+[('LE','u1',(len(phaselist),64))]),
                 title='LE_hist_data')
             t.attrs.phaselist=phaselist
             f_o.create_table(
@@ -233,20 +231,20 @@ class AnalyzeHits():
 
     def run_le_hist(self,hits,fhit_root):
         buf=np.empty(1,dtype=fhit_root.LEHist.dtype)
-        buf_dist=np.empty(16*256,dtype=fhit_root.LEDist.dtype)
+        buf_dist=np.empty(16*64,dtype=fhit_root.LEDist.dtype)
 
-        uni,idx,cnt=np.unique(hits[['scan_param_id', 'col', 'row','th','inj']],
+        uni,idx,cnt=np.unique(hits[['scan_param_id', 'col', 'row','inj']],
                           return_counts=True,return_index=True)
         for u_i,u in enumerate(uni):
-            dat=hits[hits[['scan_param_id', 'col', 'row', 'th','inj']]==u]
+            dat=hits[hits[['scan_param_id', 'col', 'row', 'inj']]==u]
             ph0=dat[0]["phase"]
             
             for i,ph in enumerate(self.res["le_hist"]):
                 tmp=dat[dat["phase"]==ph]
                 buf[0]["LE"][i,:]=np.bincount(
                           tmp["tof"]- np.uint8(np.uint64(tmp["ts_inj"]-ph)>>np.uint64(4)),
-                          minlength=256)
-            for c in ['scan_param_id', 'col', 'row', 'th','inj']:
+                          minlength=64)
+            for c in ['scan_param_id', 'col', 'row','inj']:
                 buf[0][c]=u[c]
             fhit_root.LEHist.append(buf)
             fhit_root.LEHist.flush()
@@ -260,7 +258,7 @@ class AnalyzeHits():
                        )
                 plt.title("inj=%.3f"%buf[0]["inj"])
                 a_start=min(np.argwhere(buf[0]["LE"][0,:]!=0)-10,0)
-                a_stop=max(np.argwhere(buf[0]["LE"][-1,:]!=0)+10,256)
+                a_stop=max(np.argwhere(buf[0]["LE"][-1,:]!=0)+10,64)
                 plt.ylim(a_start,a_stop)
                 c=plt.colorbar()
                 c.set_label("#")

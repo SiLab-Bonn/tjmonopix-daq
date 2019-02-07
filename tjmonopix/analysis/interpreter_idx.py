@@ -14,12 +14,9 @@ def _interpret_idx(raw,buf,start,col,row,le,te,noise,timestamp,rx_flg,
                ts2t_timestamp,ts2t_flg,ts2t_cnt,
                ts3_timestamp,ts3_pre,ts3_flg,ts3_cnt,
                ts4_timestamp,ts4_pre,ts4_flg,ts4_cnt,debug):
-    MASK1       =np.uint64(0x000000000000FFF0)
-    NOT_MASK1   =np.uint64(0x00FFFFFFFFFF0000)
-    MASK2       =np.uint64(0x000000000FFF0000)
-    NOT_MASK2   =np.uint64(0x00FFFFFFF000FFF0)
-    MASK3       =np.uint64(0x00FFFFFFF0000000)
-    NOT_MASK3   =np.uint64(0x000000000FFFFFF0)
+    TJ_MASK_LOWER = np.uint64(0x00000000FFFFFFF0)
+    TJ_MASK_UPPER = np.uint64(0x00FFFFFF00000000)
+
     TS_MASK_DAT           =0x0000000000FFFFFF
     TS_MASK1    =np.uint64(0xFFFFFFFFFF000000)
     TS_MASK2    =np.uint64(0xFFFF000000FFFFFF)
@@ -33,13 +30,14 @@ def _interpret_idx(raw,buf,start,col,row,le,te,noise,timestamp,rx_flg,
         ########################
         ### MONOPIX_RX
         ########################
-        if (r & 0xF0000000 == 0x00000000):
-           pass #TODO get count
-        elif (r & 0xF0000000 == 0x10000000):
-           col= (r & 0x3F)
-           row= (r >> 8) & 0xFF
-           timestamp= (timestamp & NOT_MASK1) | (np.uint64(r >> 12) & MASK1) ### 16-4(160MHz)
-           noise = (r >> 6)  & 0x1
+        if (r & 0xF0000000 == 0x30000000):
+            pass #TODO get count
+        elif (r & 0xF0000000 == 0x00000000):
+            col = 2 * (r & 0x3f) + (((r & 0x7FC0) >> 6) // 256)
+            row = ((r & 0x7FC0) >> 6) % 256
+            te = (r & 0x1F8000) >> 15
+            le = (r & 0x7E00000) >> 21
+            noise = (r & 0x8000000) >> 27
            #if debug & 0x4 ==0x4:
                #print r_i,hex(r),rx_flg,"ts=",hex(timestamp),col,row,noise
 
@@ -57,10 +55,9 @@ def _interpret_idx(raw,buf,start,col,row,le,te,noise,timestamp,rx_flg,
                buf_i=buf_i+1
                rx_flg=0
            
-        elif (r & 0xF0000000 == 0x20000000):
-           te = (r & 0xFF)
-           le = (r >> 8) &  0xFF           
-           timestamp = (timestamp & NOT_MASK2) | (np.uint64(r) & MASK2)  ### >>16 + <<12 + 4(160MHz)
+        elif (r & 0xF0000000 == 0x10000000):
+            timestamp = (timestamp & TJ_MASK_UPPER) | (
+                np.uint64(r)<<np.uint64(4) & TJ_MASK_LOWER)
            #if debug & 0x4 ==0x4:
                #print r_i,hex(r),rx_flg,"ts=",hex(timestamp),le,te
                #pass
@@ -79,8 +76,9 @@ def _interpret_idx(raw,buf,start,col,row,le,te,noise,timestamp,rx_flg,
                buf_i=buf_i+1
                rx_flg=0
 
-        elif (r & 0xF0000000 == 0x30000000):
-           timestamp=(timestamp & NOT_MASK3) | ((np.uint64(r) << np.uint64(28)) & MASK3) ##24+4(160MHz)
+        elif (r & 0xF0000000 == 0x20000000):
+            timestamp = (timestamp & MASK1_LOWER) | (
+                (np.uint64(r) << np.uint64(32)) & MASK1_UPPER)
            #if debug & 0x4 ==0x4:
                #print r_i,hex(r),rx_flg,"ts=",hex(timestamp)
                
@@ -255,7 +253,8 @@ def _interpret_idx(raw,buf,start,col,row,le,te,noise,timestamp,rx_flg,
                    buf[buf_i]["index"]=r_i+start
                    buf_i=buf_i+1
                 ts3_flg = 0 
-                err=err+1      
+                err=err+1
+
         ########################
         ### TIMESTMP640 MON
         ########################

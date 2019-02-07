@@ -247,8 +247,8 @@ class TJMonoPix(Dut):
         self.write_conf()
 
     def save_config(self, filename=None):
-        conf = get_configuration
-        conf['SET'] = self.SET
+        conf = self.get_power_status()
+        conf.update(self.dut.get_configuration())      
         conf['conf_flg'] = self.conf_flg
         if filename == None:
             filename = None
@@ -307,11 +307,16 @@ class TJMonoPix(Dut):
             status[pwr+' [V]'] = self[pwr].get_voltage(unit='V')
             status[pwr+' [mA]'] = 5 * self[pwr].get_current(unit='mA') if pwr in [
                 "VDDP", "VDDD", "VDDA", "VDDA_DAC"] else self[pwr].get_current(unit='mA')
+            status['%sset'%pwr]=self.SET[pwr]
+        status["INJ_LOset"]=self.SET["INJ_LO"]
+        status["INJ_HIset"]=self.SET["INJ_HI"]
         return status
 
-    def set_inj_amplitude(self):
-        self['INJ_LO'].set_voltage(0.2, unit='V')
-        self['INJ_HI'].set_voltage(3.6, unit='V')
+    def set_inj_amplitude(self,inj_high=3.6,inj_low=0.2):
+        self['INJ_LO'].set_voltage(inj_low, unit='V')
+        self.SET['INJ_LO']=inj_low
+        self['INJ_HI'].set_voltage(inj_high, unit='V')
+        self.SET['INJ_HI']=inj_high
 
     def interprete_raw_data(self, raw_data):
         hit_data_sel = ((raw_data & 0xf0000000) == 0)
@@ -376,25 +381,25 @@ class TJMonoPix(Dut):
                 self['CONF_SR'][m] = conf[m]
 
     def mask(self, flavor, col, row):
-	assert 0 <= flavor <= 3, 'Flavor must be between 0 and 3'
-	assert 0 <= col <= 111, 'Column must be between 0 and 111'
-	assert 0 <= row <= 223, 'Row must be between 0 and 223'
-	mcol=(flavor)*112+col
-	md = mcol-row if (mcol-row) >= 0 else 448+mcol-row
-	self['CONF_SR']['MASKD'][md] = False
-	self['CONF_SR']['MASKV'][mcol] = False
-	self['CONF_SR']['MASKH'][row] = False
+        assert 0 <= flavor <= 3, 'Flavor must be between 0 and 3'
+        assert 0 <= col <= 111, 'Column must be between 0 and 111'
+        assert 0 <= row <= 223, 'Row must be between 0 and 223'
+        mcol=(flavor)*112+col
+        md = mcol-row if (mcol-row) >= 0 else 448+mcol-row
+        self['CONF_SR']['MASKD'][md] = False
+        self['CONF_SR']['MASKV'][mcol] = False
+        self['CONF_SR']['MASKH'][row] = False
 
     def enable_injection(self, flavor, col, row):
-	assert 0 <= flavor <= 3, 'Flavor must be between 0 and 3'
-	assert 0 <= col <= 111, 'Column must be between 0 and 111'
-	assert 0 <= row <= 223, 'Row must be between 0 and 223'
-	self['CONF_SR']['COL_PULSE_SEL'][(flavor*112)+col] = 1
-	self['CONF_SR']['INJ_ROW'][row] = 1
+        assert 0 <= flavor <= 3, 'Flavor must be between 0 and 3'
+        assert 0 <= col <= 111, 'Column must be between 0 and 111'
+        assert 0 <= row <= 223, 'Row must be between 0 and 223'
+        self['CONF_SR']['COL_PULSE_SEL'][(flavor*112)+col] = 1
+        self['CONF_SR']['INJ_ROW'][row] = 1
 
     def enable_column_hitor(self, flavor, col):
-	assert 0 <= flavor <= 3, 'Flavor must be between 0 and 3'
-	self['CONF_SR']['DIG_MON_SEL'][(flavor*112)+col] = 1
+        assert 0 <= flavor <= 3, 'Flavor must be between 0 and 3'
+        self['CONF_SR']['DIG_MON_SEL'][(flavor*112)+col] = 1
 
 ############################## SET BIAS CURRENTS AND VOLTAGES ##############################
 
@@ -506,16 +511,27 @@ class TJMonoPix(Dut):
             logging.warn("stop_tdc: error cnt=%d"%lost_cnt)
 
     def set_timestamp(self,src="rx1"):
-        self["timestamp"].reset()
-        self["timestamp"]["EXT_TIMESTAMP"]=True
-        self["timestamp"]["ENABLE"]=1
+        self["timestamp_%s"%src].reset()
+        self["timestamp_%s"%src]["EXT_TIMESTAMP"]=True
+        if src=="rx1":
+            self["timestamp_rx1"]["ENABLE_TOT"]=0
+            self["timestamp_rx1"]["ENABLE"]=1
+        elif src=="mon":
+            self["timestamp_mon"]["ENABLE_TOT"]=1
+            self["timestamp_mon"]["ENABLE"]=1
+        elif src=="inj":
+            self["timestamp_inj"]["ENABLE"]=1
+        else: #"tlu"    
+            self["timestamp_tlu"]["ENABLE_TOT"]=0
+            self["timestamp_tlu"]["ENABLE_EXTERN"]=1
+
         logging.info("set_timestamp:src=%s"%src)
         
-    def stop_timestamp(self):
-        self["timestamp"]["ENABLE"]=0
-        lost_cnt=self["timestamp"]["LOST_COUNT"]
+    def stop_timestamp(self,src="rx1"):
+        self["timestamp_%s"%src]["ENABLE"]=0
+        lost_cnt=self["timestamp_%s"%src]["LOST_COUNT"]
         if lost_cnt!=0:
-            logging.warn("stop_timestamp: lost_cnt=%d"%lost_cnt)
+            logging.warn("stop_timestamp:src=%s lost_cnt=%d"%(src,lost_cnt))
         return lost_cnt
 
     #def set_monoread(self, start_freeze=64, start_read=66, stop_read=68, stop_freeze=100, stop=105, en=True):
@@ -537,18 +553,12 @@ class TJMonoPix(Dut):
         if lost_cnt != 0:
             logging.warn("stop_monoread: error cnt=%d" % lost_cnt)
 
-    def set_tdc(self):
-        self["tdc"]["RESET"]=1
-        self["tdc"]["EXT_TIMESTAMP"]=1
-        self["tdc"]["ENABLE_TOT"]=1
-        self["tdc"]["ENABLE"]=1
-        logging.info("set_tdc:")
-
-    def stop_tdc(self):
-        self["tdc"]["ENABLE"]=0
-        lost_cnt=self["tdc"]["LOST_COUNT"]
-        if lost_cnt!=0:
-            logging.warn("stop_tdc: error cnt=%d"%lost_cnt)
+    def stop_all(self):
+        self.stop_tlu()
+        self.stop_monopread()
+        self.stop_timestamp("rx1")
+        self.stop_timestamp("inj")
+        self.stop_timestamp("mon")
 
 ########################## scans  #####################################################################
     def inj_scan(self, flavor, col, row, VL, VHLrange, start_dif, delay, width, repeat, noise_en, analog_en, sleeptime):

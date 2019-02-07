@@ -21,7 +21,7 @@ ROW_SIZE=129
 ###     0:only the data from injected pixel
 
 @njit
-def _build_inj(dat,param,injlist,thlist,phaselist,inj_period,inj_n,mode,buf,sid,pre_inj,inj_id,inj_cnt):
+def _build_inj(dat,param,injlist,phaselist,inj_period,inj_n,mode,buf,sid,pre_inj,inj_id,inj_cnt):
     b_i=0
     d_i=0
     err=0
@@ -80,13 +80,12 @@ def _build_inj(dat,param,injlist,thlist,phaselist,inj_period,inj_n,mode,buf,sid,
                         buf[b_i]["col"]= dat[d_ii]["col"]
                         buf[b_i]["row"]= dat[d_ii]["row"]
                         buf[b_i]["inj"]= injlist[inj_id]
-                        buf[b_i]["th"]= thlist[inj_id]
                         buf[b_i]["phase"]= phaselist[inj_id]
                         buf[b_i]["ts_mon"]= ts_mon
                         buf[b_i]["ts_inj"]= ts_inj
                         buf[b_i]["ts_token"]= ts_token 
-                        buf[b_i]["tot"]= (dat[d_ii]["te"]-dat[d_ii]["le"])&0xFF
-                        buf[b_i]["tof"]= dat[d_ii]["le"]
+                        buf[b_i]["tot"]= (dat[d_ii]["te"]-dat[d_ii]["le"])&0x3F
+                        buf[b_i]["toa"]= dat[d_ii]["le"]
                         buf[b_i]["tot_mon"]= ts_mon_t-ts_mon
                         buf[b_i]["flg"]= dat[d_ii]["cnt"]
                         b_i=b_i+1
@@ -112,8 +111,6 @@ def build_inj_h5(fhit,fraw,fout,n=500000,debug=0x2):
         for i in range(0,len(f.root.kwargs),2):
             if f.root.kwargs[i]=="injlist":
                 injlist=yaml.load(f.root.kwargs[i+1])
-            elif f.root.kwargs[i]=="thlist":
-                thlist=yaml.load(f.root.kwargs[i+1])
             elif f.root.kwargs[i]=="phaselist":
                 phaselist=yaml.load(f.root.kwargs[i+1])
     inj_period=firmware['inj']["WIDTH"]+firmware['inj']["DELAY"]
@@ -144,7 +141,7 @@ def build_inj_h5(fhit,fraw,fout,n=500000,debug=0x2):
                 (err,d_i,hit_dat,sid,pre_inj,inj_id,inj_cnt
                     ) =_build_inj(
                     dat,param,
-                    injlist,thlist,phaselist, ## not well written.
+                    injlist,phaselist, ## not well written.
                     inj_period,inj_n,mode,buf,
                     sid,pre_inj,inj_id,inj_cnt)
                 hit_table.append(hit_dat)

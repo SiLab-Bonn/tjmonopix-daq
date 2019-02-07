@@ -9,7 +9,7 @@ import yaml
 import monopix_daq.scan_base as scan_base
 
 local_configuration={"injlist": None, #np.arange(0.1,0.6,0.05),
-                     "thlist": None, # None, [0.82], np.arange(),
+                     "ithr": None, # None, [0.82], np.arange(),
                      "phaselist": None, # np.arange(0,16,1),
                      "pix":[18,25],
                      "n_mask_pix":12,
@@ -41,13 +41,10 @@ class InjectionScan(scan_base.ScanBase):
         injlist=kwargs.pop("injlist")
         if injlist is None or len(injlist)==0:
             injlist=[self.dut.SET_VALUE["INJ_HI"]-self.dut.SET_VALUE["INJ_LO"]]
-        thlist=kwargs.pop("thlist")
-        if thlist is None or len(thlist)==0:
-            thlist=[self.dut.SET_VALUE["TH"]]
         phaselist=kwargs.pop("phaselist")
         if phaselist is None or len(phaselist)==0:
             phaselist=[self.dut["inj"].get_phase()]
-        inj_th_phase = np.reshape(np.stack(np.meshgrid(injlist,thlist,phaselist),axis=3),[-1,3])
+        inj_phase = np.reshape(np.stack(np.meshgrid(injlist,phaselist),axis=2),[-1,2])
         
         with_mon=kwargs.pop("with_mon")
         
@@ -55,17 +52,17 @@ class InjectionScan(scan_base.ScanBase):
         
         if (debug & 0x1)==1:
             print "++++++++ injlist",len(injlist),injlist
-            print "++++++++ thlist",len(thlist),thlist
-            print "++++++++ phaselist",len(phaselist),phaselist
+            print "++++++++ phase",len(phase),phase
             print "++++++++ with_mon",with_mon
 
         param_dtype=[("scan_param_id","<i4"),("pix","<i2",(n_mask_pix,2))]
 
         glist=[]
-        #for k,v in kwargs.iteritems():
-        #    param_dtype.append((k,"<u1"))
-        #    for v_e in v:
-        #        glist.append({k:v_e})
+        for k,v in kwargs.iteritems():
+            if k in ["ithr"]:
+                param_dtype.append((k,"<u1")) ### TODO code for multiple parameters
+            for v_e in v:
+                glist.append({k:v_e})
         if len(glist)==0:
             glist=[None]
 
@@ -75,8 +72,6 @@ class InjectionScan(scan_base.ScanBase):
         self.scan_param_table = self.h5_file.create_table(self.h5_file.root, 
                       name='scan_parameters', title='scan_parameters',
                       description=description, filters=self.filter_tables)
-        self.kwargs.append("thlist")
-        self.kwargs.append(yaml.dump(inj_th_phase[:,1]))
         self.kwargs.append("injlist")
         self.kwargs.append(yaml.dump(inj_th_phase[:,0]))
         self.kwargs.append("phaselist")
@@ -86,10 +81,7 @@ class InjectionScan(scan_base.ScanBase):
         scan_param_id=0
         inj_delay_org=self.dut["inj"].DELAY
         inj_width_org=self.dut["inj"].WIDTH
-        for g in glist:
-          #if g is not None:
-          #    self.dut.set_global(**g)
-          for mask_i in range(mask_n):
+        for mask_i in range(mask_n):
             mask_pix=[]
             for i in range(mask_i,len(pix),mask_n):
                 if en[pix[i][0],pix[i][1]]==1:
@@ -98,69 +90,68 @@ class InjectionScan(scan_base.ScanBase):
             self.dut.set_inj_en(mask_pix)    ### TODO 
             if with_mon:
                 self.dut.set_mon_en(mask_pix)### TODO
+            
+            for g in glist:
+                if g is not None:
+                   self.dut.set_global(**g) ### implement this function
 
-            ####################
-            ## start readout
-            self.dut.set_monoread()
-            self.dut.set_timestamp640("inj")
-            if with_mon:
-                self.dut.set_timestamp640("mon")
-
-            ####################
-            ## save scan_param
-            self.scan_param_table.row['scan_param_id'] = scan_param_id
-            mask_pix_tmp=mask_pix
-            for i in range(n_mask_pix-len(mask_pix)):
-                mask_pix_tmp.append([-1,-1])
-            self.scan_param_table.row['pix']=mask_pix_tmp
-            if g is not None:
-              for g_key in g.keys():
-                self.scan_param_table.row[g_key]=g[g_key]
-            self.scan_param_table.row.append()
-            self.scan_param_table.flush()
-
-            ####################
-            ## start read fifo 
-            cnt=0
-            with self.readout(scan_param_id=scan_param_id,fill_buffer=False,clear_buffer=True,
-                              readout_interval=0.001):
-                for inj,th,phase in inj_th_phase:
-                  if th>0 and self.dut.SET_VALUE["TH"]!=th:
-                    self.dut["TH"].set_voltage(th,unit="V")
-                    self.dut.SET_VALUE["TH"]=th
-                  inj_high=inj+self.dut.SET_VALUE["INJ_LO"]
-                  if inj_high>0 and self.dut.SET_VALUE["INJ_HI"]!=inj_high:
-                    self.dut["INJ_HI"].set_voltage(inj_high,unit="V")
-                    self.dut.SET_VALUE["INJ_HI"]=inj_high
-                  if phase>0 and self.dut["inj"].get_phase()!=phase:
-                      self.dut["inj"].set_phase(int(phase)%16)
-                      
-                      self.dut["inj"].DELAY=inj_delay_org+int(phase)/16
-                      self.dut["inj"].WIDTH=inj_width_org-int(phase)/16
-                      if (debug & 0x1)==1:
-                         self.logger.info("inj phase=%x,period=%d"%(
-                         self.dut["inj"].PHASE_DES,self.dut["inj"].DELAY+self.dut["inj"].WIDTH))
-                  self.dut["inj"].start()
-                  while self.dut["inj"].is_done()!=1:
-                        time.sleep(0.005)
-                  pre_cnt=cnt
-                  
-                  if (debug & 0x2)==2:
-                    cnt=self.fifo_readout.get_record_count()
-                    self.logger.info('mask=%d th=%.3f inj=%.3f phase=%d dat=%d'%(
-                      scan_param_id,th,inj,self.dut["inj"].get_phase(),cnt-pre_cnt))    
-                       
                 ####################
-                ## stop readout
-                self.dut.stop_timestamp640("inj")
-                self.dut.stop_timestamp640("mon")
-                self.dut.stop_monoread()
-                time.sleep(0.2)
-                pre_cnt=cnt
-                cnt=self.fifo_readout.get_record_count()
-                
-            self.logger.info('mask=%d pix=%s dat=%d'%(mask_i,str(mask_pix),cnt-pre_cnt))
-            scan_param_id=scan_param_id+1
+                ## start readout
+                self.dut.set_monoread()
+                self.dut.set_timestamp640("inj")
+                if with_mon:
+                    self.dut.set_timestamp640("mon")
+
+                ####################
+                ## save scan_param
+                self.scan_param_table.row['scan_param_id'] = scan_param_id
+                mask_pix_tmp=mask_pix
+                for i in range(n_mask_pix-len(mask_pix)):
+                    mask_pix_tmp.append([-1,-1])
+                self.scan_param_table.row['pix']=mask_pix_tmp
+                if g is not None:
+                  for g_key in g.keys():
+                    self.scan_param_table.row[g_key]=g[g_key]
+                self.scan_param_table.row.append()
+                self.scan_param_table.flush()
+
+                ####################
+                ## start read fifo 
+                cnt=0
+                with self.readout(scan_param_id=scan_param_id,fill_buffer=False,clear_buffer=True,
+                                  readout_interval=0.001):
+                    for inj,phase in inj_phase:
+                      inj_high=inj+self.dut.SET_VALUE["INJ_LO"]
+                      if inj_high > 0 and self.dut.SET_VALUE["INJ_HI"] != inj_high:
+                        self.dut["INJ_HI"].set_voltage(inj_high,unit="V")
+                        self.dut.SET_VALUE["INJ_HI"]=inj_high
+                      if phase > 0 and self.dut["inj"].get_phase() != phase:
+                          self.dut["inj"].set_phase(int(phase)%16)
+                          self.dut["inj"].DELAY=inj_delay_org+int(phase)/16
+                          self.dut["inj"].WIDTH=inj_width_org-int(phase)/16
+                          if (debug & 0x1)==1:
+                             self.logger.info("inj phase=%x,period=%d"%(
+                             self.dut["inj"].PHASE_DES,self.dut["inj"].DELAY+self.dut["inj"].WIDTH))
+                      self.dut["inj"].start()
+                      while self.dut["inj"].is_done()!=1:
+                            time.sleep(0.005)
+                      if (debug & 0x2)==2:
+                        pre_cnt=cnt
+                        cnt=self.fifo_readout.get_record_count()
+                        self.logger.info('mask=%d th=%.3f inj=%.3f phase=%d dat=%d'%(
+                          scan_param_id,th,inj,self.dut["inj"].get_phase(),cnt-pre_cnt))    
+                           
+                    ####################
+                    ## stop readout
+                    self.dut.stop_timestamp640("inj")
+                    self.dut.stop_timestamp640("mon")
+                    self.dut.stop_monoread()
+                    time.sleep(0.2)
+                    pre_cnt=cnt
+                    cnt=self.fifo_readout.get_record_count()
+                    
+                self.logger.info('mask=%d pix=%s dat=%d'%(mask_i,str(mask_pix),cnt-pre_cnt))
+                scan_param_id=scan_param_id+1
 
     def analyze(self):
         fraw = self.output_filename +'.h5'
