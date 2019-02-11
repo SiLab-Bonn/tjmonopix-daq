@@ -295,11 +295,14 @@ class TJMonoPix(Dut):
             status[pwr + ' [V]'] = self[pwr].get_voltage(unit='V')
             status[pwr + ' [mA]'] = 5 * self[pwr].get_current(unit='mA') if pwr in [
                 "VDDP", "VDDD", "VDDA", "VDDA_DAC"] else self[pwr].get_current(unit='mA')
+
         return status
 
-    def set_inj_amplitude(self):
-        self['INJ_LO'].set_voltage(0.2, unit='V')
-        self['INJ_HI'].set_voltage(3.6, unit='V')
+    def set_inj_amplitude(self, inj_high=3.6, inj_low=0.2):
+        self['INJ_LO'].set_voltage(inj_low, unit='V')
+        self.SET['INJ_LO'] = inj_low
+        self['INJ_HI'].set_voltage(inj_high, unit='V')
+        self.SET['INJ_HI'] = inj_high
 
     def interpret_raw_data(self, raw_data):
         hit_data_sel = ((raw_data & 0xF0000000) == 0)
@@ -366,9 +369,8 @@ class TJMonoPix(Dut):
                 self['CONF_SR'][m] = mask[m]
                 self.write_conf()
             for m in ['EN_HV', 'EN_PMOS', 'MASKD', 'MASKH', 'MASKV']:
-                for i in range(0, len(self['CONF_SR'][m]), 1):
-                    self['CONF_SR'][m][i] = mask[m][i]
-                    self.write_conf()
+                self['CONF_SR'][m] = bitarray(mask[m])[::-1]
+                self.write_conf()
 
     def mask(self, flavor, col, row):
         assert 0 <= flavor <= 3, 'Flavor must be between 0 and 3'
@@ -546,23 +548,27 @@ class TJMonoPix(Dut):
             logging.warn("stop_tdc: error cnt=%d" % lost_cnt)
 
     def set_timestamp(self, src="rx1"):
-        """ src: rx1 or gate_tdc
-        """
+        self["timestamp_{}".format(src)].reset()
+        self["timestamp_{}".format(src)]["EXT_TIMESTAMP"] = True
         if src == "rx1":
-            self['CONF']["SEL_TIMESTAMP_DI_RX1"] = True
-        else:
-            self['CONF']["SEL_TIMESTAMP_DI_RX1"] = False
-        self['CONF'].write()
-        self["timestamp"].reset()
-        self["timestamp"]["EXT_TIMESTAMP"] = True
-        self["timestamp"]["ENABLE"] = 1
-        logging.info("set_timestamp:src=%s" % src)
+            self["timestamp_rx1"]["ENABLE_TOT"] = 0
+            self["timestamp_rx1"]["ENABLE"] = 1
+        elif src == "mon":
+            self["timestamp_mon"]["ENABLE_TOT"] = 1
+            self["timestamp_mon"]["ENABLE"] = 1
+        elif src == "inj":
+            self["timestamp_inj"]["ENABLE"] = 1
+        elif src == "tlu":
+            self["timestamp_tlu"]["ENABLE_TOT"] = 0
+            self["timestamp_tlu"]["ENABLE_EXTERN"] = 1
 
-    def stop_timestamp(self):
-        self["timestamp"]["ENABLE"] = 0
-        lost_cnt = self["timestamp"]["LOST_COUNT"]
+        logging.info("Set timestamp: src={}".format(src))
+
+    def stop_timestamp(self, src="rx1"):
+        self["timestamp_{}".format(src)]["ENABLE"] = 0
+        lost_cnt = self["timestamp_{}".format(src)]["LOST_COUNT"]
         if lost_cnt != 0:
-            logging.warn("stop_timestamp: lost_cnt=%d" % lost_cnt)
+            logging.warn("Stop timestamp: src={} lost_cnt={:d}".format(src, lost_cnt))
         return lost_cnt
 
     # def set_monoread(self, start_freeze=64, start_read=66, stop_read=68, stop_freeze=100, stop=105, en=True):
@@ -582,18 +588,12 @@ class TJMonoPix(Dut):
         if lost_cnt != 0:
             logging.warn("stop_monoread: error cnt=%d" % lost_cnt)
 
-    def set_tdc(self):
-        self["tdc"]["RESET"] = 1
-        self["tdc"]["EXT_TIMESTAMP"] = 1
-        self["tdc"]["ENABLE_TOT"] = 1
-        self["tdc"]["ENABLE"] = 1
-        logging.info("set_tdc:")
-
-    def stop_tdc(self):
-        self["tdc"]["ENABLE"] = 0
-        lost_cnt = self["tdc"]["LOST_COUNT"]
-        if lost_cnt != 0:
-            logging.warn("stop_tdc: error cnt=%d" % lost_cnt)
+    def stop_all(self):
+        self.stop_tlu()
+        self.stop_monopread()
+        self.stop_timestamp("rx1")
+        self.stop_timestamp("inj")
+        self.stop_timestamp("mon")
 
 ########################## pcb components #####################################
     def get_temperature(self, n=10):
@@ -708,11 +708,7 @@ class TJMonoPix(Dut):
     def auto_mask(self, th=2, step=10, exp=0.2):
         logger.info("auto_mask th=%d step=%d exp=%d fl=%s" % (th, step, exp, self.SET['fl']))
         self['CONF_SR'][self.SET['fl']].setall(False)
-        if self.SET['fl'] == 'EN_PMOS':
-            fl_n = 1
-        elif self.SET['fl'] == 'EN_HV':
-            fl_n = 3
-        self['CONF_SR']['EN_OUT'][fl_n] = False
+        self['CONF_SR']['EN_OUT'][self.fl_n] = False
         self['CONF_SR']['MASKD'].setall(False)
         self['CONF_SR']['MASKH'].setall(False)
         self['CONF_SR']['MASKV'].setall(False)
@@ -756,7 +752,7 @@ class TJMonoPix(Dut):
                 else:
                     pix[pix_i]["col"] = p['col']
                     pix[pix_i]["row"] = p['row']
-                    pix[pix_i]["fl"] = fl_n
+                    pix[pix_i]["fl"] = self.fl_n
                     pix_i = pix_i + 1
             logging.info("Number of noisy pixels: %d" % pix_i)
 
@@ -765,7 +761,7 @@ class TJMonoPix(Dut):
             self['CONF_SR']['MASKD'].setall(False)
             self['CONF_SR']['MASKV'].setall(False)
             self['CONF_SR']['MASKH'].setall(True)
-            self['CONF_SR']['MASKV'][i + (fl_n * COL):(fl_n * COL)] = (int(i) + 1) * bitarray('1')
+            self['CONF_SR']['MASKV'][i + (self.fl_n * COL):(self.fl_n * COL)] = (int(i) + 1) * bitarray('1')
             for p_i in range(pix_i):
                 self.mask(pix[p_i]["fl"], pix[p_i]['col'], pix[p_i]['row'])
             self['CONF_SR'].write()
@@ -789,14 +785,14 @@ class TJMonoPix(Dut):
                 else:
                     pix[pix_i]["col"] = p['col']
                     pix[pix_i]["row"] = p['row']
-                    pix[pix_i]["fl"] = fl_n
+                    pix[pix_i]["fl"] = self.fl_n
                     pix_i = pix_i + 1
             logging.info("Number of noisy pixels: %d" % pix_i)
 
         # Iterate over MASKD to find noisy pixels
         for i in np.append(range(step, len(self['CONF_SR']['MASKD']) - 1, step), len(self['CONF_SR']['MASKD']) - 1):
             self['CONF_SR']['MASKD'].setall(False)
-            self['CONF_SR']['MASKV'][(fl_n + 1) * COL:(fl_n * COL)] = (int(COL) + 1) * bitarray('1')
+            self['CONF_SR']['MASKV'][(self.fl_n + 1) * COL:(self.fl_n * COL)] = (int(COL) + 1) * bitarray('1')
             self['CONF_SR']['MASKH'].setall(True)
             self['CONF_SR']['MASKD'][i:0] = True
             for p_i in range(pix_i):
@@ -823,7 +819,7 @@ class TJMonoPix(Dut):
                 else:
                     pix[pix_i]["col"] = p['col']
                     pix[pix_i]["row"] = p['row']
-                    pix[pix_i]["fl"] = fl_n
+                    pix[pix_i]["fl"] = self.fl_n
                     pix_i = pix_i + 1
             logging.info("Number of noisy pixels: %d" % pix_i)
 
@@ -851,7 +847,7 @@ class TJMonoPix(Dut):
             else:
                 pix[pix_i]["col"] = p['col']
                 pix[pix_i]["row"] = p['row']
-                pix[pix_i]["fl"] = fl_n
+                pix[pix_i]["fl"] = self.fl_n
                 pix_i = pix_i + 1
         logging.info("Number of noisy pixels: %d" % pix_i)
 
@@ -869,8 +865,8 @@ class TJMonoPix(Dut):
 
         # Get mask from register settings
         mask = self.get_disabled_pixel(maskV=self['CONF_SR']['MASKV'], maskH=self['CONF_SR']['MASKH'], maskD=self['CONF_SR']['MASKD'])
-        total_enabled = np.shape(np.argwhere(mask[(fl_n * 112):(fl_n + 1) * 112, :] != 0))[0]
-        total_disabled = np.shape(np.argwhere(mask[(fl_n * 112):(fl_n + 1) * 112, :] == 0))[0]
+        total_enabled = np.shape(np.argwhere(mask[(self.fl_n * 112):(self.fl_n + 1) * 112, :] != 0))[0]
+        total_disabled = np.shape(np.argwhere(mask[(self.fl_n * 112):(self.fl_n + 1) * 112, :] == 0))[0]
         logging.info("Number of enabled pixels: {}".format(str(total_enabled)))
         logging.info("Number of disabled pixels (noisy plus unintentionally masked): {}".format(str(total_disabled)))
 

@@ -8,7 +8,7 @@ transfer_layer:
   - name  : intf
     type  : SiTcp
     init:
-        ip : "192.168.11.16"
+        ip : "192.168.10.20"
         udp_port : 4660
         tcp_port : 24
         tcp_connection : True
@@ -41,7 +41,7 @@ hw_drivers:
   - name      : gpio
     type      : gpio
     interface : intf
-    base_addr : 0x10000
+    base_addr : 0x10010
     size      : 16
     
   - name      : spi
@@ -50,7 +50,7 @@ hw_drivers:
     base_addr : 0x11000
     
   - name      : inj
-    type      : pulse_gen
+    type      : pulse_gen640
     interface : intf
     base_addr : 0x10100
        
@@ -65,21 +65,26 @@ hw_drivers:
     base_addr : 0x10600
     size      : 8
     
-  - name      : timestamp
-    type      : timestamp
+  - name      : timestamp_rx1
+    type      : timestamp640
     interface : intf
-    base_addr : 0x10700
+    base_addr : 0x10C00
     size      : 8
 
-  - name      : tdc
-    type      : timestamp_div
+  - name      : timestamp_mon
+    type      : timestamp640
     interface : intf
     base_addr : 0x10900
 
   - name      : timestamp_tlu
-    type      : timestamp_div
+    type      : timestamp640
     interface : intf
     base_addr : 0x10A00
+
+  - name      : timestamp_inj
+    type      : timestamp640
+    interface : intf
+    base_addr : 0x10B00
 
 
   - name      : gate_tdc

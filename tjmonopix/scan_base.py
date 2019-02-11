@@ -81,6 +81,14 @@ class ScanBase(object):
         self.meta_data_table.attrs.power_before = yaml.dump(status)
         self.meta_data_table.attrs.status_before = yaml.dump(self.dut.get_configuration())
         self.meta_data_table.attrs.SET_before = yaml.dump(self.dut.SET)
+        self.kwargs = self.h5_file.create_vlarray(
+            self.h5_file.root,
+            name='kwargs',
+            atom=tb.VLStringAtom(),
+            title='kwargs',
+            filters=tb.Filters(complib='blosc', complevel=5, fletcher32=False))
+        self.kwargs.append("kwargs")
+        self.kwargs.append(yaml.dump(kwargs))
 
         # Setup socket for Online Monitor
         if self.socket == "":
@@ -115,6 +123,12 @@ class ScanBase(object):
             except Exception:
                 pass
         return self.output_filename + '.h5'
+
+    def stop(self):
+        try:
+            self.h5_file.close()
+        except Exception:
+            self.logger.warn("Could not close h5 file manually")
 
     @contextmanager
     def readout(self, *args, **kwargs):
