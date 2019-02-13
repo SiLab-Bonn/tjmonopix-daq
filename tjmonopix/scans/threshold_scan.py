@@ -14,36 +14,21 @@ from tqdm import tqdm
 
 
 class ThresholdScan(ScanBase):
-    scan_id = "threshold_scan"
 
     def scan(self, **kwargs):
 
         self.max_cols = self.dut.COL
         self.max_rows = self.dut.ROW
 
-        if self.dut.SET["fl"] == "EN_PMOS":
-            fl_n = 1
-        elif self.dut.SET["fl"] == "EN_HV":
-            fl_n = 3
         with_tlu = kwargs.pop('with_tlu', False)
         with_timestamp = kwargs.pop('with_timestamp', False)
         with_tdc = kwargs.pop('with_tdc', False)
         inj_low_limit = kwargs.pop('inj_low_limit', 35)
         inj_high_limit = kwargs.pop('inj_high_limit', 100)
 
-        ####################
-        # stop readout and clean fifo
-        if with_timestamp:
-            self.dut.stop_timestamp()
-        if with_tlu:
-            self.dut.stop_tlu()
-        if with_tdc:
-            self.dut.stop_tdc()
-
-        self.dut.stop_monoread()
+        # Stop readout and clean FIFO
+        self.dut.stop_all()
         self.dut['fifo'].reset()
-
-        print(self.dut.get_power_status())
 
         # Write scan_id (type) to file
         self.meta_data_table.attrs.scan_id = "threshold_scan"
@@ -57,6 +42,7 @@ class ThresholdScan(ScanBase):
         repeat = 100
         delay = 5000
         width = 350
+        phase = 0
 
         # SET THE INJECTION PULSE AMPLITUDE
         # 128-bit DAC (7-bit binary equivalent)
@@ -74,16 +60,16 @@ class ThresholdScan(ScanBase):
         self.dut['inj'].set_delay(delay)
         self.dut['inj'].set_width(width)
         self.dut['inj'].set_repeat(repeat)
+        self.dut['inj'].set_phase(phase)
         self.dut['inj'].set_en(0)
 
-        ####################
         # start readout
         self.dut.set_monoread()
 
         scan_param_id = 0
 
-        injcol_step = self.max_cols // 2
-        injrow_step = self.max_rows // 45
+        injcol_step = 56
+        injrow_step = 4
         injcol_start = 0
         injrow_start = 0
 
@@ -100,39 +86,28 @@ class ThresholdScan(ScanBase):
                 self.dut.write_conf()
 
             with self.readout(scan_param_id=scan_param_id, fill_buffer=False, clear_buffer=True, reset_sram_fifo=True):
-                # Set columns to inject
-                for seed_col in range(injcol_start, injcol_step):
-                    self.dut['CONF_SR']['COL_PULSE_SEL'].setall(False)
+                for mask in self.dut.prepare_injection_mask(
+                    start_col=injcol_start,
+                    step_col=injcol_step,
+                    start_row=injrow_start,
+                    step_row=injrow_step
+                ):
+                    self.dut['CONF_SR']['COL_PULSE_SEL'] = mask["col"]
+                    self.dut['CONF_SR']['INJ_ROW'] = mask["row"]
                     self.dut.write_conf()
-                    for col in range(seed_col, self.dut.COL, injcol_step):
-                        self.dut['CONF_SR']['COL_PULSE_SEL'][fl_n * 112 + col] = True
-                        self.dut.write_conf()
+                    self.dut.reset_ibias()
+                    time.sleep(0.05)  # This needs to be long enough (0.05 works, maybe less) TODO: optimize wait time
 
-                    # Set rows to inject
-                    for seed_row in range(injrow_start, injrow_step):
-                        self.dut['CONF_SR']['INJ_ROW'].setall(False)
-                        self.dut.write_conf()
-                        time.sleep(0.005)
-                        row_mask = self.dut.ROW * bitarray('0')
-                        row_mask[0 + seed_row:self.dut.ROW:4] = True  # BitLogic masking in array[223:0]
-                        self.dut['CONF_SR']['INJ_ROW'][:] = bitarray(row_mask)
-                        self.dut.write_conf()
-                        self.dut.reset_ibias()
-                        time.sleep(0.05)  # This needs to be long enough (0.05 works, maybe less)
+                    # Read out trash data
+                    for _ in range(5):
+                        self.dut["fifo"].reset()
+                        time.sleep(0.01)  # TODO: optimize wait time
 
-                        # Set ibias to zero and back again to eliminate oscillations from mask switching
-                        self.dut.reset_ibias()
-
-                        # Read out trash data
-                        for _ in range(5):
-                            self.dut["fifo"].reset()
-                            time.sleep(0.01)
-
-                        # Start injection and read data
-                        self.dut["inj"].start()
-                        while not self.dut['inj'].is_ready:
-                            time.sleep(0.02)
-                        pbar.update(1)
+                    # Start injection and read data
+                    self.dut["inj"].start()
+                    while not self.dut['inj'].is_ready:
+                        time.sleep(0.01)
+                    pbar.update(1)
             scan_param_id = scan_param_id + 1
         pbar.close()
 

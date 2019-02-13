@@ -402,6 +402,20 @@ class TJMonoPix(Dut):
         self['CONF_SR']['COL_PULSE_SEL'][(flavor * 112) + col] = 1
         self['CONF_SR']['INJ_ROW'][row] = 1
 
+    def prepare_injection_mask(self, start_col=0, stop_col=112, step_col=56, start_row=0, stop_row=224, step_row=4):
+        n_masks = step_col * step_row
+        masks = []
+
+        for i in range(n_masks):
+            ba_col = 448 * bitarray('0')
+            ba_row = 224 * bitarray('0')
+
+            ba_col[self.fl_n * 112 + start_col + i // step_row:self.fl_n * 112 + stop_col:step_col] = True
+            ba_row[start_row + i % step_row:stop_row:step_row] = True
+
+            masks.append({'col': ba_col, 'row': ba_row})
+        return masks
+
     def enable_column_hitor(self, flavor, col):
         """ Enables hit or in given column for given flavor
 
@@ -543,9 +557,9 @@ class TJMonoPix(Dut):
     def stop_tlu(self):
         self["tlu"]["TRIGGER_ENABLE"] = 0
         self["timestamp_tlu"]["ENABLE_EXTERN"] = 0
-        lost_cnt = self["tdc"]["LOST_COUNT"]
+        lost_cnt = self["timestamp_tlu"]["LOST_COUNT"]
         if lost_cnt != 0:
-            logging.warn("stop_tdc: error cnt=%d" % lost_cnt)
+            logging.warn("stop_tlu: error cnt=%d" % lost_cnt)
 
     def set_timestamp(self, src="rx1"):
         self["timestamp_{}".format(src)].reset()
@@ -590,7 +604,7 @@ class TJMonoPix(Dut):
 
     def stop_all(self):
         self.stop_tlu()
-        self.stop_monopread()
+        self.stop_monoread()
         self.stop_timestamp("rx1")
         self.stop_timestamp("inj")
         self.stop_timestamp("mon")
