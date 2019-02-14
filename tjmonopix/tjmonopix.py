@@ -403,7 +403,7 @@ class TJMonoPix(Dut):
         self['CONF_SR']['INJ_ROW'][row] = 1
 
     def prepare_injection_mask(self, start_col=0, stop_col=112, step_col=56, start_row=0, stop_row=224, step_row=4):
-        n_masks = step_col * step_row
+        n_masks = min(stop_col - start_col, step_col) * min(stop_row - start_row, step_row)
         masks = []
 
         for i in range(n_masks):

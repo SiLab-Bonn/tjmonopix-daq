@@ -2,14 +2,12 @@
 
 import time
 import numpy as np
-import yaml
 import logging
 
 from tjmonopix.scan_base import ScanBase
 from tjmonopix.analysis import analysis
 from tjmonopix.analysis import plotting
 
-from bitarray import bitarray
 from tqdm import tqdm
 
 
@@ -20,9 +18,7 @@ class ThresholdScan(ScanBase):
         self.max_cols = self.dut.COL
         self.max_rows = self.dut.ROW
 
-        with_tlu = kwargs.pop('with_tlu', False)
         with_timestamp = kwargs.pop('with_timestamp', False)
-        with_tdc = kwargs.pop('with_tdc', False)
         inj_low_limit = kwargs.pop('inj_low_limit', 35)
         inj_high_limit = kwargs.pop('inj_high_limit', 100)
 
@@ -68,13 +64,24 @@ class ThresholdScan(ScanBase):
 
         scan_param_id = 0
 
+        injcol_start = 20
+        injrow_start = 20
+        injcol_stop = 50
+        injrow_stop = 50
         injcol_step = 56
         injrow_step = 4
-        injcol_start = 0
-        injrow_start = 0
+
+        masks = self.dut.prepare_injection_mask(
+            start_col=injcol_start,
+            stop_col=injcol_stop,
+            step_col=injcol_step,
+            start_row=injrow_start,
+            stop_row=injrow_stop,
+            step_row=injrow_step
+        )
 
         # Main scan loop
-        pbar = tqdm(total=injcol_step * injrow_step * len(scan_range))
+        pbar = tqdm(total=len(masks) * len(scan_range))
         for step in scan_range:
             # Ramp to vh value
             if vh > step:
@@ -86,12 +93,7 @@ class ThresholdScan(ScanBase):
                 self.dut.write_conf()
 
             with self.readout(scan_param_id=scan_param_id, fill_buffer=False, clear_buffer=True, reset_sram_fifo=True):
-                for mask in self.dut.prepare_injection_mask(
-                    start_col=injcol_start,
-                    step_col=injcol_step,
-                    start_row=injrow_start,
-                    step_row=injrow_step
-                ):
+                for mask in masks:
                     self.dut['CONF_SR']['COL_PULSE_SEL'] = mask["col"]
                     self.dut['CONF_SR']['INJ_ROW'] = mask["row"]
                     self.dut.write_conf()
@@ -101,7 +103,7 @@ class ThresholdScan(ScanBase):
                     # Read out trash data
                     for _ in range(5):
                         self.dut["fifo"].reset()
-                        time.sleep(0.01)  # TODO: optimize wait time
+                        time.sleep(0.005)
 
                     # Start injection and read data
                     self.dut["inj"].start()
@@ -112,17 +114,7 @@ class ThresholdScan(ScanBase):
         pbar.close()
 
         # stop readout
-        if with_timestamp:
-            self.dut.stop_timestamp()
-            self.meta_data_table.attrs.timestamp_status = yaml.dump(
-                self.dut["timestamp"].get_configuration())
-        if with_tlu:
-            self.dut.stop_tlu()
-            self.meta_data_table.attrs.tlu_status = yaml.dump(
-                self.dut["tlu"].get_configuration())
-        if with_tdc:
-            self.dut.stop_tdc()
-        self.dut.stop_monoread()
+        self.dut.stop_all()
 
     @classmethod
     def analyze(self, data_file=None, create_plots=True):
@@ -153,6 +145,5 @@ if __name__ == "__main__":
     scan.scan()
     scan.analyze()
 
-    # ThresholdScan.analyze(data_file="/media/silab/Maxtor/tjmonopix-data/development/threshold_scan/test_threshold_W04R08_PMOS_-6_-6_idb40.h5")
+#     ThresholdScan.analyze(data_file="/media/silab/Maxtor/tjmonopix-data/development/threshold_scan/thr_W04R08_PMOS_-6_-6_idb30_interpreted_test.h5")
     # ThresholdScan.analyze("/home/silab/tjmonopix/data/Threshold_scans/threshold_test.h5", create_plots=True)
-
