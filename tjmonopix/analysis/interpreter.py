@@ -7,11 +7,13 @@ class_spec = [
     ('tj_data_flag', numba.uint8),
     ('hitor_timestamp_flag', numba.uint8),
     ('ext_timestamp_flag', numba.uint8),
+    ('inj_timestamp_flag', numba.uint8),
     ('tlu_timestamp_flag', numba.uint8),
     ('tj_timestamp', numba.int64),
     ('hitor_timestamp', numba.int64),
     ('hitor_charge', numba.int16),
     ('ext_timestamp', numba.int64),
+    ('inj_timestamp', numba.int64),
     ('tlu_timestamp', numba.int64),
     ('error_cnt', numba.int32),
     ('col', numba.uint8),
@@ -145,21 +147,41 @@ def is_tlu_timestamp3(word):
 
 @numba.njit
 def is_ext_timestamp0(word):
-    return word & 0xFF000000 == 0x50000000
+    return word & 0xFF000000 == 0x40000000
 
 
 @numba.njit
 def is_ext_timestamp1(word):
-    return word & 0xFF000000 == 0x51000000
+    return word & 0xFF000000 == 0x41000000
 
 
 @numba.njit
 def is_ext_timestamp2(word):
-    return word & 0xFF000000 == 0x52000000
+    return word & 0xFF000000 == 0x42000000
 
 
 @numba.njit
 def is_ext_timestamp3(word):
+    return word & 0xFF000000 == 0x43000000
+
+
+@numba.njit
+def is_inj_timestamp0(word):
+    return word & 0xFF000000 == 0x50000000
+
+
+@numba.njit
+def is_inj_timestamp1(word):
+    return word & 0xFF000000 == 0x51000000
+
+
+@numba.njit
+def is_inj_timestamp2(word):
+    return word & 0xFF000000 == 0x52000000
+
+
+@numba.njit
+def is_inj_timestamp3(word):
     return word & 0xFF000000 == 0x53000000
 
 
@@ -203,10 +225,12 @@ class RawDataInterpreter(object):
         self.tj_timestamp = 0
         self.hitor_timestamp_flag = 0
         self.ext_timestamp_flag = 0
+        self.inj_timestamp_flag = 0
         self.tlu_timestamp_flag = 0
         self.hitor_timestamp = 0
         self.hitor_charge = 0
         self.ext_timestamp = 0
+        self.inj_timestamp = 0
         self.tlu_timestamp = 0
 
     def get_error_count(self):
@@ -398,7 +422,55 @@ class RawDataInterpreter(object):
                 self.ext_timestamp_flag = 0
 
             #########################################
-            # Part 4: interpret TLU 64bit timestamp #
+            # Part 4: interpret injection timestamp #
+            #########################################
+
+            elif is_inj_timestamp0(raw_data_word):
+                pass  # TODO: Used for debug mode only
+
+            # Third word comes first in data
+            elif is_inj_timestamp3(raw_data_word):
+                if self.inj_timestamp_flag != 0:
+                    self.reset()
+                    self.error_cnt += 1
+                    continue
+
+                self.inj_timestamp = (self.inj_timestamp & 0x0000FFFFFFFFFFFF) | (get_timestamp_div(raw_data_word) << 48)
+
+                self.inj_timestamp_flag = 1
+
+            elif is_inj_timestamp2(raw_data_word):
+                if self.inj_timestamp_flag != 1:
+                    self.reset()
+                    self.error_cnt += 1
+                    continue
+
+                self.inj_timestamp = (self.inj_timestamp & 0xFFFF000000FFFFFF) | (get_timestamp_div(raw_data_word) << 24)
+
+                self.inj_timestamp_flag = 2
+
+            elif is_inj_timestamp1(raw_data_word):
+                if self.inj_timestamp_flag != 2:
+                    self.reset()
+                    self.error_cnt += 1
+                    continue
+
+                self.inj_timestamp = (self.inj_timestamp & 0xFFFFFFFFFF000000) | get_timestamp_div(raw_data_word)
+
+                hit_data[hit_index]["col"] = 0xFC
+                hit_data[hit_index]["row"] = 0
+                hit_data[hit_index]["le"] = 0
+                hit_data[hit_index]["te"] = 0
+                hit_data[hit_index]["cnt"] = 0
+                hit_data[hit_index]["timestamp"] = self.inj_timestamp
+                hit_data[hit_index]["scan_param_id"] = self.raw_idx
+
+                # Prepare for next data block. Increase hit index and reset ext_timestamp flag
+                hit_index += 1
+                self.inj_timestamp_flag = 0
+
+            #########################################
+            # Part 5: interpret TLU 64bit timestamp #
             #########################################
 
             elif is_tlu_timestamp0(raw_data_word):
@@ -433,7 +505,7 @@ class RawDataInterpreter(object):
 
                 self.tlu_timestamp = (self.tlu_timestamp & 0xFFFFFFFFFF000000) | get_timestamp_div(raw_data_word)
 
-                hit_data[hit_index]["col"] = 0xFC
+                hit_data[hit_index]["col"] = 0xFB
                 hit_data[hit_index]["row"] = 0
                 hit_data[hit_index]["le"] = 0
                 hit_data[hit_index]["te"] = 0
@@ -446,7 +518,7 @@ class RawDataInterpreter(object):
                 self.tlu_timestamp_flag = 0
 
             ##############################
-            # Part 5: interpret TLU word #
+            # Part 6: interpret TLU word #
             ##############################
 
             elif is_tlu(raw_data_word):
