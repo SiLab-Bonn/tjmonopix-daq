@@ -26,7 +26,7 @@
 
 ////SiTCP
 `include "SiTCP/WRAP_SiTCP_GMII_XC7K_32K.V"
-`include "SiTCP/SiTCP_XC7K_32K_BBT_V80.v"
+`include "SiTCP/SiTCP_XC7K_32K_BBT_V110.V"
 `include "SiTCP/TIMER.v"
 
 ////User core and its modules
@@ -333,7 +333,7 @@ module tjmonopix_mio3(
         .RST(RST)                    ,    // in    : System reset
         // Configuration parameters
         .FORCE_DEFAULTn(1'b0)        ,    // in    : Load default parameters
-        .EXT_IP_ADDR(32'hc0a80b10)            ,    // in    : IP address[31:0] //192.168.11.16
+        .EXT_IP_ADDR(32'hc0a80a17)            ,    // in    : IP address[31:0] //192.168.10.16, 17,18, 19,20, 21,22, 23 
         .EXT_TCP_PORT(16'd24)        ,    // in    : TCP port #[15:0]
         .EXT_RBCP_PORT(16'd4660)        ,    // in    : RBCP port #[15:0]
         .PHY_ADDR(5'd3)            ,    // in    : PHY-device MIF address[4:0]
