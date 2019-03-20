@@ -27,7 +27,7 @@ class tjmono_data_rx(RegisterHardwareLayer):
                   'CNT2': {'descr': {'addr': 18, 'size': 8}},
                   }
 
-    _require_version = "==2"
+    _require_version = "==3"
 
     def __init__(self, intf, conf):
         super(tjmono_data_rx, self).__init__(intf, conf)
