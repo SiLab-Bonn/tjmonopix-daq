@@ -48,11 +48,12 @@
 `include "pulse_gen/pulse_gen.v"
 `include "pulse_gen/pulse_gen_core.v"
 
-`include "timestamp_div/timestamp_div.v"
-`include "timestamp_div/timestamp_div_core.v"
-
 `include "tjmono_data_rx/tjmono_data_rx.v"
 `include "tjmono_data_rx/tjmono_data_rx_core.v"
+`include "timestamp640/timestamp640.v"
+`include "timestamp640/timestamp640_core.v"
+`include "pulse_gen640/pulse_gen640.v"
+`include "pulse_gen640/pulse_gen640_core.v"
 
 module tjmonopix_mio3(
 
@@ -74,7 +75,8 @@ module tjmonopix_mio3(
     output wire RST_N,
     
     output wire INJECTION,
-    //output wire INJECTION_MON,
+    input  wire INJECTION_IN, //flatcable 6
+    output wire INJECTION_OUT, //flatcable 5
     
     output wire CLK_BX,
     output wire CLK_OUT,
@@ -333,7 +335,7 @@ module tjmonopix_mio3(
         .RST(RST)                    ,    // in    : System reset
         // Configuration parameters
         .FORCE_DEFAULTn(1'b0)        ,    // in    : Load default parameters
-        .EXT_IP_ADDR(32'hc0a80a17)            ,    // in    : IP address[31:0] //192.168.10.16, 17,18, 19,20, 21,22, 23 
+        .EXT_IP_ADDR(32'hc0a80a14)            ,    // in    : IP address[31:0] //192.168.10.16
         .EXT_TCP_PORT(16'd24)        ,    // in    : TCP port #[15:0]
         .EXT_RBCP_PORT(16'd4660)        ,    // in    : RBCP port #[15:0]
         .PHY_ADDR(5'd3)            ,    // in    : PHY-device MIF address[4:0]
@@ -525,7 +527,7 @@ tjmonopix_core i_tjmonopix_core(
     .LED(LED[4:0]),
     
     .LEMO_RX({LEMO_RX2,LEMO_RX}),
-    .LEMO_TX({LEMO_TX2,LEMO_TX}), // TX[0] == RJ45 trigger clock output, TX[1] == RJ45 busy output
+    .LEMO_TX({INJECTION_OUT,LEMO_TX}), // TX[0] == RJ45 trigger clock output, TX[1] == RJ45 busy output
     .RJ45_RESET(RJ45_RESET),
     .RJ45_TRIGGER(RJ45_TRIGGER),
 
@@ -537,6 +539,8 @@ tjmonopix_core i_tjmonopix_core(
     .RST_N(RST_N),
     
     .INJECTION(INJECTION), //DOUT12
+    .INJECTION_IN(INJECTION_IN),
+
     
     .CLK_BX(CLK_BX),       //DOUT6
     .CLK_OUT(CLK_OUT),   //DOUT5
