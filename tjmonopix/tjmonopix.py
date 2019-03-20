@@ -544,7 +544,7 @@ class TJMonoPix(Dut):
         if "r" in mode:
            data["read_reg"]=self["CONF_SR"].get_data(size=byte_size).tostring()
         if "m" in mode:
-           a=bitarray.bitarray("0000000")[0:r]+self["CONF_SR"][:]
+           a=bitarray("0000000")[0:r]+self["CONF_SR"][:]
            data["memory"]=a[::-1].tobytes()
         return data 
 
