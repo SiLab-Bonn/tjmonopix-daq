@@ -42,7 +42,7 @@ module tjmonopix_core (
     output wire RST_N,
     
     output wire INJECTION,
-	input wire INJECTION_IN,
+    input wire INJECTION_IN,
     
     output wire CLK_BX,
     output wire CLK_OUT,
@@ -71,8 +71,8 @@ localparam PULSE_INJ_HIGHADDR = 16'h0200-1;
 localparam DATA_RX_BASEADDR = 16'h0500;
 localparam DATA_RX_HIGHADDR = 16'h0600-1;
 
-localparam SPI_BASEADDR = 16'h1000;
-localparam SPI_HIGHADDR = 16'h2000-1;
+localparam SPI_BASEADDR = 16'h5000;
+localparam SPI_HIGHADDR = 16'h8000-1;
 
 localparam PULSE_GATE_TDC_BASEADDR = 16'h0400;
 localparam PULSE_GATE_TDC_HIGHADDR = 16'h0500-1;

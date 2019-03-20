@@ -335,7 +335,7 @@ module tjmonopix_mio3(
         .RST(RST)                    ,    // in    : System reset
         // Configuration parameters
         .FORCE_DEFAULTn(1'b0)        ,    // in    : Load default parameters
-        .EXT_IP_ADDR(32'hc0a80a14)            ,    // in    : IP address[31:0] //192.168.10.16
+        .EXT_IP_ADDR(32'hc0a80a13)            ,    // in    : IP address[31:0] //192.168.10.16
         .EXT_TCP_PORT(16'd24)        ,    // in    : TCP port #[15:0]
         .EXT_RBCP_PORT(16'd4660)        ,    // in    : RBCP port #[15:0]
         .PHY_ADDR(5'd3)            ,    // in    : PHY-device MIF address[4:0]
@@ -541,7 +541,6 @@ tjmonopix_core i_tjmonopix_core(
     .INJECTION(INJECTION), //DOUT12
     .INJECTION_IN(INJECTION_IN),
 
-    
     .CLK_BX(CLK_BX),       //DOUT6
     .CLK_OUT(CLK_OUT),   //DOUT5
     .READ_A(READ_A),       //DOUT3
