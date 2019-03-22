@@ -33,7 +33,7 @@ class TestInterpreter(unittest.TestCase):
                                                    (40, 163, 47, 3, 0, 8534572896, 24),
                                                    (253, 0, 0, 0, 228, 6784213859, 25),
                                                    (255, 0, 0, 0, 26086, 271120, 25),
-                                                   (252, 0, 0, 0, 0, 1407380519721, 25)],
+                                                   (251, 0, 0, 0, 0, 1407380519721, 25)],
                                                   dtype=hit_dtype)
 
         self.expected_broken_hit_data = np.array([(60, 175, 56, 5, 0, 8534559536, 1),
@@ -47,6 +47,8 @@ class TestInterpreter(unittest.TestCase):
     def test_correct_data(self):
         my_interpreter = interpreter.Interpreter()
         hit_data, errors = my_interpreter.interpret_data(self.correct_raw_data, self.meta_data_for_correct)
+
+        print(hit_data)
 
         np.testing.assert_array_equal(hit_data, self.expected_correct_hit_data)
         self.assertEqual(errors, 0)

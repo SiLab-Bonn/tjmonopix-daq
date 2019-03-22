@@ -1,28 +1,28 @@
 `timescale 1ns / 1ps
 `default_nettype none
 
-`include "/home/user/workspace/basil/basil_thinn/firmware/modules/utils/bus_to_ip.v"
+`include "utils/bus_to_ip.v"
 
-`include "/home/user/workspace/basil/basil_thinn/firmware/modules/utils/cdc_syncfifo.v"
-`include "/home/user/workspace/basil/basil_thinn/firmware/modules/utils/generic_fifo.v"
-`include "/home/user/workspace/basil/basil_thinn/firmware/modules/utils/cdc_pulse_sync.v"
+`include "utils/cdc_syncfifo.v"
+`include "utils/generic_fifo.v"
+`include "utils/cdc_pulse_sync.v"
 
-`include "/home/user/workspace/basil/basil_thinn/firmware/modules/utils/CG_MOD_pos.v"
+`include "utils/CG_MOD_pos.v"
 
-`include "/home/user/workspace/basil/basil_thinn/firmware/modules/utils/3_stage_synchronizer.v"
-`include "/home/user/workspace/basil/basil_thinn/firmware/modules/rrp_arbiter/rrp_arbiter.v"
-`include "/home/user/workspace/basil/basil_thinn/firmware/modules/utils/ddr_des.v"
-`include "/home/user/workspace/basil/basil_thinn/firmware/modules/utils/flag_domain_crossing.v"
+`include "utils/3_stage_synchronizer.v"
+`include "rrp_arbiter/rrp_arbiter.v"
+`include "utils/ddr_des.v"
+`include "utils/flag_domain_crossing.v"
 
-`include "/home/user/workspace/basil/basil_thinn/firmware/modules/utils/cdc_reset_sync.v"
+`include "utils/cdc_reset_sync.v"
 
-`include "/home/user/workspace/basil/basil_thinn/firmware/modules/utils/fifo_32_to_8.v"
-`include "/home/user/workspace/basil/basil_thinn/firmware/modules/utils/clock_divider.v"
-`include "/home/user/workspace/basil/basil_thinn/firmware/modules/i2c/i2c.v"
-`include "/home/user/workspace/basil/basil_thinn/firmware/modules/i2c/i2c_core.v"
+`include "utils/fifo_32_to_8.v"
+`include "utils/clock_divider.v"
+`include "i2c/i2c.v"
+`include "i2c/i2c_core.v"
 
-`include "/home/user/workspace/basil/basil_thinn/firmware/modules/utils/rgmii_io.v"
-`include "/home/user/workspace/basil/basil_thinn/firmware/modules/utils/rbcp_to_bus.v"
+`include "utils/rgmii_io.v"
+`include "utils/rbcp_to_bus.v"
 
 ////SiTCP
 `include "SiTCP/WRAP_SiTCP_GMII_XC7K_32K.V"
@@ -32,22 +32,21 @@
 ////User core and its modules
 `include "tjmonopix_core.v"
 
-`include "/home/user/workspace/basil/basil_thinn/firmware/modules/spi/spi_core.v"
-`include "/home/user/workspace/basil/basil_thinn/firmware/modules/spi/spi.v"
-`include "/home/user/workspace/basil/basil_thinn/firmware/modules/spi/blk_mem_gen_8_to_1_2k.v"
+`include "spi/spi_core.v"
+`include "spi/spi.v"
+`include "spi/blk_mem_gen_8_to_1_2k.v"
 
-`include "/home/user/workspace/basil/basil_thinn/firmware/modules/gpio/gpio.v"
+`include "gpio/gpio.v"
 
-`include "/home/user/workspace/basil/basil_thinn/firmware/modules/tlu/tlu_controller.v"
-`include "/home/user/workspace/basil/basil_thinn/firmware/modules/tlu/tlu_controller_core.v"
-`include "/home/user/workspace/basil/basil_thinn/firmware/modules/tlu/tlu_controller_fsm.v"
+`include "tlu/tlu_controller.v"
+`include "tlu/tlu_controller_core.v"
+`include "tlu/tlu_controller_fsm.v"
 
-`include "/home/user/workspace/basil/basil_thinn/firmware/modules/timestamp/timestamp.v"
-`include "/home/user/workspace/basil/basil_thinn/firmware/modules/timestamp/timestamp_core.v"
+`include "timestamp/timestamp.v"
+`include "timestamp/timestamp_core.v"
 
-`include "/home/user/workspace/basil/basil_thinn/firmware/modules/pulse_gen/pulse_gen.v"
-`include "/home/user/workspace/basil/basil_thinn/firmware/modules/pulse_gen/pulse_gen_core.v"
-
+`include "pulse_gen/pulse_gen.v"
+`include "pulse_gen/pulse_gen_core.v"
 
 `include "tjmono_data_rx/tjmono_data_rx.v"
 `include "tjmono_data_rx/tjmono_data_rx_core.v"
@@ -77,7 +76,7 @@ module tjmonopix_mio3(
     
     output wire INJECTION,
     input  wire INJECTION_IN, //flatcable 6
-    output wire INJECTION_OUT,//flatcable 5
+    output wire INJECTION_OUT, //flatcable 5
     
     output wire CLK_BX,
     output wire CLK_OUT,
@@ -540,7 +539,8 @@ tjmonopix_core i_tjmonopix_core(
     .RST_N(RST_N),
     
     .INJECTION(INJECTION), //DOUT12
-    
+    .INJECTION_IN(INJECTION_IN),
+
     .CLK_BX(CLK_BX),       //DOUT6
     .CLK_OUT(CLK_OUT),   //DOUT5
     .READ_A(READ_A),       //DOUT3

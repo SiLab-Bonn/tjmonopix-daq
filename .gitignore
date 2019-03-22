@@ -4,6 +4,9 @@
 work/
 #setup
 setup
+# backup files 
+*/obsolete/
+*/.ipynb_checkpoint/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -115,8 +118,7 @@ ENV/
 /firmware/src/SiTCP/
 
 # Output data
-/output_data/*
-/tjmonopix/scans/output_data/*
+*/output_data/*
 
 # pyDev project files
 .project
