@@ -239,6 +239,16 @@ class TJMonoPix(Dut):
         # TODO !!
         self.write_conf()
 
+    def save_config(self, filename=None):
+        conf = self.get_power_status()
+        conf.update(self.dut.get_configuration())      
+        conf['conf_flg'] = self.conf_flg
+        if filename == None:
+            filename = None
+            # time.strf TODO!
+        with open(filename, 'w') as f:
+            f.write(yaml.yamldump(conf))
+
     def power_on(self, VDDA=1.8, VDDP=1.8, VDDA_DAC=1.8, VDDD=1.8, VPCSWSF=0.5, VPC=1.3, BiasSF=100, INJ_LO=0.2, INJ_HI=3.6):
         # Set power
 

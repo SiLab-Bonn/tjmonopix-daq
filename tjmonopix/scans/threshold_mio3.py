@@ -45,10 +45,6 @@ if __name__ == "__main__":
 
             logging.info("Number of disabled pixels (Noisy+Ghost): " + str(np.shape(np.argwhere(disabledpix[(dut.fl_n * 112):(dut.fl_n + 1) * 112, :] == 0))[0]))
 
-    dut["CONF_SR"]["EN_PMOS"][48]=0
-    dut["CONF_SR"]["EN_PMOS"][49]=0
-    dut.write_conf()
-    
     # CONFIGURE THE FRONT END #
     # SET VRESET_P, THIS IS THE BASELINE OF THE FRONT END INPUT, ONE HOT ENCODING
     dut.set_vreset_dacunits(dut_config["vreset_dacunits"], 1)  # 1V

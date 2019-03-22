@@ -1,12 +1,9 @@
 import time
-import numpy as np
 import yaml
 import logging
 from tqdm import tqdm
 
 from tjmonopix.scan_base import ScanBase
-from tjmonopix.tjmonopix import TJMonoPix
-
 from tjmonopix.analysis import analysis
 from tjmonopix.analysis import plotting
 

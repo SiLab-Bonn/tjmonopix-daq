@@ -4,7 +4,6 @@ import math
 import matplotlib
 import logging
 
-import matplotlib.pyplot as plt
 from matplotlib import colors, cm
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.figure import Figure
@@ -65,8 +64,8 @@ class Plotting(object):
             else:
                 title = 'Occupancy'
 
-            self._plot_occupancy(hist=self.HistOcc[:].T, suffix='occupancy', title=title, z_max=20000)  # TODO: get mask and enable here
-        except:
+            self._plot_occupancy(hist=self.HistOcc[:].T, suffix='occupancy', title=title, z_max=np.ceil(1.1 * np.amax(self.HistOcc[:])))  # TODO: get mask and enable here
+        except Exception:
             self.logger.error('Could not create occupancy map!')
 
     def create_threshold_map(self):
@@ -81,7 +80,7 @@ class Plotting(object):
                                  title='Threshold',
                                  show_sum=False,
                                  suffix='threshold_map')
-        except:
+        except Exception:
             self.logger.error('Could not create threshold map!')
 
     def create_scurves_plot(self, scan_parameter_name='Scan parameter'):
@@ -103,12 +102,52 @@ class Plotting(object):
 #                 electron_axis = False
 #                 scan_parameter_range = range(min_tdac, max_tdac)
 
-            self._plot_scurves(scurves=self.HistSCurve,
+            self._plot_scurves(scurves=self.HistSCurve[:, 112:220, :],
                                scan_parameters=scan_parameter_range,
                                electron_axis=electron_axis,
-                               scan_parameter_name=scan_parameter_name)
-        except:
+                               scan_parameter_name=scan_parameter_name,
+                               title="S-Curves removed deep p-well")
+
+            self._plot_scurves(scurves=self.HistSCurve[:, :112, :],
+                               scan_parameters=scan_parameter_range,
+                               electron_axis=electron_axis,
+                               scan_parameter_name=scan_parameter_name,
+                               title='S-Curves full deep p-well')
+        except Exception:
             self.logger.error('Could not create scurve plot!')
+
+    def create_threshold_distribution_plot(self):
+        mask = np.full((112, 224), False)
+        sel = np.logical_and(self.Chi2Map[:] > 0., self.ThresholdMap > 0)  # Mask not converged fits (chi2 = 0)
+        mask[~sel] = True
+
+        data = np.ma.masked_array(self.ThresholdMap, mask)
+        data_rdpw = data[:, 112:220].reshape(-1)
+        data_fdpw = data[:, :112].reshape(-1)
+
+        hist_rdpw, edges_rdpw = np.histogram(data_rdpw, bins=np.arange(np.floor(np.amin(data_rdpw)) - .5, np.ceil(np.amax(data_rdpw) + .5), 1))
+        self._plot_histogram1d(hist=hist_rdpw,
+                               edges=edges_rdpw,
+                               title="Threshold distribution removed deep p-well",
+                               suffix='threshold_distribution')
+
+        hist_fdpw, edges_fdpw = np.histogram(data_fdpw, bins=np.arange(np.floor(np.amin(data_fdpw)) - .5, np.ceil(np.amax(data_fdpw) + .5), 1))
+        self._plot_histogram1d(hist=hist_fdpw,
+                               edges=edges_fdpw,
+                               title="Threshold distribution full deep p-well",
+                               suffix='threshold_distribution')
+
+    def _plot_histogram1d(self, hist, edges, title='Distribution', suffix=None):
+        # TODO: histogram data
+
+        fig = Figure()
+        FigureCanvas(fig)
+        ax = fig.add_subplot(111)
+        ax.set_title(title + ' for %d pixel(s)' % (np.sum(hist)), color=TITLE_COLOR)
+
+        ax.bar(edges[:-1], hist, align="edge", width=((edges[-1] - edges[0]) / (len(edges) - 1)))
+
+        self._save_plots(fig, suffix=suffix)
 
     def _plot_occupancy(self, hist, electron_axis=False, title='Occupancy', z_label='# of hits', z_min=None, z_max=None, show_sum=True, suffix=None):
         if z_max == 'median':
@@ -203,7 +242,7 @@ class Plotting(object):
         if increase_count:
             self.plot_cnt += 1
 
-    def _plot_scurves(self, scurves, scan_parameters, electron_axis=False, max_occ=120, scan_parameter_name=None, title='S-curves', ylabel='Occupancy'):
+    def _plot_scurves(self, scurves, scan_parameters, electron_axis=False, max_occ=130, scan_parameter_name=None, title='S-curves', ylabel='Occupancy'):
         # TODO: get n_pixels and start and stop columns from run_config
         # start_column = self.run_config['start_column']
         # stop_column = self.run_config['stop_column']
@@ -218,7 +257,9 @@ class Plotting(object):
         # Reformat scurves array as one long list of scurves
         # For very noisy or not properly masked devices, ignore all s-curves where any data
         # is larger than given threshold (max_occ)
-        scurves = scurves.reshape((112 * 224, 64))
+#         scurves = scurves.reshape((112 * 224, 64))
+        scurves = scurves.reshape((scurves.shape[0] * scurves.shape[1], scurves.shape[2]))
+
         scurves_masked = scurves[~np.any(scurves > max_occ, axis=1)]
         n_pixel = scurves_masked.shape[0]
 
