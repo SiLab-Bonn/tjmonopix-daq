@@ -129,8 +129,8 @@ class ThresholdScan(ScanBase):
             print(np.median(a.threshold_map[:, 112:220][np.nonzero(a.threshold_map[:, 112:220])]))
             print(np.median(a.threshold_map[:, :112][np.nonzero(a.threshold_map[:, :112])]))
 
-            logging.info("Mean threshold for removed DPW region is %i DAC units" % (int(mean_thr_rdpw)))
-            logging.info("Mean threshold for full DPW region is %i DAC units" % (int(mean_thr_fdpw)))
+            #logging.info("Mean threshold for removed DPW region is %i DAC units" % (int(mean_thr_rdpw)))
+            #logging.info("Mean threshold for full DPW region is %i DAC units" % (int(mean_thr_fdpw)))
 
         if create_plots:
             with plotting.Plotting(analyzed_data_file=a.analyzed_data_file) as p:

@@ -50,7 +50,7 @@ hw_drivers:
     base_addr : 0x11000
     
   - name      : inj
-    type      : pulse_gen640
+    type      : tjmonopix.pulse_gen640
     interface : intf
     base_addr : 0x10100
        
@@ -66,23 +66,23 @@ hw_drivers:
     size      : 8
     
   - name      : timestamp_rx1
-    type      : timestamp640
+    type      : tjmonopix.timestamp640
     interface : intf
     base_addr : 0x10C00
     size      : 8
 
   - name      : timestamp_mon
-    type      : timestamp640
+    type      : tjmonopix.timestamp640
     interface : intf
     base_addr : 0x10900
 
   - name      : timestamp_tlu
-    type      : timestamp640
+    type      : tjmonopix.timestamp640
     interface : intf
     base_addr : 0x10A00
 
   - name      : timestamp_inj
-    type      : timestamp640
+    type      : tjmonopix.timestamp640
     interface : intf
     base_addr : 0x10B00
 
