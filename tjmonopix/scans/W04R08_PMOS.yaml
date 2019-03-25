@@ -1,12 +1,13 @@
 dut :
-    flavor: "PMOS_NOSF"
+    file: "/home/silab/git/tjmonopix-daq/tjmonopix/tjmonopix_mio3.yaml"
+    flavor: "PMOS"
     vreset_dacunits : 35
     icasn_dacunits : 0
     ireset_dacunits :
         value: 29
         mode: 0
     ithr_dacunits : 15
-    idb_dacunits : 50 ## 30
+    idb_dacunits : 30
     ibias_dacunits : 45
 
 scan :

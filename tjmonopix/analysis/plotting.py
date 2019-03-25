@@ -125,13 +125,21 @@ class Plotting(object):
         data_rdpw = data[:, 112:220].reshape(-1)
         data_fdpw = data[:, :112].reshape(-1)
 
-        hist_rdpw, edges_rdpw = np.histogram(data_rdpw, bins=np.arange(np.floor(np.amin(data_rdpw)) - .5, np.ceil(np.amax(data_rdpw) + .5), 1))
+        hist_rdpw, edges_rdpw = np.histogram(
+            data_rdpw,
+            bins=np.arange(np.floor(np.mean(data_rdpw) - 3 * np.std(data_rdpw)) - .5, np.ceil(np.mean(data_rdpw) + 3 * np.std(data_rdpw)) + .5, 1),
+            range=(np.mean(data_rdpw) - 3 * np.std(data_rdpw), np.mean(data_rdpw) + 3 * np.std(data_rdpw))
+        )
         self._plot_histogram1d(hist=hist_rdpw,
                                edges=edges_rdpw,
                                title="Threshold distribution removed deep p-well",
                                suffix='threshold_distribution')
 
-        hist_fdpw, edges_fdpw = np.histogram(data_fdpw, bins=np.arange(np.floor(np.amin(data_fdpw)) - .5, np.ceil(np.amax(data_fdpw) + .5), 1))
+        hist_fdpw, edges_fdpw = np.histogram(
+            data_fdpw,
+            bins=np.arange(np.floor(np.mean(data_fdpw) - 3 * np.std(data_fdpw)) - .5, np.ceil(np.mean(data_fdpw) + 3 * np.std(data_fdpw)) + .5, 1),
+            range=(np.mean(data_fdpw) - 3 * np.std(data_fdpw), np.mean(data_fdpw) + 3 * np.std(data_fdpw))
+        )
         self._plot_histogram1d(hist=hist_fdpw,
                                edges=edges_fdpw,
                                title="Threshold distribution full deep p-well",
@@ -146,6 +154,54 @@ class Plotting(object):
         ax.set_title(title + ' for %d pixel(s)' % (np.sum(hist)), color=TITLE_COLOR)
 
         ax.bar(edges[:-1], hist, align="edge", width=((edges[-1] - edges[0]) / (len(edges) - 1)))
+
+        self._save_plots(fig, suffix=suffix)
+
+    def _plot_histogram2d(self, hist, z_min=None, z_max=None, suffix=None, xlabel='', ylabel='', title='', z_label='# of hits'):
+        x_bins = np.arange(-0.5, hist.shape[0] - 0.5)
+        y_bins = np.arange(-0.5, hist.shape[1] - 0.5)
+
+        if z_max == 'median':
+            z_max = 2 * np.ma.median(hist)
+        elif z_max == 'maximum' or z_max is None:
+            z_max = np.ma.max(hist)
+        if z_max < 1 or hist.all() is np.ma.masked:
+            z_max = 1.0
+
+        if z_min is None:
+            z_min = np.ma.min(hist)
+        if z_min == z_max or hist.all() is np.ma.masked:
+            z_min = 0
+
+        fig = Figure()
+        FigureCanvas(fig)
+        ax = fig.add_subplot(111)
+
+        fig.patch.set_facecolor('white')
+        cmap = cm.get_cmap('cool')
+        if np.allclose(hist, 0.0) or hist.max() <= 1:
+            z_max = 1.0
+        else:
+            z_max = hist.max()
+        # for small z use linear scale, otherwise log scale
+        if z_max <= 10.0:
+            bounds = np.linspace(start=0.0, stop=z_max, num=255, endpoint=True)
+            norm = colors.BoundaryNorm(bounds, cmap.N)
+        else:
+            bounds = np.linspace(start=1.0, stop=z_max, num=255, endpoint=True)
+            norm = colors.LogNorm()
+
+        im = ax.pcolormesh(x_bins, y_bins, hist.T, norm=norm, rasterized=True)
+        ax.set_title(title, color=TITLE_COLOR)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+
+        if z_max <= 10.0:
+            cb = fig.colorbar(im, ticks=np.linspace(start=0.0, stop=z_max, num=min(
+                11, math.ceil(z_max) + 1), endpoint=True), fraction=0.04, pad=0.05)
+        else:
+            cb = fig.colorbar(im, fraction=0.04, pad=0.05)
+        cb.set_label(z_label)
 
         self._save_plots(fig, suffix=suffix)
 
@@ -223,25 +279,6 @@ class Plotting(object):
 
         self._save_plots(fig, suffix=suffix)
 
-    def _save_plots(self, fig, suffix=None, tight=False):
-        increase_count = False
-        bbox_inches = 'tight' if tight else ''
-        if suffix is None:
-            suffix = str(self.plot_cnt)
-
-        if not self.out_file:
-            fig.show()
-        else:
-            self.out_file.savefig(fig, bbox_inches=bbox_inches)
-        if self.save_png:
-            fig.savefig(self.filename[:-4] + '_' + suffix + '.png', bbox_inches=bbox_inches)
-            increase_count = True
-        if self.save_single_pdf:
-            fig.savefig(self.filename[:-4] + '_' + suffix + '.pdf', bbox_inches=bbox_inches)
-            increase_count = True
-        if increase_count:
-            self.plot_cnt += 1
-
     def _plot_scurves(self, scurves, scan_parameters, electron_axis=False, max_occ=130, scan_parameter_name=None, title='S-curves', ylabel='Occupancy'):
         # TODO: get n_pixels and start and stop columns from run_config
         # start_column = self.run_config['start_column']
@@ -311,3 +348,22 @@ class Plotting(object):
 #             cb.update_ticks()
 
         self._save_plots(fig, suffix='scurves')
+
+    def _save_plots(self, fig, suffix=None, tight=False):
+        increase_count = False
+        bbox_inches = 'tight' if tight else ''
+        if suffix is None:
+            suffix = str(self.plot_cnt)
+
+        if not self.out_file:
+            fig.show()
+        else:
+            self.out_file.savefig(fig, bbox_inches=bbox_inches)
+        if self.save_png:
+            fig.savefig(self.filename[:-4] + '_' + suffix + '.png', bbox_inches=bbox_inches)
+            increase_count = True
+        if self.save_single_pdf:
+            fig.savefig(self.filename[:-4] + '_' + suffix + '.pdf', bbox_inches=bbox_inches)
+            increase_count = True
+        if increase_count:
+            self.plot_cnt += 1

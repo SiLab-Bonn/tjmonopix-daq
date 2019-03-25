@@ -4,12 +4,12 @@ import yaml
 import logging
 
 from tjmonopix.tjmonopix import TJMonoPix
-from tjmonopix.scans.threshold_scan import ThresholdScan
+from tjmonopix.scans.threshold_scan import AnalogScan
 
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(
-        description='TJ-MONOPIX threshold scan \n example: threshold_scan --scan_time 10 --data simple_0', formatter_class=argparse.RawTextHelpFormatter)
+        description='TJ-MONOPIX analog scan \n example: analog_scan --scan_time 10 --data simple_0', formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('-c', '--config', type=str, default=None, help='Name of scan configuration file')
     parser.add_argument('-d', '--data', type=str, default=None, help='Name of data file without extension')
 
@@ -21,9 +21,7 @@ if __name__ == "__main__":
         dut_config = configuration["dut"]
         scan_config = configuration["scan"]
 
-    # TESTBEAM: dut = "/home/silab/tjmonopix/tjmonopix-daq/tjmonopix-testbeam-april/tjmonopix/tjmonopix_mio3.yaml"
-    dut = '/home/user/workspace/tjmonopix/tjmonopix_inj/tjmonopix/tjmonopix_mio3.yaml'
-    dut = TJMonoPix(conf=dut)
+    dut = TJMonoPix(conf=dut_config["file"])
     dut.init(fl="EN_" + dut_config["flavor"])
 
     mask = '/media/silab/Maxtor/tjmonopix-data/development/noise_tuning/test_noise_tuning_W04R08_PMOS_-6_-6.yaml'
@@ -90,7 +88,7 @@ if __name__ == "__main__":
     for mask_pix in configuration["mask"]:
         dut.mask(*mask_pix)
 
-    scan = ThresholdScan(dut=dut, filename=args.data, send_addr=scan_config["online_monitor"])
+    scan = AnalogScan(dut=dut, filename=args.data, send_addr=scan_config["online_monitor"])
     dut.save_config(scan.output_filename + '.yaml')
     scan.start(with_tdc=False, with_timestamp=False, with_tlu=False, with_tj=True)
     scan.analyze(scan.output_filename + '.h5')

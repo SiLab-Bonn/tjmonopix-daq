@@ -1,4 +1,4 @@
-''' Histograms the Mimosa26 hit table'''
+''' Histograms the TJMonoPix hit table'''
 
 import numpy as np
 from numba import njit
@@ -25,7 +25,9 @@ def apply_noisy_pixel_cut(hists, noisy_threshold):
 class TJMonopixHistogrammer(Transceiver):
 
     def setup_transceiver(self):
-        self.set_bidirectional_communication()  # We want to be able to change the histogrammmer settings
+        # We want to be able to change the histogramer settings
+        # thus bidirectional communication needed
+        self.set_bidirectional_communication()
 
     def setup_interpretation(self):
         self.occupancy = np.zeros(shape=(112, 224), dtype=np.int32)
@@ -73,11 +75,11 @@ class TJMonopixHistogrammer(Transceiver):
             recent_fps = 1.0 / (ts_now - self.ts_last_readout)
             self.fps = self.fps * 0.95 + recent_fps * 0.05
 
-            # Calulate hits per second with smoothing
+            # Calculate hits per second with smoothing
             recent_hps = self.hits_last_readout * recent_fps
             self.hps = self.hps * 0.95 + recent_hps * 0.05
 
-            # Calulate hits per second with smoothing
+            # Calculate hits per second with smoothing
             recent_eps = self.events_last_readout * recent_fps
             self.eps = self.eps * 0.95 + recent_eps * 0.05
 

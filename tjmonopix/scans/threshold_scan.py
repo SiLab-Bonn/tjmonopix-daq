@@ -18,7 +18,6 @@ class ThresholdScan(ScanBase):
         self.max_cols = self.dut.COL
         self.max_rows = self.dut.ROW
 
-        with_timestamp = kwargs.pop('with_timestamp', False)
         inj_low_limit = kwargs.pop('inj_low_limit', 35)
         inj_high_limit = kwargs.pop('inj_high_limit', 100)
 
@@ -37,6 +36,12 @@ class ThresholdScan(ScanBase):
         width = 350
         phase = 0
 
+        self.dut['inj'].set_delay(delay)
+        self.dut['inj'].set_width(width)
+        self.dut['inj'].set_repeat(repeat)
+        self.dut['inj'].set_phase(phase)
+        self.dut['inj'].set_en(0)
+
         # SET THE INJECTION PULSE AMPLITUDE
         # 128-bit DAC (7-bit binary equivalent)
         # SET THE VOLTAGES IN ONE HOT ENCODING, ONLY ONE BIT ACTIVE AT A TIME.
@@ -50,31 +55,25 @@ class ThresholdScan(ScanBase):
 
         scan_range = np.arange(inj_low_limit, inj_high_limit, 1)
 
-        self.dut['inj'].set_delay(delay)
-        self.dut['inj'].set_width(width)
-        self.dut['inj'].set_repeat(repeat)
-        self.dut['inj'].set_phase(phase)
-        self.dut['inj'].set_en(0)
-
         # start readout
         self.dut.set_monoread()
 
         scan_param_id = 0
 
-        injcol_start = 20
-        injrow_start = 20
-        injcol_stop = 50
-        injrow_stop = 50
+        injcol_start = 0
+        injrow_start = 56
+        injcol_stop = 112
+        injrow_stop = 56 + 112
         injcol_step = 56
         injrow_step = 4
 
         masks = self.dut.prepare_injection_mask(
             start_col=injcol_start,
             stop_col=injcol_stop,
-            step_col=injcol_step,
+            width_col=injcol_step,
             start_row=injrow_start,
             stop_row=injrow_stop,
-            step_row=injrow_step
+            width_row=injrow_step
         )
 
         # Main scan loop
@@ -110,7 +109,7 @@ class ThresholdScan(ScanBase):
             scan_param_id = scan_param_id + 1
         pbar.close()
 
-        # stop readout
+        # Stop readout
         self.dut.stop_all()
 
     @classmethod

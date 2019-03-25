@@ -1,41 +1,42 @@
 converter :
     TJ_Interpreter :
         kind : tjmonopix_converter
-        frontend : tcp://127.0.0.1:5500
+        frontend : tcp://131.220.162.239:5500  # silab21
+#        frontend : tcp://131.220.162.237:5500  #  silab05
         backend : tcp://127.0.0.1:5600
-    DUT0_Interpreter :
-        kind : pybar_mimosa26
-        frontend : tcp://127.0.0.1:4500
-        backend : tcp://127.0.0.1:4600
-    DUT1_Interpreter :
-        kind : pybar_fei4
-        frontend : tcp://127.0.0.1:6500
-        backend : tcp://127.0.0.1:6600
-    ANEMONE_Correlator :
-        kind : anemone_correlator
-        frontend : 
-          - tcp://127.0.0.1:4600
-          - tcp://127.0.0.1:6600
-        backend : tcp://127.0.0.1:8700
-        max_n_rows_fei4 : 337 
-        max_n_columns_fei4 : 81
-        max_n_rows_m26 : 576 
-        max_n_columns_m26 : 1152
-        noisy_threshold : 1
+#    DUT0_Interpreter :
+#        kind : pybar_mimosa26
+#        frontend : tcp://127.0.0.1:4500
+#        backend : tcp://127.0.0.1:4600
+#    DUT1_Interpreter :
+#        kind : pybar_fei4
+#        frontend : tcp://127.0.0.1:6500
+#        backend : tcp://127.0.0.1:6600
+#    ANEMONE_Correlator :
+#        kind : anemone_correlator
+#        frontend : 
+#          - tcp://127.0.0.1:4600
+#          - tcp://127.0.0.1:6600
+#        backend : tcp://127.0.0.1:8700
+#        max_n_rows_fei4 : 337 
+#        max_n_columns_fei4 : 81
+#        max_n_rows_m26 : 576 
+#        max_n_columns_m26 : 1152
+#        noisy_threshold : 1
     TJ_Histogrammer :
         kind : tjmonopix_histogrammer
         frontend : tcp://127.0.0.1:5600
         backend : tcp://127.0.0.1:5700
         noisy_threshold : 1
-    DUT0_Histogrammer :
-        kind : pybar_mimosa26_histogrammer
-        frontend : tcp://127.0.0.1:4600
-        backend : tcp://127.0.0.1:4700
-        noisy_threshold : 1
-    DUT1_Histogrammer :
-        kind : pybar_fei4_histogrammer
-        frontend : tcp://127.0.0.1:6600
-        backend : tcp://127.0.0.1:6700
+#    DUT0_Histogrammer :
+#        kind : pybar_mimosa26_histogrammer
+#        frontend : tcp://127.0.0.1:4600
+#        backend : tcp://127.0.0.1:4700
+#        noisy_threshold : 1
+#    DUT1_Histogrammer :
+#        kind : pybar_fei4_histogrammer
+#        frontend : tcp://127.0.0.1:6600
+#        backend : tcp://127.0.0.1:6700
 #    Telescope_Status :
 #        kind : telescope_status
 #        frontend : 
@@ -47,22 +48,22 @@ receiver :
     TJ :
         kind : tjmonopix_receiver
         frontend : tcp://127.0.0.1:5700
-    M26 :
-        kind : pybar_mimosa26
-        frontend : tcp://127.0.0.1:4700
-    FEI4 :
-        kind : pybar_fei4
-        frontend : tcp://127.0.0.1:6700
-    ANEMONE_Correlator :
-        kind : anemone_correlator
-        frontend : tcp://127.0.0.1:8700
-        devices :
-            - tcp://127.0.0.1:4600
-            - tcp://127.0.0.1:6600
-        max_n_rows_fei4 : 337 
-        max_n_columns_fei4 : 81
-        max_n_rows_m26 : 576 
-        max_n_columns_m26 : 1152
+#    M26 :
+#        kind : pybar_mimosa26
+#        frontend : tcp://127.0.0.1:4700
+#    FEI4 :
+#        kind : pybar_fei4
+#        frontend : tcp://127.0.0.1:6700
+#    ANEMONE_Correlator :
+#        kind : anemone_correlator
+#        frontend : tcp://127.0.0.1:8700
+#        devices :
+#            - tcp://127.0.0.1:4600
+#            - tcp://127.0.0.1:6600
+#        max_n_rows_fei4 : 337 
+#        max_n_columns_fei4 : 81
+#        max_n_rows_m26 : 576 
+#        max_n_columns_m26 : 1152
 #    Telescope_Status :
 #        kind : telescope_status
 #        frontend : tcp://127.0.0.1:9700
