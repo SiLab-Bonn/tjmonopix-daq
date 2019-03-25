@@ -1,0 +1,22 @@
+dut :
+    flavor: "PMOS_NOSF"
+    vreset_dacunits : 35
+    icasn_dacunits : 0
+    ireset_dacunits :
+        value: 29
+        mode: 0
+    ithr_dacunits : 15
+    idb_dacunits : 50 ## 30
+    ibias_dacunits : 45
+
+scan :
+    online_monitor: "tcp://131.220.162.239:5500"
+
+mask:
+    [
+        [1, 10, 177],
+        [1, 106, 177],
+        [1, 53, 129],
+        [1, 89, 54],
+        [1, 19, 139]
+    ]

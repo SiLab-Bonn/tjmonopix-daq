@@ -729,6 +729,8 @@ class TJMonoPix(Dut):
         self.write_conf()
 
         self['CONF_SR'][self.SET['fl']].setall(True)
+        self['CONF_SR'][self.SET['fl']][48]=0
+        self['CONF_SR'][self.SET['fl']][49]=0
         self.write_conf()
 
         for _ in range(10):

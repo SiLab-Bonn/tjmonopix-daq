@@ -22,12 +22,12 @@ if __name__ == "__main__":
         scan_config = configuration["scan"]
 
     # TESTBEAM: dut = "/home/silab/tjmonopix/tjmonopix-daq/tjmonopix-testbeam-april/tjmonopix/tjmonopix_mio3.yaml"
-    dut = '/home/silab/git/tjmonopix-redo/tjmonopix/tjmonopix_mio3.yaml'
+    dut = '/home/user/workspace/tjmonopix/tjmonopix_thscan/tjmonopix/tjmonopix_mio3.yaml'
     dut = TJMonoPix(conf=dut)
     dut.init(fl="EN_" + dut_config["flavor"])
 
+    mask = '/media/silab/Maxtor/tjmonopix-data/development/noise_tuning/test_noise_tuning_W04R08_PMOS_-6_-6.yaml'
     mask = 'auto'
-    # maskedpix_file = "/media/silab/Maxtor/tjmonopix-data/measurements/source_scan/modified_process/pmos/W04R08_-6_-6_idb30_conf.yaml"
     if mask == '':
             logging.warn("A masked pixel file was not specified. The device will probably show noisy pixels.")
     elif mask == 'auto':
@@ -44,7 +44,7 @@ if __name__ == "__main__":
             disabledpix = dut.get_disabled_pixel()
 
             logging.info("Number of disabled pixels (Noisy+Ghost): " + str(np.shape(np.argwhere(disabledpix[(dut.fl_n * 112):(dut.fl_n + 1) * 112, :] == 0))[0]))
-
+    
     # CONFIGURE THE FRONT END #
     # SET VRESET_P, THIS IS THE BASELINE OF THE FRONT END INPUT, ONE HOT ENCODING
     dut.set_vreset_dacunits(dut_config["vreset_dacunits"], 1)  # 1V

@@ -289,6 +289,9 @@ set_property PACKAGE_PIN Y25 [get_ports RJ45_RESET]
 set_property IOSTANDARD LVCMOS33 [get_ports RJ45_RESET]
 set_property IOSTANDARD LVCMOS33 [get_ports RJ45_TRIGGER]
 
-
-
-
+set_property PACKAGE_PIN G12 [get_ports INJECTION_OUT]
+set_property IOSTANDARD LVCMOS33 [get_ports INJECTION_OUT]
+set_property PACKAGE_PIN F12 [get_ports INJECTION_IN]
+set_property IOSTANDARD LVCMOS33 [get_ports INJECTION_IN]
+set_property DRIVE 16 [get_ports INJECTION_OUT]
+set_property SLEW FAST [get_ports INJECTION_OUT]
