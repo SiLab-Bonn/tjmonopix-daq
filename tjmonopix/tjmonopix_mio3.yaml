@@ -70,7 +70,7 @@ hw_drivers:
     interface : intf
     base_addr : 0x10C00
     size      : 8
-    
+
   - name      : timestamp_mon  #6
     type      : tjmonopix.timestamp640
     interface : intf
@@ -371,6 +371,4 @@ registers:
         - name     : COL_PULSE_SEL
           size     : 448
           offset   : 3924
-          
-        
-       
+

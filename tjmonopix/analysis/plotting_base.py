@@ -21,12 +21,13 @@ from matplotlib import gridspec
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.ticker as ticker
 
-COL_SIZE = 36 ##TODO change hard coded values
-ROW_SIZE = 129
+COL_SIZE = 112 ##TODO change hard coded values
+ROW_SIZE = 224
 TITLE_COLOR = '#07529a'
 OVERTEXT_COLOR = '#07529a'
 
-import monopix_daq.analysis.utils
+import tjmonopix.analysis.utils
+
 
 class PlottingBase(object):
     def __init__(self, fout, save_png=False ,save_single_pdf=False):
@@ -359,7 +360,7 @@ class PlottingBase(object):
         for i, d in enumerate(dat):
             color = next(ax._get_lines.prop_cycler)['color']
             ax.plot(d["x"], d["y"],linestyle="", marker="o",color=color,label=dat_title[i])
-            x,y=monopix_daq.analysis.utils.scurve_from_fit(d["x"], d["A"],d["mu"],d["sigma"],reverse=reverse,n=500)
+            x,y=tjmonopix.analysis.utils.scurve_from_fit(d["x"], d["A"],d["mu"],d["sigma"],reverse=reverse,n=500)
             ax.plot(x,y,linestyle="-", marker="",color=color)
         if x_min is None:
             x_min=np.min(d["x"])

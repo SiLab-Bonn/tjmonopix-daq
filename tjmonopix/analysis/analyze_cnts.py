@@ -5,9 +5,10 @@ import yaml
 import logging
 import matplotlib.pyplot as plt
 
-import monopix_daq.analysis.utils as utils
-COL_SIZE = 36
-ROW_SIZE = 129
+import tjmonopix.analysis.utils as utils
+COL_SIZE = 112
+ROW_SIZE = 224
+
 
 class AnalyzeCnts():
     def __init__(self,fev,fraw):
@@ -19,11 +20,9 @@ class AnalyzeCnts():
             for i in range(0,len(f.root.kwargs),2):
                 if f.root.kwargs[i]=="injlist":
                     self.injlist=np.sort(np.unique(yaml.load(f.root.kwargs[i+1])))
-                elif f.root.kwargs[i]=="thlist":
-                    self.thlist=np.sort(np.unique(yaml.load(f.root.kwargs[i+1])))
                 elif f.root.kwargs[i]=="phaselist":
                     self.phaselist=np.sort(np.unique(yaml.load(f.root.kwargs[i+1])))
-            self.inj_n=yaml.load(f.root.meta_data.attrs.firmware)["inj"]["REPEAT"]
+            self.inj_n=yaml.load(f.root.meta_data.attrs.status)["inj"]["REPEAT"]
  
     def run(self,n=10000000):
         with tb.open_file(self.fdat,"a") as f:
@@ -206,8 +205,8 @@ class AnalyzeCnts():
                            title='scurve_fit %s'%x)
             if x=="inj":
                 t.attrs.injlist=self.injlist
-            elif x=="th":
-                t.attrs.thlist=self.thlist
+            # elif x=="th":
+            #     t.attrs.thlist=self.thlist
 
     def run_scurve_fit(self,dat,fdat_root):
         uni=np.unique(dat[self.res["scurve_fit"]["cols"]])

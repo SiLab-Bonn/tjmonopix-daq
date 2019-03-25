@@ -5,9 +5,11 @@ import yaml
 import logging
 import matplotlib.pyplot as plt
 
-import monopix_daq.analysis.utils as utils
-COL_SIZE = 36
-ROW_SIZE = 129
+# import tjmonopix.analysis.utils as utils
+import tjmonopix.analysis.analysis_utils as utils
+COL_SIZE = 112 
+ROW_SIZE = 224
+
 
 class AnalyzeLECnts():
     def __init__(self,fev,fraw):
@@ -19,11 +21,9 @@ class AnalyzeLECnts():
             for i in range(0,len(f.root.kwargs),2):
                 if f.root.kwargs[i]=="injlist":
                     self.injlist=np.sort(np.unique(yaml.load(f.root.kwargs[i+1])))
-                elif f.root.kwargs[i]=="thlist":
-                    self.thlist=np.sort(np.unique(yaml.load(f.root.kwargs[i+1])))
                 elif f.root.kwargs[i]=="phaselist":
                     self.phaselist=np.sort(np.unique(yaml.load(f.root.kwargs[i+1])))
-            self.inj_n=yaml.load(f.root.meta_data.attrs.firmware)["inj"]["REPEAT"]
+            self.inj_n=yaml.load(f.root.meta_data.attrs.status)["inj"]["REPEAT"]
 
     def run(self,n=10000000):
         with tb.open_file(self.fdat,"a") as f:
@@ -258,8 +258,9 @@ class AnalyzeLECnts():
                 t.attrs.injlist=self.injlist
             elif x=="th":
                 t.attrs.thlist=self.thlist
-                
+
     def run_scurve_fit(self,dat,fdat_root):
+        print("### Fit scurves ###")
         uni=np.unique(dat[self.res["scurve_fit"]])
         buf=np.empty(len(uni),dtype=fdat_root.LEScurveFit.dtype)
         for u_i,u in enumerate(uni):
@@ -271,7 +272,8 @@ class AnalyzeLECnts():
                 cnt=dat["cnt"][args]
                 inj=np.append(self.injlist[self.injlist<np.min(inj)],inj)
                 cnt=np.append(np.zeros(len(inj)-len(cnt)),cnt)
-                fit=utils.fit_scurve(inj,cnt,A=self.inj_n,reverse=False)
+                sigma = utils.get_noise(inj, cnt, self.inj_n, False)
+                fit = utils.fit_scurve(cnt, inj, self.inj_n, sigma_0=sigma, reverse=False)
             for c in self.res["scurve_fit"]:
                 buf[u_i][c]=u[c]
             buf[u_i]["n"]=len(args)

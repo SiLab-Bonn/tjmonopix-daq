@@ -1,6 +1,5 @@
 import time
 import yaml
-import logging
 from tqdm import tqdm
 
 from tjmonopix.scan_base import ScanBase
@@ -21,15 +20,8 @@ class SimpleScan(ScanBase):
         cnt = 0
         scanned = 0
 
-        # Stop readout and clean FIFO but this does not clean all
-        if with_timestamp:
-            self.dut.stop_timestamp()
-        if with_tlu:
-            self.dut.stop_tlu()
-        if with_tdc:
-            self.dut.stop_tdc()
-
-        self.dut.stop_monoread()
+        # Stop readout and clean FIFO
+        self.dut.stop_all()
         self.dut['fifo'].reset()
 
         # Start readout
@@ -39,12 +31,12 @@ class SimpleScan(ScanBase):
             time.sleep(0.05)
             self.dut['fifo'].reset()
         if with_tdc:
-            self.dut.set_tdc()
+            self.dut.set_timestamp("mon")
         if with_tlu:
             tlu_delay = kwargs.pop('tlu_delay', 8)
             self.dut.set_tlu(tlu_delay)
         if with_timestamp:
-            self.dut.set_timestamp()
+            self.dut.set_timestamp("rx_1")
 
         self.dut.reset_ibias()
 
@@ -80,7 +72,7 @@ class SimpleScan(ScanBase):
 
         # Stop FIFO readout
         if with_timestamp:
-            self.dut.stop_timestamp()
+            self.dut.stop_all()
             self.meta_data_table.attrs.timestamp_status = yaml.dump(
                 self.dut["timestamp"].get_configuration())
         if with_tlu:

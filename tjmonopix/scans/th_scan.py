@@ -6,7 +6,7 @@ import tables as tb
 import logging
 import yaml
 
-import monopix_daq.scans.injection_scan as injection_scan
+import tjmonopix.scans.injection_scan as injection_scan
 INJCAP=2.7E-15
 
 local_configuration={"injlist": np.arange(0.005,0.6,0.005),
@@ -25,7 +25,6 @@ class ThScan(injection_scan.InjectionScan):
         """
         kwargs["pix"]=kwargs.pop("pix",local_configuration['pix'])
 
-        kwargs["thlist"]=None
         kwargs["injlist"]=kwargs.pop("injlist",local_configuration['injlist'])
         kwargs["phaselist"]=None
 
@@ -37,10 +36,10 @@ class ThScan(injection_scan.InjectionScan):
         fraw = self.output_filename +'.h5'
         fhit=fraw[:-7]+'hit.h5'
         fev=fraw[:-7]+'ev.h5'
-        
+
         super(ThScan, self).analyze()
 
-        import monopix_daq.analysis.analyze_cnts as analyze_cnts
+        import tjmonopix.analysis.analyze_cnts as analyze_cnts
         ana=analyze_cnts.AnalyzeCnts(fev,fraw)
         ana.init_scurve()
         ana.init_scurve_fit()
@@ -54,7 +53,7 @@ class ThScan(injection_scan.InjectionScan):
         fraw = self.output_filename +'.h5'
         fpdf = self.output_filename +'.pdf'
 
-        import monopix_daq.analysis.plotting_base as plotting_base
+        import tjmonopix.analysis.plotting_base as plotting_base
         with plotting_base.PlottingBase(fpdf,save_png=True) as plotting:
             with tb.open_file(fraw) as f:
                 firmware=yaml.load(f.root.meta_data.attrs.firmware)
@@ -111,7 +110,7 @@ class ThScan(injection_scan.InjectionScan):
                                              title=f.root.ThDist.title)
 
 if __name__ == "__main__":
-    from monopix_daq import monopix
+    from tjmonopix import tjmonopix
     import argparse
     
     parser = argparse.ArgumentParser(usage="analog_scan.py xxx_scan",
@@ -132,7 +131,7 @@ if __name__ == "__main__":
     local_configuration["injlist"]=np.arange(args.inj_start,args.inj_stop,args.inj_step)
     local_configuration["n_mask_pix"]=args.n_mask_pix
 
-    m=monopix.Monopix()
+    m=tjmonopix.TJMonoPix()
     scan = ThScan(m,online_monitor_addr="tcp://127.0.0.1:6500")
     
     if args.config_file is not None:

@@ -9,6 +9,7 @@ from Queue import Queue, Empty
 
 data_iterable = ("data", "timestamp_start", "timestamp_stop", "error")
 
+
 class RxSyncError(Exception):
     pass
 
@@ -54,8 +55,8 @@ class FifoReadout(object):
         self.reset_rx()
         self.reset_sram_fifo()
         self._record_count_lock = Lock()
-        self.set_record_count(0,reset=True)
-        
+        self.set_record_count(0, reset=True)
+
     @property
     def is_running(self):
         return self._is_running
@@ -88,7 +89,7 @@ class FifoReadout(object):
     def start(self, callback=None, errback=None, reset_rx=False, reset_sram_fifo=False, clear_buffer=False, fill_buffer=False, no_data_timeout=None):
         if self._is_running:
             raise RuntimeError("Readout already running: use stop() before start()")
-        
+
         logging.info("Starting FIFO readout")
         self._is_running = True
         self.callback = callback
@@ -139,7 +140,7 @@ class FifoReadout(object):
                 self.errback(sys.exc_info())
             else:
                 logging.error(exc)
-        
+
         # If threads are still running, join for good (either because of exception or normal termination)
         if self.readout_thread.is_alive():
             self.readout_thread.join()
@@ -156,13 +157,13 @@ class FifoReadout(object):
         data_rx_lost_count = self.get_data_rx_fifo_discard_count()
         tlu_lost_count = self.get_data_tlu_fifo_discard_count()
         timestamp_lost_count = self.get_data_timestamp_fifo_discard_count()
-        
+
         logging.info('Recived words: %d', self._record_count)
         logging.info('Data queue size: %d', len(self._data_deque))
         logging.info('SRAM FIFO size: %d', self.dut['fifo']['FIFO_SIZE'])
-        logging.info('Channel:                     %s', " | ".join(['TDC','DATA_RX','TLU',"TIMESTAMP"]))
+        logging.info('Channel:                     %s', " | ".join(['TDC', 'DATA_RX', 'TLU', 'TIMESTAMP']))
         logging.info('Discard counter:             %s', " | ".join([str(tdc_discard_count).rjust(3), str(data_rx_lost_count).rjust(7),
-                                                                  str(tlu_lost_count).rjust(3), str(timestamp_lost_count).rjust(9)]))
+                                                                    str(tlu_lost_count).rjust(3), str(timestamp_lost_count).rjust(9)]))
 
         if tdc_discard_count or data_rx_lost_count:
             logging.warning('Errors detected')
@@ -208,7 +209,7 @@ class FifoReadout(object):
                     break
                 else:
                     self._words_per_read.append(0)
-            
+
             finally:
                 time_wait = self.readout_interval - (time() - time_read)
             if self._calculate.is_set():
@@ -248,10 +249,10 @@ class FifoReadout(object):
                 #    raise RxSyncError('No RX sync')
                 #if any(self.get_rx_8b10b_error_count()):
                 #    raise EightbTenbError('RX 8b10b error(s) detected')
-                
+
                 if self.get_data_rx_fifo_discard_count():
                     raise FifoError('DATA RX FIFO discard error(s) detected')
-                
+
                 if self.get_tdc_fifo_discard_count():
                     raise FifoError('TDC FIFO discard error(s) detected')
             except Exception:
@@ -280,18 +281,19 @@ class FifoReadout(object):
 
     def read_status(self):
         raise NotImplementedError()
-        
+
     def get_record_count(self):
         self._record_count_lock.acquire()
-        cnt=self._record_count
+        cnt = self._record_count
         self._record_count_lock.release()
         return cnt
-    def set_record_count(self,cnt,reset=False):
+
+    def set_record_count(self, cnt, reset=False):
         self._record_count_lock.acquire()
         if reset:
-            self._record_count=cnt
+            self._record_count = cnt
         else:
-            self._record_count=self._record_count+cnt
+            self._record_count = self._record_count + cnt
         self._record_count_lock.release()
 
     def reset_sram_fifo(self):
@@ -316,24 +318,24 @@ class FifoReadout(object):
     def get_tdc_fifo_discard_count(self, channels=None):
         pass
         # return self.dut['tdc'].LOST_DATA_COUNTER
-    
+
     def get_data_rx_fifo_discard_count(self, channels=None):
         return self.dut['data_rx'].LOST_COUNT
-        
+
     def get_data_timestamp_fifo_discard_count(self, channels=None):
         try:
-            ret=self.dut['timestamp'].LOST_COUNT
+            ret = self.dut['timestamp'].LOST_COUNT
         except:
-            ret=0
+            ret = 0
         return ret
-    
+
     def get_data_tlu_fifo_discard_count(self, channels=None):
         try:
-            ret=self.dut['tlu'].LOST_DATA_COUNTER
+            ret = self.dut['tlu'].LOST_DATA_COUNTER
         except:
-            ret=0
+            ret = 0
         return ret
-        
+
     def get_float_time(self):
         """
         returns time as double precision floats - Time64 in pytables - mapping to and from python datetime's
