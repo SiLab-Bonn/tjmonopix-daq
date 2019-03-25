@@ -148,6 +148,15 @@ class BuildEvents():
         self.lower=np.uint64(np.abs(lower))
         self.offset=(WAIT_CYCLES+1) * 16
         
+    def check_fist_data(self,tlu_e,ts_e):
+        if (tlu_e["timestamp"]-ts_e["timestamp"]) & np.uint64(0x7FFFF) > np.uint64(0x15-16) \
+           and (tlu_e["timestamp"]-ts_e["timestamp"]) & np.uint64(0x7FFFF)< np.uint64(0x150+16*2) :
+                #print "tlu and tlu_ts is synchronized"
+                return 0
+        else:
+            print "tlu and tlu_ts is not synchronized, synchronize data manually"
+            return -1
+        
     def run(self, hits):
         self.tlu=np.append(self.tlu,hits[hits["col"]==255][["timestamp","cnt"]])
         self.ts=np.append(self.ts,hits[hits["col"]==252][["timestamp"]])

@@ -255,10 +255,13 @@ always@(posedge RX_CLK)
     else if(cnt != 7'hff)
         cnt <= cnt + 1;
 
-        
 reg [26:0] ser;
 always@(posedge RX_CLK)
     ser <= {ser[25:0], RX_DATA};
+    
+reg [26:0] ser_neg;
+    always@(negedge RX_CLK)
+        ser_neg <= {ser_neg[25:0], RX_DATA};
 
 wire store_data;
 assign store_data = (cnt == CONF_READ_SHIFT[7:1]);
@@ -266,11 +269,14 @@ assign store_data = (cnt == CONF_READ_SHIFT[7:1]);
 reg [26:0] data_out;
 wire [111:0] data_to_cdc;   // [82:0] data_to_cdc;
 
-always@(posedge RX_CLK)
+always@(posedge RX_CLK) begin
     if(RST_SYNC)
         data_out <= 0;
-    else if(store_data)
+    else if(store_data && CONF_READ_SHIFT[0]==0) 
         data_out <= ser;
+    else if(store_data && CONF_READ_SHIFT[0]==1)
+        data_out <= ser_neg;
+end
 
 reg data_out_strobe;        
 always@(posedge RX_CLK)

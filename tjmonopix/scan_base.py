@@ -76,6 +76,7 @@ class ScanBase(object):
             title='meta_data',
             filters=tb.Filters(complib='zlib', complevel=5, fletcher32=False))
         self.meta_data_table.attrs.kwargs = yaml.dump(kwargs)
+        self.meta_data_table.attrs.scan_id = self.scan_id
         status = self.dut.get_power_status()
         self.logger.info('power status: {:s}'.format(str(status)))
         self.meta_data_table.attrs.power_before = yaml.dump(status)

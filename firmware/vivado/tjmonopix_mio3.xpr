@@ -3,7 +3,7 @@
 <!--                                                         -->
 <!-- Copyright 1986-2016 Xilinx, Inc. All Rights Reserved.   -->
 
-<Project Version="7" Minor="12" Path="/home/user/workspace/tjmonopix/tjmonopix_git/firmware/vivado/tjmonopix_mio3.xpr">
+<Project Version="7" Minor="12" Path="/home/user/workspace/tjmonopix/tjmonopix_inj/firmware/vivado/tjmonopix_mio3.xpr">
   <DefaultLaunch Dir="$PRUNDIR"/>
   <Configuration>
     <Option Name="Id" Val="25e90b18d3ad41a98b8911fbbc91521b"/>
@@ -56,8 +56,8 @@
         <Option Name="TopModule" Val="tjmonopix_mio3"/>
         <Option Name="VerilogDir" Val="$PPRDIR/../src"/>
         <Option Name="VerilogDir" Val="$PPRDIR/../../../tjmonopix_mio3/firmware/src/SiTCP"/>
-        <Option Name="VerilogDir" Val="$PPRDIR/../../../../basil/basil_tid/basil/firmware/modules"/>
-        <Option Name="VerilogDir" Val="$PPRDIR/../../../../basil/basil_tid/basil/firmware/modules/utils"/>
+        <Option Name="VerilogDir" Val="$PPRDIR/../../../../basil/basil_tjmonopix/firmware/modules"/>
+        <Option Name="VerilogDir" Val="$PPRDIR/../../../../basil/basil_tjmonopix/firmware/modules/utils"/>
       </Config>
     </FileSet>
     <FileSet Name="constrs_1" Type="Constrs" RelSrcDir="$PSRCDIR/constrs_1">

@@ -9,6 +9,7 @@ from tjmonopix.analysis import plotting
 
 
 class SimpleScan(ScanBase):
+    scan_id = "simple"
 
     def scan(self, **kwargs):
         with_tj = kwargs.pop('with_tj', True)
@@ -30,9 +31,6 @@ class SimpleScan(ScanBase):
 
         self.dut.stop_monoread()
         self.dut['fifo'].reset()
-
-        # Write scan_id (type) to file
-        self.meta_data_table.attrs.scan_id = "simple_scan"
 
         # Start readout
         if with_tj:
@@ -101,9 +99,12 @@ class SimpleScan(ScanBase):
 
         with analysis.Analysis(raw_data_file=data_file, cluster_hits=False) as a:
             a.analyze_data()
+            self.analyzed_data_file=a.analyzed_data_file
 
-        if create_plots:
-            with plotting.Plotting(analyzed_data_file=a.analyzed_data_file) as p:
+    def plot(self, analyzed_data_file=None):
+        if danalyzed_data_file is None:
+            analyzed_data_file = self.analyzed_data_file
+        with plotting.Plotting(analyzed_data_file=analyzed_data_file) as p:
                 p.create_standard_plots()
 
 

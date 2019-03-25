@@ -239,6 +239,16 @@ class TJMonoPix(Dut):
         # TODO !!
         self.write_conf()
 
+    def save_config(self, filename=None):
+        conf = self.get_power_status()
+        conf.update(self.dut.get_configuration())      
+        conf['conf_flg'] = self.conf_flg
+        if filename == None:
+            filename = None
+            # time.strf TODO!
+        with open(filename, 'w') as f:
+            f.write(yaml.yamldump(conf))
+
     def power_on(self, VDDA=1.8, VDDP=1.8, VDDA_DAC=1.8, VDDD=1.8, VPCSWSF=0.5, VPC=1.3, BiasSF=100, INJ_LO=0.2, INJ_HI=3.6):
         # Set power
 
@@ -450,6 +460,15 @@ class TJMonoPix(Dut):
             logger.info('ibias = ' + str(dacunits))
             logger.info('ibias = ' + str(1400.0 * ((dacunits + 1) / 128.0)) + 'nA')
 
+    def reset_ibias(self):
+        """ To eliminate oscillations, set ibias to 0 and back to previous value
+        """
+        ibias = self['CONF_SR']['SET_IBIAS'][:]
+        self.set_ibias_dacunits(0, 0)
+        self.write_conf()
+        self['CONF_SR']['SET_IBIAS'][:] = ibias
+        self.write_conf()
+
     def set_idb_dacunits(self, dacunits, printen=False):
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
         low = (128 - dacunits) // 2
@@ -537,6 +556,28 @@ class TJMonoPix(Dut):
             logger.info('vcasn = ' + str(dacunits))
             logger.info('vcasn = ' + str(((1.8 / 127.0) * dacunits)) + 'V')
 
+    def get_conf_sr(self,mode="mwr"):
+        """ mode:'w' get values in FPGA write register (output to SI_CONF)
+                 'r' get values in FPGA read register (input from SO_CONF)
+                 'm' get values in cpu memory (data in self['CONF_SR'])
+                 'mrw' get all
+        """
+        size=self['CONF_SR'].get_size()
+        r=size%8
+        byte_size=size/8
+        if r!=0:
+            r=8-r
+            byte_size=byte_size+1
+        data={"size":size}
+        if "w" in mode:
+           data["write_reg"]=self["CONF_SR"].get_data(addr=0,size=byte_size).tostring()
+        if "r" in mode:
+           data["read_reg"]=self["CONF_SR"].get_data(size=byte_size).tostring()
+        if "m" in mode:
+           a=bitarray("0000000")[0:r]+self["CONF_SR"][:]
+           data["memory"]=a[::-1].tobytes()
+        return data 
+
 ############################## SET data readout ##############################
 
     def cleanup_fifo(self, n=10):
@@ -597,12 +638,14 @@ class TJMonoPix(Dut):
         return lost_cnt
 
     # def set_monoread(self, start_freeze=64, start_read=66, stop_read=68, stop_freeze=100, stop=105, en=True):
-    def set_monoread(self, start_freeze=57, start_read=60, stop_read=62, stop_freeze=95, stop=100, en=True):
+    def set_monoread(self, start_freeze=57, start_read=60, stop_read=62, stop_freeze=95, stop=100,
+                     en=True, read_shift=52):
         self['data_rx'].CONF_START_FREEZE = start_freeze  # default 57
         self['data_rx'].CONF_STOP_FREEZE = stop_freeze  # default 95
         self['data_rx'].CONF_START_READ = start_read  # default 60
         self['data_rx'].CONF_STOP_READ = stop_read  # default 62
         self['data_rx'].CONF_STOP = stop  # default 100
+        self['data_rx'].CONF_READ_SHIFT = read_shift  # default 100
 
         self.cleanup_fifo(2)
         self['data_rx'].set_en(en)
@@ -720,15 +763,6 @@ class TJMonoPix(Dut):
             hits[i] = cnt
 
         return hits
-
-    def reset_ibias(self):
-        """ To eliminate oscillations, set ibias to 0 and back to previous value
-        """
-        ibias = self['CONF_SR']['SET_IBIAS'][:]
-        self.set_ibias_dacunits(0, 0)
-        self.write_conf()
-        self['CONF_SR']['SET_IBIAS'][:] = ibias
-        self.write_conf()
 
     def auto_mask(self, th=2, step=10, exp=0.2):
         logger.info("auto_mask th=%d step=%d exp=%d fl=%s" % (th, step, exp, self.SET['fl']))

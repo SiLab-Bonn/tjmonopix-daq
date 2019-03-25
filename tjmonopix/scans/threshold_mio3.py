@@ -22,7 +22,7 @@ if __name__ == "__main__":
         scan_config = configuration["scan"]
 
     # TESTBEAM: dut = "/home/silab/tjmonopix/tjmonopix-daq/tjmonopix-testbeam-april/tjmonopix/tjmonopix_mio3.yaml"
-    dut = '/home/user/workspace/tjmonopix/tjmonopix_thscan/tjmonopix/tjmonopix_mio3.yaml'
+    dut = '/home/user/workspace/tjmonopix/tjmonopix_inj/tjmonopix/tjmonopix_mio3.yaml'
     dut = TJMonoPix(conf=dut)
     dut.init(fl="EN_" + dut_config["flavor"])
 

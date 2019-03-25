@@ -22,7 +22,7 @@ class tjmono_data_rx(RegisterHardwareLayer):
                   'CONF_START_READ': {'descr': {'addr': 6, 'size': 8}},
                   'CONF_STOP_READ': {'descr': {'addr': 7, 'size': 8}},
                   'CONF_STOP': {'descr': {'addr': 8, 'size': 8}},
-                  'EXPOSURE_TIME': {'descr': {'addr': 9, 'size': 64}},
+                  'CONF_READ_SHIFT': {'descr': {'addr': 9, 'size': 8}},
                   'READY': {'descr': {'addr': 18, 'size': 1, 'offset': 0, 'properties': ['ro']}},
                   'CNT2': {'descr': {'addr': 18, 'size': 8}},
                   }

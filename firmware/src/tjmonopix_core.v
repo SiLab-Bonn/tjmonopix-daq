@@ -42,7 +42,7 @@ module tjmonopix_core (
     output wire RST_N,
     
     output wire INJECTION,
-	output wire INJECTION_IN,
+    input wire INJECTION_IN,
     
     output wire CLK_BX,
     output wire CLK_OUT,
@@ -62,7 +62,7 @@ module tjmonopix_core (
 );
 
 // -------  MODULE ADREESSES  ------- //
-localparam VERSION = 8'h04;
+localparam VERSION = 8'h05;
 
 localparam GPIO_BASEADDR = 16'h0010;
 localparam GPIO_HIGHADDR = 16'h0100-1;
@@ -73,8 +73,8 @@ localparam PULSE_INJ_HIGHADDR = 16'h0200-1;
 localparam DATA_RX_BASEADDR = 16'h0500;
 localparam DATA_RX_HIGHADDR = 16'h0600-1;
 
-localparam SPI_BASEADDR = 16'h1000;
-localparam SPI_HIGHADDR = 16'h2000-1;
+localparam SPI_BASEADDR = 16'h5000;
+localparam SPI_HIGHADDR = 16'h8000-1;
 
 localparam PULSE_GATE_TDC_BASEADDR = 16'h0400;
 localparam PULSE_GATE_TDC_HIGHADDR = 16'h0500-1;
@@ -342,6 +342,7 @@ timestamp640
 	 .DI(INJECTION_IN),
 	 .EXT_ENABLE(GATE_TDC),
 	 .EXT_TIMESTAMP(TIMESTAMP),
+	 .EXT_ENABLE(GATE_TDC),
 
     .FIFO_READ(TS_INJ_FIFO_READ),
     .FIFO_EMPTY(TS_INJ_FIFO_EMPTY),
@@ -365,9 +366,9 @@ timestamp640
      .CLK40(CLK40),
      .CLK160(CLK160),
      .CLK320(CLK320),
-	 .DI(HITOR_B),
-	 .EXT_TIMESTAMP(TIMESTAMP),
-	 .EXT_ENABLE(GATE_TDC),
+     .DI(HITOR_B),
+     .EXT_TIMESTAMP(TIMESTAMP),
+     .EXT_ENABLE(GATE_TDC),
 
     .FIFO_READ(TS_MON_FIFO_READ),
     .FIFO_EMPTY(TS_MON_FIFO_EMPTY),

@@ -1,14 +1,14 @@
 
 ---
 name    : tjmonopix-daq
-version : 0.1.0
+version : 0.1.5
 
 # MIO3
 transfer_layer:
   - name  : intf
     type  : SiTcp
     init:
-        ip : "192.168.10.20"
+        ip : "192.168.10.23"
         udp_port : 4660
         tcp_port : 24
         tcp_connection : True
@@ -47,44 +47,46 @@ hw_drivers:
   - name      : spi
     type      : spi
     interface : intf
-    base_addr : 0x11000
+    base_addr : 0x15000
     
   - name      : inj
     type      : tjmonopix.pulse_gen640
     interface : intf
     base_addr : 0x10100
        
-  - name      : data_rx
+  - name      : data_rx  # 0,1,2,3
     type      : tjmonopix.tjmono_data_rx
     interface : intf
     base_addr : 0x10500
 
-  - name      : tlu
+  - name      : tlu     # 8,a,b,c,d,e,f
     type      : tlu
     interface : intf
     base_addr : 0x10600
     size      : 8
     
-  - name      : timestamp_rx1
+  - name      : timestamp_rx1  #4
     type      : tjmonopix.timestamp640
     interface : intf
     base_addr : 0x10C00
     size      : 8
 
-  - name      : timestamp_mon
+  - name      : timestamp_mon  #6
     type      : tjmonopix.timestamp640
     interface : intf
     base_addr : 0x10900
-
-  - name      : timestamp_tlu
+    
+  - name      : timestamp_tlu #7
     type      : tjmonopix.timestamp640
     interface : intf
     base_addr : 0x10A00
+    size      : 8
 
-  - name      : timestamp_inj
+  - name      : timestamp_inj #5
     type      : tjmonopix.timestamp640
     interface : intf
     base_addr : 0x10B00
+    size      : 8
 
 
   - name      : gate_tdc
@@ -135,8 +137,6 @@ registers:
     hw_driver   : GPAC
     arg_names   : [value]
     arg_add     : {'channel': 'PWR1'}
-    init        : 
-        value : 1.8
 
   - name        : VDDA
     type        : FunctionalRegister
@@ -371,6 +371,4 @@ registers:
         - name     : COL_PULSE_SEL
           size     : 448
           offset   : 3924
-          
-        
-       
+
