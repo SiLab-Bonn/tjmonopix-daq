@@ -627,12 +627,14 @@ class TJMonoPix(Dut):
         return lost_cnt
 
     # def set_monoread(self, start_freeze=64, start_read=66, stop_read=68, stop_freeze=100, stop=105, en=True):
-    def set_monoread(self, start_freeze=57, start_read=60, stop_read=62, stop_freeze=95, stop=100, en=True):
+    def set_monoread(self, start_freeze=57, start_read=60, stop_read=62, stop_freeze=95, stop=100,
+                     en=True, read_shift=52):
         self['data_rx'].CONF_START_FREEZE = start_freeze  # default 57
         self['data_rx'].CONF_STOP_FREEZE = stop_freeze  # default 95
         self['data_rx'].CONF_START_READ = start_read  # default 60
         self['data_rx'].CONF_STOP_READ = stop_read  # default 62
         self['data_rx'].CONF_STOP = stop  # default 100
+        self['data_rx'].CONF_READ_SHIFT = read_shift  # default 100
 
         self.cleanup_fifo(2)
         self['data_rx'].set_en(en)

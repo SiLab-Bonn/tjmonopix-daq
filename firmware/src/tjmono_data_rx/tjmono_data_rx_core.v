@@ -272,12 +272,10 @@ wire [111:0] data_to_cdc;   // [82:0] data_to_cdc;
 always@(posedge RX_CLK) begin
     if(RST_SYNC)
         data_out <= 0;
-    else if(store_data ) begin
-        if (CONF_READ_SHIFT[0]==1)
-            data_out <= ser_neg;
-        else
-            data_out <= ser;
-    end
+    else if(store_data && CONF_READ_SHIFT[0]==0) 
+        data_out <= ser;
+    else if(store_data && CONF_READ_SHIFT[0]==1)
+        data_out <= ser_neg;
 end
 
 reg data_out_strobe;        
