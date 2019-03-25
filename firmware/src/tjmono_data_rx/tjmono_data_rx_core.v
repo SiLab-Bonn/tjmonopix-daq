@@ -120,7 +120,7 @@ always @(posedge BUS_CLK) begin
         else if(BUS_ADD == 8)
             BUS_DATA_OUT <= CONF_STOP;
 		else if(BUS_ADD == 9)
-            BUS_DATA_OUT <= CONF_READ_SHIFT;
+            BUS_DATA_OUT <= CONF_READ_SHIFT[7:0];
          else if(BUS_ADD == 17)
             BUS_DATA_OUT <= {7'b0,READY};
          else if (BUS_ADD ==18)  ///debug
@@ -269,13 +269,16 @@ assign store_data = (cnt == CONF_READ_SHIFT[7:1]);
 reg [26:0] data_out;
 wire [111:0] data_to_cdc;   // [82:0] data_to_cdc;
 
-always@(posedge RX_CLK)
+always@(posedge RX_CLK) begin
     if(RST_SYNC)
         data_out <= 0;
-    else if(store_data && CONF_READ_SHIFT[0]==1'b1)
-        data_out <= ser_neg;
-    else if(store_data)
-        data_out <= ser;
+    else if(store_data ) begin
+        if (CONF_READ_SHIFT[0]==1)
+            data_out <= ser_neg;
+        else
+            data_out <= ser;
+    end
+end
 
 reg data_out_strobe;        
 always@(posedge RX_CLK)

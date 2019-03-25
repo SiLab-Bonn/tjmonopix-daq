@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 
 class ThresholdScan(ScanBase):
-
+    scan_id='threshold_scan'
     def scan(self, **kwargs):
 
         self.max_cols = self.dut.COL
@@ -25,9 +25,6 @@ class ThresholdScan(ScanBase):
         # Stop readout and clean FIFO
         self.dut.stop_all()
         self.dut['fifo'].reset()
-
-        # Write scan_id (type) to file
-        self.meta_data_table.attrs.scan_id = "threshold_scan"
 
         # Why is this needed?
         self.dut['data_rx'].set_en(True)

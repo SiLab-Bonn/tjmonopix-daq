@@ -3,7 +3,7 @@ from numba import njit
 import tables
 import yaml
 
-#@njit
+@njit
 def _build_with_tlu(sync,tj,data_out,upper,lower,data_format):
     tj_i=0
     i=0
@@ -24,8 +24,8 @@ def _build_with_tlu(sync,tj,data_out,upper,lower,data_format):
             data_out[i]["column"] = tj[tj_i]["col"]
             data_out[i]["row"] = tj[tj_i]["row"]
             if data_format & 0x2 == 0x2:
-                data_out[i]["trigger_timestamp"]= sync[sync_i]["tlu_timestamp"]
-                data_out[i]["ts_timestamp"]= sync[sync_i]["ts_timestamp"]
+                data_out[i]["tlu_timestamp"]= sync[sync_i]["tlu_timestamp"]
+                data_out[i]["trigger_timestamp"]= sync[sync_i]["ts_timestamp"]
                 data_out[i]["token_timestamp"]= tj[tj_i]["timestamp"]
                 data_out[i]["le"]= tj[tj_i]["le"]
                 data_out[i]["te"]= tj[tj_i]["te"]
@@ -62,9 +62,12 @@ def _sync_tlu_timestamp(tlu,ts,data_out,offset):
 
 def build_h5(fraw,fhit,fout,upper=0x80,lower=-0x100,data_format=0x2,n=1000000):
     buf_type=[("trigger_number","i2"),("tlu_timestamp","u8"),("ts_timestamp","u8")]
-    data_out_type=[("le","u1"),("te","u1"),("column","u1"),("row","u2"),
+    if data_format & 0x2 == 0x2:
+        data_out_type=[("le","u1"),("te","u1"),("column","u1"),("row","u2"),
                    ("trigger_number","i2"),("trigger_timestamp","u8"),
-                   ("ts_timestamp","u8"), ("token_timestamp","u8")]
+                   ("tlu_timestamp","u8"), ("token_timestamp","u8")]
+    else:
+        data_out_type=[("column","u1"),("row","u2"), ("trigger_number","i2")]
     with tables.open_file(fhit) as f_i:
         hits=f_i.root.Hits[:]
 
@@ -79,7 +82,7 @@ def build_h5(fraw,fhit,fout,upper=0x80,lower=-0x100,data_format=0x2,n=1000000):
     
     tlu=hits[hits["col"]==255][["timestamp","cnt"]]
     ts=hits[hits["col"]==252][["timestamp"]]
-    tj=hits[np.bitwise_and(hits["col"]<112, hits["cnt"]==0)]
+    tj=hits[np.bitwise_and(hits["col"]<112, hits["cnt"]==0)][["timestamp","col","row"]]
     print "# of data: tlu=%d ts=%d tj=%d"%(len(tlu),len(ts),len(tj))
     if len(tlu)==0 or len(ts)==0 or len(tj)==0:
        print "no data"
@@ -88,7 +91,7 @@ def build_h5(fraw,fhit,fout,upper=0x80,lower=-0x100,data_format=0x2,n=1000000):
     if check_tlu_data(tlu[0],ts[0]) == 0:
              pass
     elif check_tlu_data(tlu[0],ts[1]) == 0:
-             ts=ts[1:]
+             ts_i=ts[1:]
     elif check_tlu_data(tlu[1],ts[0]) == 0:
              tlu=tlu[1:]
     else:
@@ -99,10 +102,10 @@ def build_h5(fraw,fhit,fout,upper=0x80,lower=-0x100,data_format=0x2,n=1000000):
     data_out=np.empty(len(tj),dtype=data_out_type)
  
     err, buf_i, tlu_i, ts_i, buf = _sync_tlu_timestamp(tlu,ts,buf,offset)
-    print "assign 64bits-timestamp to tlu err=%d assigned=%d tlu=%d ts=%d"%(err, buf_i, tlu_i, ts_i)
+    print "assign 64bits-timestamp to tlu err=%d assigned=%d tlu=%d ts=%d"(err, buf_i, tlu_i, ts_i)
     
     err, i, buf_i, tj_i, data_out = _build_with_tlu(buf[:buf_i],tj,data_out,upper,lower,data_format)
-    print "assign tlu number to tj err=%d assigned=%d tlu_with_ts=%d tj=%d"%(err, i, buf_i, tj_i)
+    print "assign tlu number to tj err=%d assigned=%d tlu_with_ts=%d tj=%d"(err, i, buf_i, tj_i)
     
     with tables.open_file(fout, "w") as f_o:
         description = np.zeros((1,), dtype=data_out_type).dtype
@@ -118,18 +121,18 @@ def check_tlu_data(tlu_e,ts_e):
             #print "tlu and tlu_ts is synchronized"
             return 0
     else:
-        print "tlu and tlu_ts is not synchronized"
+        #print "tlu and tlu_ts is not synchronized"
         return -1
     
 class BuildEvents():
     def __init__(self,upper=0x80,lower=-0x100,WAIT_CYCLES=20,data_format=0x2):
-        self.data_format=data_format
+        self.data_format=2
         self.reset(upper,lower,WAIT_CYCLES)
         
     def reset(self,upper=0x80,lower=-0x100,WAIT_CYCLES=20,n=1000000):
         if self.data_format & 0x2 == 0x2:
-            data_out_type=[("column","u1"),("row","u2"), ("trigger_number","i2"),("tlu_timestamp","u8"),("ts_timestamp","u8"), 
-                   ("token_timestamp","u8"),("le","u1"),("te","u1")]
+            data_out_type=[("column","u1"),("row","u2"), ("trigger_number","i2"),("tlu_timestamp","u8"),("trigger_timestamp","u8"), 
+                   ("token_timestamp","u8")]
         else:
             data_out_type=[("column","u1"),("row","u2"), ("trigger_number","i2")]
         buf_type=[("trigger_number","i2"),("tlu_timestamp","u8"),("ts_timestamp","u8")]
@@ -158,17 +161,28 @@ class BuildEvents():
         self.tlu=np.append(self.tlu,hits[hits["col"]==255][["timestamp","cnt"]])
         self.ts=np.append(self.ts,hits[hits["col"]==252][["timestamp"]])
         self.tj=np.append(self.tj,hits[np.bitwise_and(hits["col"]<112, hits["cnt"]==0)][["timestamp","col","row"]])
-        if len(self.ts)<2 or len(self.tlu)<2 or len(self.tj)<1:
-             return np.empty(0,dtype=self.data_out.dtype)
-        if check_tlu_data(self.tlu[0],self.ts[0]) == 0:
-                 pass
-        elif check_tlu_data(self.tlu[0],self.ts[1]) == 0:
-                 self.ts=self.ts[1:]
-        elif check_tlu_data(self.tlu[1],self.ts[0]) == 0:
-                 self.tlu=self.tlu[1:]
-        else:
+        if len(self.tlu) ==0 or len(self.ts) == 0:
             return np.empty(0,dtype=self.data_out.dtype)
+        
+        if len(self.tlu) > 1 and len(self.ts) > 1:
+            #mask=np.uint64(0x7ffff)
+            #print "---------------",self.tlu[0]["timestamp"]&mask,self.ts[0]["timestamp"]&mask,self.tlu[1]["timestamp"]&mask,self.ts[1]["timestamp"]&mask
+            if check_tlu_data(self.tlu[0],self.ts[0]) == 0:
+                #print "okokokokokok"
+	              pass
+            elif check_tlu_data(self.tlu[0],self.ts[1]) == 0:
+                self.ts=self.ts[1:]
+            elif check_tlu_data(self.tlu[1],self.ts[0]) == 0:
+                self.tlu=self.tlu[1:]
+        else:
+	       print "synchronize tlu and tlu_ts manually" 
+	       return np.empty(0,dtype=self.data_out.dtype)
         err, buf_i, tlu_i, ts_i, self.tmpbuf = _sync_tlu_timestamp(self.tlu,self.ts,self.tmpbuf,self.offset)
+        if err != 0:
+            print "data might be broken",err,tlu_i,ts_i
+            return np.empty(0,dtype=self.data_out.dtype)
+        self.tlu=self.tlu[tlu_i:]
+        self.ts=self.ts[ts_i:]
         self.buf=np.append(self.buf,self.tmpbuf[:buf_i])
         err, i, buf_ii, tj_i, self.data_out = _build_with_tlu(self.buf,self.tj,self.data_out,self.upper,self.lower,self.data_format)
         if err != 0 or self.data_format & 0x1 ==0x01:
