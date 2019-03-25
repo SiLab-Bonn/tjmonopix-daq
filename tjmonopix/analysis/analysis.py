@@ -323,6 +323,17 @@ class Analysis():
                                                           complevel=5,
                                                           fletcher32=False))
 
+                ave_tots = au.tot_ave3d(hits, scan_param_range)
+                ave_tots = np.array(ave_tots,dtype=np.float32)/np.array(hist_scurve,dtype=np.float32)
+                out_file.create_carray(out_file.root,
+                                       name="ToTAve",
+                                       title="ToT average",
+                                       obj=ave_tots,
+                                       filters=tb.Filters(complib='blosc',
+                                                          complevel=5,
+                                                          fletcher32=False))
+
+
                 self.threshold_map, self.noise_map, self.chi2_map = au.fit_scurves_multithread(
                     hist_scurve.reshape(112 * 224, 64), scan_param_range, n_injections=n_injections, invert_x=False)
 

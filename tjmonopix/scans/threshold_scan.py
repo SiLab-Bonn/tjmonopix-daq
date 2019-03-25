@@ -114,12 +114,13 @@ class ThresholdScan(ScanBase):
         self.dut.stop_all()
 
     @classmethod
-    def analyze(self, data_file=None, create_plots=True):
+    def analyze(self, data_file=None):
         if data_file is None:
             data_file = self.output_filename + '.h5'
 
         with analysis.Analysis(raw_data_file=data_file) as a:
             a.analyze_data()
+            self.analyzed_data_file=a.analyzed_data_file
             mean_thr_rdpw = np.median(a.threshold_map[:, 112:220][np.nonzero(a.threshold_map[:, 112:220])])
             mean_thr_fdpw = np.median(a.threshold_map[:, :112][np.nonzero(a.threshold_map[:, :112])])
 
@@ -127,8 +128,15 @@ class ThresholdScan(ScanBase):
             print(np.median(a.threshold_map[:, :112][np.nonzero(a.threshold_map[:, :112])]))
 
             #logging.info("Mean threshold for removed DPW region is %i DAC units" % (int(mean_thr_rdpw)))
-            #logging.info("Mean threshold for full DPW region is %i DAC units" % (int(mean_thr_fdpw)))
+            logging.info("Mean threshold for full DPW region is %i DAC units" % (int(mean_thr_fdpw)))
 
+    def plot(self,analyzed_data_file=None):
+        if data_file is None:
+           if hasattr(self,"analysis_data_file"):
+               analyzed_data_file = self.analyzed_data_file
+           else:
+               analyzed_data_file = self.output_filename + '_interpreted.h5'
+            
         if create_plots:
             with plotting.Plotting(analyzed_data_file=a.analyzed_data_file) as p:
                 p.create_standard_plots()
