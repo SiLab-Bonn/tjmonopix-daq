@@ -402,16 +402,21 @@ class TJMonoPix(Dut):
         self['CONF_SR']['COL_PULSE_SEL'][(flavor * 112) + col] = 1
         self['CONF_SR']['INJ_ROW'][row] = 1
 
-    def prepare_injection_mask(self, start_col=0, stop_col=112, step_col=56, start_row=0, stop_row=224, step_row=4):
-        n_masks = min(stop_col - start_col, step_col) * min(stop_row - start_row, step_row)
+    def prepare_injection_mask(self, start_col=0, stop_col=112, step_col=56, width_col=56, start_row=0, stop_row=224, step_row=4, width_row=4):
+        """ Start col/row: first col/row
+        Stop col/row: last col/row
+        Step col/row: col/row step to inject
+        Width col/row: Step width to inject into cols/rows at same time
+        """
+        n_masks = min(stop_col - start_col, width_col) * min(stop_row - start_row, width_row) / (step_col * step_row)
         masks = []
 
         for i in range(n_masks):
             ba_col = 448 * bitarray('0')
             ba_row = 224 * bitarray('0')
 
-            ba_col[self.fl_n * 112 + start_col + i // step_row:self.fl_n * 112 + stop_col:step_col] = True
-            ba_row[start_row + i % step_row:stop_row:step_row] = True
+            ba_col[self.fl_n * 112 + start_col + (i // width_row) * step_col:self.fl_n * 112 + stop_col:width_col] = True
+            ba_row[start_row + (i % (width_row // step_row) * step_row):stop_row:width_row] = True
 
             masks.append({'col': ba_col, 'row': ba_row})
         return masks
@@ -508,6 +513,12 @@ class TJMonoPix(Dut):
     def get_vh_dacunits(self):
         for i in range(0, 128):
             if self['CONF_SR']['SET_VH'][i] is True:
+                return i
+        return -1
+
+    def get_vl_dacunits(self):
+        for i in range(0, 128):
+            if self['CONF_SR']['SET_VL'][i] is True:
                 return i
         return -1
 
