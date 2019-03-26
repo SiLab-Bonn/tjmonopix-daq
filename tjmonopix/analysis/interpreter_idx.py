@@ -41,9 +41,9 @@ def _interpret_idx(raw,buf,start,col,row,le,te,noise,timestamp,rx_flg,
            #if debug & 0x4 ==0x4:
                #print r_i,hex(r),rx_flg,"ts=",hex(timestamp),col,row,noise
 
-           if rx_flg==0x0:
+            if rx_flg==0x0:
               rx_flg=0x1
-           else:
+            else:
                err=err+1
                buf[buf_i]["row"]=0xE1
                buf[buf_i]["col"]=0
@@ -62,9 +62,9 @@ def _interpret_idx(raw,buf,start,col,row,le,te,noise,timestamp,rx_flg,
                #print r_i,hex(r),rx_flg,"ts=",hex(timestamp),le,te
                #pass
                
-           if rx_flg==0x1:
+            if rx_flg==0x1:
               rx_flg=0x2
-           else:
+            else:
                err=err+1
                buf[buf_i]["row"]=0xE1
                buf[buf_i]["col"]=1
@@ -77,12 +77,12 @@ def _interpret_idx(raw,buf,start,col,row,le,te,noise,timestamp,rx_flg,
                rx_flg=0
 
         elif (r & 0xF0000000 == 0x20000000):
-            timestamp = (timestamp & MASK1_LOWER) | (
-                (np.uint64(r) << np.uint64(32)) & MASK1_UPPER)
+            timestamp = (timestamp & TJ_MASK_LOWER) | (
+                (np.uint64(r) << np.uint64(32)) & TJ_MASK_UPPER)
            #if debug & 0x4 ==0x4:
                #print r_i,hex(r),rx_flg,"ts=",hex(timestamp)
                
-           if rx_flg == 0x2:
+            if rx_flg == 0x2:
                buf[buf_i]["row"]=row
                buf[buf_i]["col"]=col
                buf[buf_i]["le"]=le
@@ -92,7 +92,7 @@ def _interpret_idx(raw,buf,start,col,row,le,te,noise,timestamp,rx_flg,
                buf[buf_i]["index"]=r_i+start
                buf_i=buf_i+1
                rx_flg=0
-           else:
+            else:
                err=err+1
                buf[buf_i]["row"]=0xE1
                buf[buf_i]["col"]=2
@@ -147,7 +147,7 @@ def _interpret_idx(raw,buf,start,col,row,le,te,noise,timestamp,rx_flg,
             if ts_flg==0x1:
               ts_flg=0x2
             else:
-               if debug & 0x1 == 0x1:
+                if debug & 0x1 == 0x1:
                    buf[buf_i]["col"]=0xEE
                    buf[buf_i]["row"]=1
                    buf[buf_i]["le"]=ts_flg
@@ -156,8 +156,8 @@ def _interpret_idx(raw,buf,start,col,row,le,te,noise,timestamp,rx_flg,
                    buf[buf_i]["cnt"]=r
                    buf[buf_i]["index"]=r_i+start
                    buf_i=buf_i+1
-               ts_flg=0x0
-               err=err+1
+                ts_flg=0x0
+                err=err+1
         elif r & 0xFF000000 == 0x43000000: ## timestamp
             ts_pre=ts_timestamp
             ts_timestamp=(ts_timestamp & TS_MASK3)+ (np.uint64(r & TS_MASK_DAT) << np.uint64(48))
@@ -204,7 +204,7 @@ def _interpret_idx(raw,buf,start,col,row,le,te,noise,timestamp,rx_flg,
                     #    buf[buf_i]['idx']=r_i
                     buf_i = buf_i+1
             else:
-               if debug & 0x1 == 0x1:
+                if debug & 0x1 == 0x1:
                    buf[buf_i]["col"]=0xEC
                    buf[buf_i]["row"]=2
                    buf[buf_i]["le"]=ts3_flg
@@ -213,8 +213,8 @@ def _interpret_idx(raw,buf,start,col,row,le,te,noise,timestamp,rx_flg,
                    buf[buf_i]["cnt"]=r
                    buf[buf_i]["index"]=r_i+start
                    buf_i=buf_i+1
-               ts3_flg = 0 
-               err=err+1
+                ts3_flg = 0 
+                err=err+1
         elif r & 0xFF000000 == 0x52000000:  # timestamp
             ts3_timestamp = (ts3_timestamp & np.uint64(0xFFFF000000FFFFFF)) | \
                 (np.uint64(r & TS_MASK_DAT) << np.uint64(24))
@@ -426,7 +426,7 @@ def _interpret_idx(raw,buf,start,col,row,le,te,noise,timestamp,rx_flg,
                     #    buf[buf_i]['idx']=r_i
                     buf_i = buf_i+1
             else:
-               if debug & 0x1 == 0x1:
+                if debug & 0x1 == 0x1:
                    buf[buf_i]["col"]=0xEB
                    buf[buf_i]["row"]=2
                    buf[buf_i]["le"]=ts4_flg
@@ -435,8 +435,8 @@ def _interpret_idx(raw,buf,start,col,row,le,te,noise,timestamp,rx_flg,
                    buf[buf_i]["cnt"]=r
                    buf[buf_i]["index"]=r_i+start
                    buf_i=buf_i+1
-               ts4_flg = 0  
-               err=err+1
+                ts4_flg = 0  
+                err=err+1
         elif r & 0xFF000000 == 0x72000000:  # timestamp
             ts4_timestamp = (ts4_timestamp & np.uint64(0xFFFF000000FFFFFF)) | \
                 (np.uint64(r & TS_MASK_DAT) << np.uint64(24))
@@ -577,7 +577,6 @@ def interpret_idx_h5(fin,fout,debug=12, n=100000000):
         hit_table=f_o.create_table(f_o.root,name="Hits",description=description,title='hit_data')
         with tables.open_file(fin) as f:
             meta=f.root.meta_data[:]
-            param=f.root.scan_parameters[:]
             end=len(f.root.raw_data)
             start=0
             t0=time.time()
