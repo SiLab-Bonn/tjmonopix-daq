@@ -12,7 +12,8 @@ from tqdm import tqdm
 
 
 class ThresholdScan(ScanBase):
-    scan_id='threshold_scan'
+    scan_id = 'threshold_scan'
+
     def scan(self, **kwargs):
 
         self.max_cols = self.dut.COL
@@ -119,25 +120,24 @@ class ThresholdScan(ScanBase):
 
         with analysis.Analysis(raw_data_file=data_file) as a:
             a.analyze_data()
-            self.analyzed_data_file=a.analyzed_data_file
+            self.analyzed_data_file = a.analyzed_data_file
             mean_thr_rdpw = np.median(a.threshold_map[:, 112:220][np.nonzero(a.threshold_map[:, 112:220])])
             mean_thr_fdpw = np.median(a.threshold_map[:, :112][np.nonzero(a.threshold_map[:, :112])])
 
             print(np.median(a.threshold_map[:, 112:220][np.nonzero(a.threshold_map[:, 112:220])]))
             print(np.median(a.threshold_map[:, :112][np.nonzero(a.threshold_map[:, :112])]))
 
-            #logging.info("Mean threshold for removed DPW region is %i DAC units" % (int(mean_thr_rdpw)))
+            # logging.info("Mean threshold for removed DPW region is %i DAC units" % (int(mean_thr_rdpw)))
             logging.info("Mean threshold for full DPW region is %i DAC units" % (int(mean_thr_fdpw)))
 
-    def plot(self,analyzed_data_file=None):
-        if data_file is None:
-           if hasattr(self,"analysis_data_file"):
-               analyzed_data_file = self.analyzed_data_file
-           else:
-               analyzed_data_file = self.output_filename + '_interpreted.h5'
-            
-        if create_plots:
-            with plotting.Plotting(analyzed_data_file=a.analyzed_data_file) as p:
+    def plot(self, analyzed_data_file=None):
+        if analyzed_data_file is None:
+            if hasattr(self, "analyzed_data_file"):
+                analyzed_data_file = self.analyzed_data_file
+            else:
+                analyzed_data_file = self.output_filename + '_interpreted.h5'
+
+            with plotting.Plotting(analyzed_data_file=analyzed_data_file) as p:
                 p.create_standard_plots()
                 p.create_threshold_map()
                 p.create_scurves_plot()
