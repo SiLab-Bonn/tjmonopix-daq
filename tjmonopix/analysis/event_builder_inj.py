@@ -21,7 +21,7 @@ ROW_SIZE = 129
 
 
 @njit
-def _build_inj(dat, injlist, phaselist, inj_period, inj_n, mode, buf, scan_param_id, pre_inj, inj_id, inj_cnt):
+def _build_inj(dat, injlist, thlist, phaselist, inj_period, inj_n, mode, buf, scan_param_id, pre_inj, inj_id, inj_cnt):
     buf_i = 0
     dat_i = 0
     err = 0
@@ -56,7 +56,7 @@ def _build_inj(dat, injlist, phaselist, inj_period, inj_n, mode, buf, scan_param
                 err = err + 1
                 if (mode & 0x2) == 2:
                     inj_cnt = 0
-                    inj_id = max(inj_id + 1, len(injlist) - 1)
+                    inj_id = min(inj_id + 1, len(injlist) - 1)
                 else:
                     inj_cnt = inj_cnt + 1
             else:
@@ -80,6 +80,7 @@ def _build_inj(dat, injlist, phaselist, inj_period, inj_n, mode, buf, scan_param
                         buf[buf_i]["col"] = dat[d_ii]["col"]
                         buf[buf_i]["row"] = dat[d_ii]["row"]
                         buf[buf_i]["inj"] = injlist[inj_id]
+                        buf[buf_i]["th"] = thlist[inj_id]
                         buf[buf_i]["phase"] = phaselist[inj_id]
                         buf[buf_i]["ts_mon"] = ts_mon
                         buf[buf_i]["ts_inj"] = ts_inj
@@ -109,14 +110,16 @@ def build_inj_h5(fhit, fraw, fout, n=500000, debug=0x2):
     with tables.open_file(fraw) as f:
         status = yaml.load(f.root.meta_data.attrs.status)
         for i in range(0, len(f.root.kwargs), 2):
-            if f.root.kwargs[i] == "inj_list":
-                inj_list = yaml.load(f.root.kwargs[i + 1])
+            if f.root.kwargs[i] == "injlist":
+                injlist = yaml.load(f.root.kwargs[i + 1])
+            elif f.root.kwargs[i] == "thlist":
+                thlist = yaml.load(f.root.kwargs[i + 1])
             elif f.root.kwargs[i] == "phaselist":
                 phaselist = yaml.load(f.root.kwargs[i + 1])
     inj_period = status['inj']["WIDTH"] + status['inj']["DELAY"]
     inj_n = status['inj']["REPEAT"]
     sid = -1
-    inj_id = len(inj_list) - 1
+    inj_id = len(injlist) - 1
     inj_cnt = inj_n - 1
     pre_inj = 0
     print phaselist
@@ -131,7 +134,7 @@ def build_inj_h5(fhit, fraw, fout, n=500000, debug=0x2):
                 tmpend = min(end, start + n)
                 dat = f.root.Hits[start:tmpend]
                 print "data (inj_n %d,inj_loop %d): INJ=%d MONO=%d MON=%d" % (
-                    inj_n, len(inj_list),
+                    inj_n, len(injlist),
                     len(np.where(dat["col"] == TS_INJ)[0]),
                     len(np.where(dat["col"] < COL_SIZE)[0]),
                     len(np.where(dat["col"] == TS_MON)[0])
@@ -142,7 +145,7 @@ def build_inj_h5(fhit, fraw, fout, n=500000, debug=0x2):
                     mode = 1 | debug
                 (err, d_i, hit_dat, sid, pre_inj, inj_id, inj_cnt) = _build_inj(
                     dat,
-                    inj_list, phaselist,  # # not well written.
+                    injlist, thlist, phaselist,  # # not well written.
                     inj_period, inj_n, mode, buf,
                     sid, pre_inj, inj_id, inj_cnt
                 )

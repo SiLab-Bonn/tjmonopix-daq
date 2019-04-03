@@ -133,9 +133,12 @@ class ScanBase(object):
 
     @contextmanager
     def readout(self, *args, **kwargs):
+        timeout = kwargs.pop('timeout', 10.0)
+        self.fifo_readout.readout_interval=kwargs.pop('readout_interval', 0.003)
+            
         self._start_readout(*args, **kwargs)
         yield
-        self._stop_readout()
+        self.fifo_readout.stop(timeout=timeout)
 
     def _start_readout(self, *args, **kwargs):
         callback = kwargs.pop('callback', self._handle_data)

@@ -539,7 +539,7 @@ def _assign_scan_id(dat,meta):
     return 0,dat,m_i, d_i
                       
                       
-def interpret_idx_h5(fin,fout,debug=12, n=100000000):
+def interpret_idx_h5(fin,fout,debug=3, n=100000000):
     buf=np.empty(n,dtype=hit_idx_dtype)
     col=0xFF
     row=0xFF
