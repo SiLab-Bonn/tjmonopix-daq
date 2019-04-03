@@ -55,19 +55,19 @@ class AnalogScan(ScanBase):
         self.dut.set_monoread()
 
         injcol_start = 0
-        injrow_start = 56
+        injrow_start = 0
         injcol_stop = 112
-        injrow_stop = 56 + 112
-        injcol_step = 56
-        injrow_step = 4
+        injrow_stop = 224
+        injcol_step = 1
+        injrow_step = 1
 
         masks = self.dut.prepare_injection_mask(
             start_col=injcol_start,
             stop_col=injcol_stop,
-            width_col=injcol_step,
+            step_col=injcol_step,
             start_row=injrow_start,
             stop_row=injrow_stop,
-            width_row=injrow_step
+            step_row=injrow_step
         )
 
         # Main scan loop

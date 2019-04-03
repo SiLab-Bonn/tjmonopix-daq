@@ -4,7 +4,7 @@ import yaml
 import logging
 
 from tjmonopix.tjmonopix import TJMonoPix
-from tjmonopix.scans.threshold_scan import AnalogScan
+from tjmonopix.scans.analog_scan import AnalogScan
 
 if __name__ == "__main__":
     import argparse
@@ -92,3 +92,4 @@ if __name__ == "__main__":
     dut.save_config(scan.output_filename + '.yaml')
     scan.start(with_tdc=False, with_timestamp=False, with_tlu=False, with_tj=True)
     scan.analyze(scan.output_filename + '.h5')
+    scan.plot()
