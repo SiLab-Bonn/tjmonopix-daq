@@ -136,8 +136,6 @@ class AnalyzeHits():
         buf = np.empty(len(uni), dtype=fhit_root.LECnts.dtype)
         for c in self.res["le_cnts"]:
             buf[c] = uni[c]
-        print "toa",buf["toa"][:20]
-        print "toa",cnt[:20]
         buf["cnt"] = cnt
         # TODO copy scan_param_id to the data here
         fhit_root.LECnts.append(buf)

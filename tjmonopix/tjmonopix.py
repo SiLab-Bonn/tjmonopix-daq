@@ -550,12 +550,6 @@ class TJMonoPix(Dut):
                 return i
         return -1
 
-    def get_vl_dacunits(self):
-        for i in range(0, 128):
-            if self['CONF_SR']['SET_VL'][i] is True:
-                return i
-        return -1
-
     def set_vl_dacunits(self, dacunits, printen=False):
         dacunits=int(dacunits)
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
@@ -563,6 +557,12 @@ class TJMonoPix(Dut):
         self['CONF_SR']['SET_VL'][dacunits] = True
         if (printen == 1):
                 logger.info('vl = ' + str(((1.8 / 127.0) * dacunits + 0.385)) + 'V')
+
+    def get_vl_dacunits(self):
+        for i in range(0, 128):
+            if self['CONF_SR']['SET_VL'][i] is True:
+                return i
+        return -1
 
     def set_vcasn_dac_dacunits(self, dacunits, printen=False):
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
