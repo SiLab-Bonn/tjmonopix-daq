@@ -74,7 +74,7 @@ def build_h5(fraw,fhit,fout,upper=0x80,lower=-0x100,data_format=0x2,n=1000000):
     ## set parameters
     with tables.open_file(fraw) as f_i:
         conf_s=f_i.root.meta_data.get_attr("status")
-    conf=yaml.load(conf_s)
+    conf=yaml.safe_load(conf_s)
     WAIT_CYCLES=conf['tlu']["TRIGGER_HANDSHAKE_ACCEPT_WAIT_CYCLES"]
     offset=(WAIT_CYCLES+1) * 16
     upper=np.uint64(np.abs(upper))
@@ -209,7 +209,7 @@ if  __name__ == "__main__":
 #    with tables.open_file('20180322_001649_simple.h5', "r") as f_i:
 #        conf_s=f_i.root.meta_data.get_attr("status")
         
-    conf=yaml.load(conf_s)
+    conf=yaml.safe_load(conf_s)
     
     WAIT_CYCLES=conf['tlu']["TRIGGER_HANDSHAKE_ACCEPT_WAIT_CYCLES"]
     lower = -0x100

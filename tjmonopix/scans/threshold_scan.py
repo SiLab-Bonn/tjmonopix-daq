@@ -61,11 +61,11 @@ class ThresholdScan(ScanBase):
 
         scan_param_id = 0
 
-        injcol_start = 0
-        injrow_start = 56
+        injcol_start = 1
+        injrow_start = 1
         injcol_stop = 112
-        injrow_stop = 56 + 112
-        injcol_step = 1
+        injrow_stop = 224
+        injcol_step = 2
         injrow_step = 2
 
         masks = self.dut.prepare_injection_mask(

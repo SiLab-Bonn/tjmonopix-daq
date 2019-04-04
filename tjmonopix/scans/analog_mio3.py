@@ -36,7 +36,7 @@ if __name__ == "__main__":
         dut.write_conf()
     else:
         with open(mask, 'r') as f:
-            conf = yaml.load(f)
+            conf = yaml.safe_load(f)
             logging.info("Loading pixel masks from: " + str(mask))
             dut.set_all_mask(conf['CONF_SR'])
             disabledpix = dut.get_disabled_pixel()

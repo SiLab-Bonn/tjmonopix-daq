@@ -22,7 +22,7 @@ if __name__ == "__main__":
         scan_config = configuration["scan"]
 
     # TESTBEAM: dut = "/home/silab/tjmonopix/tjmonopix-daq/tjmonopix-testbeam-april/tjmonopix/tjmonopix_mio3.yaml"
-    dut = '/home/user/workspace/tjmonopix/tjmonopix_inj/tjmonopix/tjmonopix_mio3.yaml'
+    dut = '/home/silab/git/tjmonopix-daq/tjmonopix/tjmonopix_mio3.yaml'
     dut = TJMonoPix(conf=dut)
     dut.init(fl="EN_" + dut_config["flavor"])
 
@@ -38,7 +38,7 @@ if __name__ == "__main__":
         dut.write_conf()
     else:
         with open(mask, 'r') as f:
-            conf = yaml.load(f)
+            conf = yaml.safe_load(f)
             logging.info("Loading pixel masks from: " + str(mask))
             dut.set_all_mask(conf['CONF_SR'])
             disabledpix = dut.get_disabled_pixel()
@@ -94,3 +94,4 @@ if __name__ == "__main__":
     dut.save_config(scan.output_filename + '.yaml')
     scan.start(with_tdc=False, with_timestamp=False, with_tlu=False, with_tj=True)
     scan.analyze(scan.output_filename + '.h5')
+    scan.plot()

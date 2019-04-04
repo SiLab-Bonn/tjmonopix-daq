@@ -112,14 +112,14 @@ class EnTune(scan_base.ScanBase):
         import monopix_daq.analysis.plotting_base as plotting_base
         with plotting_base.PlottingBase(fpdf,save_png=True) as plotting:
             with tb.open_file(fraw) as f:
-                firmware=yaml.load(f.root.meta_data.attrs.firmware)
+                firmware=yaml.safe_load(f.root.meta_data.attrs.firmware)
                 ## DAC Configuration page
-                dat=yaml.load(f.root.meta_data.attrs.dac_status)
-                dat.update(yaml.load(f.root.meta_data.attrs.power_status))
+                dat=yaml.safe_load(f.root.meta_data.attrs.dac_status)
+                dat.update(yaml.safe_load(f.root.meta_data.attrs.power_status))
                 plotting.table_1value(dat,page_title="Chip configuration")
                 
                 ## Pixel Configuration page (before tuning)
-                dat=yaml.load(f.root.meta_data.attrs.pixel_conf_before)
+                dat=yaml.safe_load(f.root.meta_data.attrs.pixel_conf_before)
                 plotting.plot_2d_pixel_4(
                     [dat["PREAMP_EN"],dat["INJECT_EN"],dat["MONITOR_EN"],dat["TRIM_EN"]],
                     page_title="Pixel configuration before tuninig",
@@ -127,7 +127,7 @@ class EnTune(scan_base.ScanBase):
                     z_min=[0,0,0,0], z_max=[1,1,1,15])
 
                 ## Preamp Configuration
-                dat=yaml.load(f.root.meta_data.attrs.pixel_conf)
+                dat=yaml.safe_load(f.root.meta_data.attrs.pixel_conf)
                 plotting.plot_2d_pixel_hist(np.array(dat["PREAMP_EN"]),
                         title="Enabled preamp",
                         z_max=1)

@@ -294,7 +294,6 @@ class Plotting(object):
         # Reformat scurves array as one long list of scurves
         # For very noisy or not properly masked devices, ignore all s-curves where any data
         # is larger than given threshold (max_occ)
-#         scurves = scurves.reshape((112 * 224, 64))
         scurves = scurves.reshape((scurves.shape[0] * scurves.shape[1], scurves.shape[2]))
 
         scurves_masked = scurves[~np.any(scurves > max_occ, axis=1)]

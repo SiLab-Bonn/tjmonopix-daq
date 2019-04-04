@@ -56,17 +56,17 @@ class ThScan(injection_scan.InjectionScan):
         import tjmonopix.analysis.plotting_base as plotting_base
         with plotting_base.PlottingBase(fpdf,save_png=True) as plotting:
             with tb.open_file(fraw) as f:
-                firmware=yaml.load(f.root.meta_data.attrs.firmware)
+                firmware=yaml.safe_load(f.root.meta_data.attrs.firmware)
                 inj_n=firmware["inj"]["REPEAT"]
                 ## DAC Configuration page
-                dat=yaml.load(f.root.meta_data.attrs.dac_status)
-                dat.update(yaml.load(f.root.meta_data.attrs.power_status))
+                dat=yaml.safe_load(f.root.meta_data.attrs.dac_status)
+                dat.update(yaml.safe_load(f.root.meta_data.attrs.power_status))
                 dat["inj_n"]=inj_n
                 dat["inj_delay"]=firmware["inj"]["DELAY"]
                 dat["inj_width"]=firmware["inj"]["WIDTH"]
                 plotting.table_1value(dat,page_title="Chip configuration")
 
-                dat=yaml.load(f.root.meta_data.attrs.pixel_conf)
+                dat=yaml.safe_load(f.root.meta_data.attrs.pixel_conf)
             with tb.open_file(fev) as f:
                 ## Pixel configuration page
                 injected=f.root.Injected[:]
@@ -80,8 +80,8 @@ class ThScan(injection_scan.InjectionScan):
                 ## Scurve
                 for i in range(len(f.root.Scurve)):
                   dat=f.root.Scurve[i]["scurve"]
-                  xbins=yaml.load(f.root.Scurve.attrs.xbins)
-                  ybins=yaml.load(f.root.Scurve.attrs.ybins)
+                  xbins=yaml.safe_load(f.root.Scurve.attrs.xbins)
+                  ybins=yaml.safe_load(f.root.Scurve.attrs.ybins)
                   plotting.plot_2d_hist(dat,
                        bins=[xbins,ybins],
                        title=f.root.Scurve.title,

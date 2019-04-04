@@ -99,7 +99,7 @@ class SimpleScan(ScanBase):
         if analyzed_data_file is None:
             analyzed_data_file = self.analyzed_data_file
         with plotting.Plotting(analyzed_data_file=analyzed_data_file) as p:
-                p.create_standard_plots()
+            p.create_standard_plots()
 
 
 if __name__ == "__main__":

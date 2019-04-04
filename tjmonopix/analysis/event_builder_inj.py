@@ -108,14 +108,14 @@ buf_type = [  # ("event_number","<i8"),
 def build_inj_h5(fhit, fraw, fout, n=500000, debug=0x2):
     buf = np.empty(n, dtype=buf_type)
     with tables.open_file(fraw) as f:
-        status = yaml.load(f.root.meta_data.attrs.status)
+        status = yaml.safe_load(f.root.meta_data.attrs.status)
         for i in range(0, len(f.root.kwargs), 2):
             if f.root.kwargs[i] == "injlist":
-                injlist = yaml.load(f.root.kwargs[i + 1])
+                injlist = yaml.safe_load(f.root.kwargs[i + 1])
             elif f.root.kwargs[i] == "thlist":
-                thlist = yaml.load(f.root.kwargs[i + 1])
+                thlist = yaml.safe_load(f.root.kwargs[i + 1])
             elif f.root.kwargs[i] == "phaselist":
-                phaselist = yaml.load(f.root.kwargs[i + 1])
+                phaselist = yaml.safe_load(f.root.kwargs[i + 1])
     inj_period = status['inj']["WIDTH"] + status['inj']["DELAY"]
     inj_n = status['inj']["REPEAT"]
     sid = -1

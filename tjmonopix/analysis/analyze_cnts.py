@@ -19,10 +19,10 @@ class AnalyzeCnts():
             param=f.root.scan_parameters[:]
             for i in range(0,len(f.root.kwargs),2):
                 if f.root.kwargs[i]=="injlist":
-                    self.injlist=np.sort(np.unique(yaml.load(f.root.kwargs[i+1])))
+                    self.injlist=np.sort(np.unique(yaml.safe_load(f.root.kwargs[i+1])))
                 elif f.root.kwargs[i]=="phaselist":
-                    self.phaselist=np.sort(np.unique(yaml.load(f.root.kwargs[i+1])))
-            self.inj_n=yaml.load(f.root.meta_data.attrs.status)["inj"]["REPEAT"]
+                    self.phaselist=np.sort(np.unique(yaml.safe_load(f.root.kwargs[i+1])))
+            self.inj_n=yaml.safe_load(f.root.meta_data.attrs.status)["inj"]["REPEAT"]
  
     def run(self,n=10000000):
         with tb.open_file(self.fdat,"a") as f:
@@ -93,8 +93,8 @@ class AnalyzeCnts():
             t.attrs.ybins=yaml.dump(list(ybins))
 
     def run_scurve(self,dat,fdat_root):
-        xbins=yaml.load(fdat_root.Scurve.attrs.xbins)
-        ybins=yaml.load(fdat_root.Scurve.attrs.ybins)
+        xbins=yaml.safe_load(fdat_root.Scurve.attrs.xbins)
+        ybins=yaml.safe_load(fdat_root.Scurve.attrs.ybins)
         uni=np.unique(dat[self.res["scurve"]])
         buf=np.zeros(len(uni),dtype=fdat_root.Scurve.dtype)
         for u_i,u in enumerate(uni):

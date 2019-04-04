@@ -71,7 +71,7 @@ class AnalyzeHits():
     def init_apply_ts_inj_window(self, inj_window=None):
         if inj_window is None:
             with tb.open_file(self.fraw) as f:
-                firmware = yaml.load(f.root.meta_data.attrs.status)
+                firmware = yaml.safe_load(f.root.meta_data.attrs.status)
                 inj_window = int(firmware["inj"]["WIDTH"] / 2)
         self.res["apply_ts_inj_window"] = inj_window
 
@@ -187,7 +187,7 @@ class AnalyzeHits():
 #             param=f.root.scan_parameters[:]
 #             if "pix" not in param.dtype.names:
 #                 return
-#             dat=yaml.load(f.root.meta_data.attrs.pixel_conf_before)
+#             dat=yaml.safe_load(f.root.meta_data.attrs.pixel_conf_before)
 #         en=np.copy(dat["PREAMP_EN"])
 #         injected=np.zeros(np.shape(en))
 #         for pix in param["pix"]:
@@ -241,7 +241,7 @@ class AnalyzeHits():
             for i in range(0,len(f.root.kwargs),2):
                 if f.root.kwargs[i]=="phaselist":
                     phaselist=np.sort(np.unique(np.array(
-                          yaml.load(f.root.kwargs[i+1]))))
+                          yaml.safe_load(f.root.kwargs[i+1]))))
         with tb.open_file(self.fhit,"a") as f_o:
             try:
                 f_o.remove_node(f_o.root,"LEHist")

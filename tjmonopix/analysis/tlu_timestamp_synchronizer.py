@@ -79,7 +79,7 @@ if __name__ == "__main__":
     with tables.open_file(fraw) as f_i:
         conf_s=f_i.root.meta_data.get_attr("status")
         
-    conf=yaml.load(conf_s)
+    conf=yaml.safe_load(conf_s)
     WAIT_CYCLES=conf['tlu']["TRIGGER_HANDSHAKE_ACCEPT_WAIT_CYCLES"]
     
     tlu_synchronizer=TLUTimestampSynchronizer(WAIT_CYCLES=WAIT_CYCLES)

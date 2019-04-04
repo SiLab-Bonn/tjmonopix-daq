@@ -324,7 +324,7 @@ class Analysis():
                                                           fletcher32=False))
 
                 ave_tots = au.tot_ave3d(hits, scan_param_range)
-                ave_tots = np.array(ave_tots,dtype=np.float32)/np.array(hist_scurve,dtype=np.float32)
+                ave_tots = np.array(ave_tots, dtype=np.float32) / np.array(hist_scurve, dtype=np.float32)
                 out_file.create_carray(out_file.root,
                                        name="ToTAve",
                                        title="ToT average",

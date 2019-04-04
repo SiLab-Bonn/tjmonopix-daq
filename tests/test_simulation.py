@@ -31,7 +31,7 @@ class TestSimulation(unittest.TestCase):
         )
 
         with open(root_dir + '/tjmonopix/tjmonopix.yaml', 'r') as f:
-            cnfg = yaml.load(f)
+            cnfg = yaml.safe_load(f)
 
         cnfg['transfer_layer'][0]['type'] = 'SiSim'
         cnfg['hw_drivers'][0]['init']['no_calibration'] = True

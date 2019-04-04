@@ -95,7 +95,8 @@ def scurve_hist3d(hits, scan_param_range):
             hist_scurves[col, row, param] += 1
 
     return hist_scurves
-    
+
+
 @numba.njit
 def tot_ave3d(hits, scan_param_range):
     ave_tots = np.zeros(shape=(112, 224, len(scan_param_range)), dtype=np.uint16)
@@ -105,7 +106,7 @@ def tot_ave3d(hits, scan_param_range):
         row = hit["row"]
         param = hit["scan_param_id"]
         if col >= 0 and col < ave_tots.shape[0] and row >= 0 and row < ave_tots.shape[1]:
-            ave_tots[col, row, param] += np.uint16((hit["te"]-hit['le']) & 0x3F)
+            ave_tots[col, row, param] += (hit["te"] - hit['le']) & 0x3F
 
     return ave_tots
 

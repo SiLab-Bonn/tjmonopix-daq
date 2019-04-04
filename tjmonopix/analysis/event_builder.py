@@ -157,7 +157,7 @@ class EventBuilder(object):
                 conf_s = in_file_h5.root.meta_data.get_attr("status")
             except Exception:
                 conf_s = in_file_h5.root.meta_data.get_attr("status_before")
-        conf = yaml.load(conf_s)
+        conf = yaml.safe_load(conf_s)
         WAIT_CYCLES = conf['tlu']["TRIGGER_HANDSHAKE_ACCEPT_WAIT_CYCLES"]
         self.tlu_offset = (WAIT_CYCLES + 1) * 16
 

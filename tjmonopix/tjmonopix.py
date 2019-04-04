@@ -61,7 +61,7 @@ class TJMonoPix(Dut):
       
         if isinstance(conf,str):
             with open(conf) as f:
-                conf=yaml.load(f)
+                conf=yaml.safe_load(f)
             for i,e in enumerate(conf["hw_drivers"]):
                 if e["type"]=="GPAC":
                     #print conf["hw_drivers"][i].keys()
@@ -228,7 +228,7 @@ class TJMonoPix(Dut):
     def load_config(self, filename):
 
         with open(filename) as f:
-            conf = yaml.load(f)
+            conf = yaml.safe_load(f)
         self.default_conf()
         self.write_conf()
         time.sleep(0.1)  # mabe not needed?
