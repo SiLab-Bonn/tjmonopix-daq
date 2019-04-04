@@ -79,6 +79,11 @@ class TestSimulation(unittest.TestCase):
         self.dut['CONF_SR']['EN_PMOS'].setall(False)
         self.dut['CONF_SR']['EN_PMOS_NOSF'].setall(True)
         self.dut['CONF_SR']['EN_TEST_PATTERN'].setall(False)
+
+        self.dut['CONF_SR']["MASKH"].setall(True)
+        self.dut['CONF_SR']["MASKD"].setall(True)
+        self.dut['CONF_SR']["MASKV"].setall(True)
+
         self.dut.write_conf()
 
         self.dut['data_rx'].set_en(True)
