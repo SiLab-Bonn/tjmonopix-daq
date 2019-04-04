@@ -49,7 +49,7 @@ class TJMonoPix(Dut):
         1: 'MIO2',
     }
 
-    def __init__(self, conf=None):
+    def __init__(self, conf=None,no_power_reset=False):
         if not conf:
             proj_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             conf = os.path.join(proj_dir, 'tjmonopix' + os.sep + 'tjmonopix.yaml')
@@ -58,6 +58,18 @@ class TJMonoPix(Dut):
         self.COL = 112
 
         logger.debug("Loading configuration file from {}".format(conf))
+      
+        if isinstance(conf,str):
+            with open(conf) as f:
+                conf=yaml.load(f)
+            for i,e in enumerate(conf["hw_drivers"]):
+                if e["type"]=="GPAC":
+                    #print conf["hw_drivers"][i].keys()
+                    if "init" in conf["hw_drivers"][i].keys():
+                        conf["hw_drivers"][i]["init"]["no_power_reset"]=no_power_reset
+                    else:
+                        conf["hw_drivers"][i]["init"]={"no_power_reset":no_power_reset}
+                    break         
 
         super(TJMonoPix, self).__init__(conf)
         self.conf_flg = 1
@@ -120,16 +132,30 @@ class TJMonoPix(Dut):
         self['CONF']['RESET_BCID'] = 0
         self['CONF']['RESET'] = 0
         self['CONF'].write()
-
         self.default_conf()
 
         self.set_icasn_dacunits(0, 0)
         self.set_vreset_dacunits(35, 0)
         self.set_ireset_dacunits(2, 1, 0)
         # self.set_ireset_dacunits(128 + 5, 0)
-        self.set_ithr_dacunits(30, 0)
+        self.set_ithr_dacunits(5, 0)
         self.set_idb_dacunits(50, 0)
+        self.write_conf()
 
+        self['CONF']['DEF_CONF_N'] = 1
+        self['CONF'].write()
+
+        self['CONF_SR'][fl].setall(True)
+        self.write_conf()
+
+        logging.info(str(self.get_power_status()))
+
+    def default_conf(self):
+        self['CONF_SR']['nEN_HITOR_OUT'].setall(True)
+        self['CONF_SR']['EN_HITOR_OUT'].setall(True)
+        self['CONF_SR']['nEN_OUT'].setall(True)
+
+        self['CONF_SR']['EN_OUT'].setall(False)  ## active low
         self['CONF_SR']['EN_HV'].setall(False)
         self['CONF_SR']['EN_COMP'].setall(False)
         self['CONF_SR']['EN_PMOS'].setall(False)
@@ -139,24 +165,6 @@ class TJMonoPix(Dut):
         self['CONF_SR']['MASKD'].setall(False)
         self['CONF_SR']['MASKH'].setall(False)
         self['CONF_SR']['MASKV'].setall(False)
-
-        self.write_conf()
-
-        self['CONF']['DEF_CONF_N'] = 1
-        self['CONF'].write()
-
-        logging.info(str(self.get_power_status()))
-
-    def default_conf(self):
-        self['CONF_SR']['nEN_HITOR_OUT'].setall(True)
-        self['CONF_SR']['EN_HITOR_OUT'].setall(True)
-        self['CONF_SR']['nEN_OUT'].setall(True)
-        self['CONF_SR']['EN_OUT'].setall(False)
-        self['CONF_SR']['EN_HV'].setall(True)
-        self['CONF_SR']['EN_COMP'].setall(True)
-        self['CONF_SR']['EN_PMOS'].setall(True)
-        self['CONF_SR']['EN_PMOS_NOSF'].setall(True)
-        self['CONF_SR']['EN_TEST_PATTERN'].setall(False)
 
         self['CONF_SR']['SWCNTL_VRESET_P'] = 0
         self['CONF_SR']['SWCNTL_VRESET_D'] = 0
@@ -205,10 +213,6 @@ class TJMonoPix(Dut):
         self['CONF_SR']['SET_IBIAS'][86:41] = True
 
         self['CONF_SR']['DIG_MON_SEL'].setall(False)
-
-        self['CONF_SR']['MASKD'].setall(True)
-        self['CONF_SR']['MASKH'].setall(True)
-        self['CONF_SR']['MASKV'].setall(True)
 
         self['CONF_SR']['INJ_ROW'].setall(False)
         self['CONF_SR']['INJ_IN_MON_R'] = 0
@@ -470,6 +474,7 @@ class TJMonoPix(Dut):
         self.write_conf()
 
     def set_idb_dacunits(self, dacunits, printen=False):
+        dacunits=int(dacunits)
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
         low = (128 - dacunits) // 2
         high = (dacunits // 2) + (128 // 2)
@@ -479,7 +484,16 @@ class TJMonoPix(Dut):
             logger.info('idb = ' + str(dacunits))
             logger.info('idb = ' + str(2240.0 * ((dacunits + 1) / 128.0)) + 'nA')
 
+    def get_idb_dacunits(self):
+        arg=np.argwhere(np.array(list(self['CONF_SR']['SET_IDB'].to01()),dtype=int))
+        low=arg[0,0]
+        high=arg[-1,0]
+        dacunits_low=128-low*2
+        dacunits_high= (high -(128 // 2))*2
+        return (dacunits_low+dacunits_high)/2
+
     def set_ithr_dacunits(self, dacunits, printen=False):
+        dacunits=int(dacunits)
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
         low = (128 - dacunits) // 2
         high = (dacunits // 2) + (128 // 2)
@@ -523,6 +537,7 @@ class TJMonoPix(Dut):
                 logger.info('vreset = ' + str(((1.8 / 127.0) * dacunits + 0.555)) + 'V')
 
     def set_vh_dacunits(self, dacunits, print_en=False):
+        dacunits=int(dacunits)
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
         self['CONF_SR']['SET_VH'].setall(False)
         self['CONF_SR']['SET_VH'][dacunits] = True
@@ -535,18 +550,19 @@ class TJMonoPix(Dut):
                 return i
         return -1
 
-    def get_vl_dacunits(self):
-        for i in range(0, 128):
-            if self['CONF_SR']['SET_VL'][i] is True:
-                return i
-        return -1
-
     def set_vl_dacunits(self, dacunits, printen=False):
+        dacunits=int(dacunits)
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
         self['CONF_SR']['SET_VL'].setall(False)
         self['CONF_SR']['SET_VL'][dacunits] = True
         if (printen == 1):
                 logger.info('vl = ' + str(((1.8 / 127.0) * dacunits + 0.385)) + 'V')
+
+    def get_vl_dacunits(self):
+        for i in range(0, 128):
+            if self['CONF_SR']['SET_VL'][i] is True:
+                return i
+        return -1
 
     def set_vcasn_dac_dacunits(self, dacunits, printen=False):
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
@@ -639,7 +655,12 @@ class TJMonoPix(Dut):
 
     # def set_monoread(self, start_freeze=64, start_read=66, stop_read=68, stop_freeze=100, stop=105, en=True):
     def set_monoread(self, start_freeze=57, start_read=60, stop_read=62, stop_freeze=95, stop=100,
-                     en=True, read_shift=52):
+                     en=True, read_shift=52, sync_timestamp=True):
+        self['CONF']['EN_RST_BCID_WITH_TIMESTAMP'] = sync_timestamp
+        self['CONF']['RESET_BCID'] = 1
+        self['CONF'].write()
+
+        self['data_rx'].reset()
         self['data_rx'].CONF_START_FREEZE = start_freeze  # default 57
         self['data_rx'].CONF_STOP_FREEZE = stop_freeze  # default 95
         self['data_rx'].CONF_START_READ = start_read  # default 60
@@ -648,6 +669,8 @@ class TJMonoPix(Dut):
         self['data_rx'].CONF_READ_SHIFT = read_shift  # default 100
 
         self.cleanup_fifo(2)
+        self['CONF']['RESET_BCID'] = 0
+        self['CONF'].write()
         self['data_rx'].set_en(en)
 
     def stop_monoread(self):
@@ -774,7 +797,6 @@ class TJMonoPix(Dut):
         self.write_conf()
 
         self['CONF_SR'][self.SET['fl']].setall(True)
-
         self.write_conf()
 
         for _ in range(10):
@@ -817,7 +839,7 @@ class TJMonoPix(Dut):
             logging.info("Number of noisy pixels: %d" % pix_i)
 
         # Iterate over MASKV to find noisy pixels
-        for i in np.append(range(step, 112, step), 111):
+        for i in np.append(range(step, 111, step), 111):
             self['CONF_SR']['MASKD'].setall(False)
             self['CONF_SR']['MASKV'].setall(False)
             self['CONF_SR']['MASKH'].setall(True)
@@ -852,7 +874,7 @@ class TJMonoPix(Dut):
         # Iterate over MASKD to find noisy pixels
         for i in np.append(range(step, len(self['CONF_SR']['MASKD']) - 1, step), len(self['CONF_SR']['MASKD']) - 1):
             self['CONF_SR']['MASKD'].setall(False)
-            self['CONF_SR']['MASKV'][(self.fl_n + 1) * COL:(self.fl_n * COL)] = (int(COL) + 1) * bitarray('1')
+            self['CONF_SR']['MASKV'][(self.fl_n + 1) * COL-1:(self.fl_n * COL)] = (int(COL)) * bitarray('1')
             self['CONF_SR']['MASKH'].setall(True)
             self['CONF_SR']['MASKD'][i:0] = True
             for p_i in range(pix_i):

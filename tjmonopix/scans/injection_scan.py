@@ -1,292 +1,211 @@
-import time
+import os,sys,time
+
 import numpy as np
+import bitarray
 import tables as tb
+import logging
 import yaml
-import numba
 
-from tjmonopix.scan_base import ScanBase
-from tjmonopix.analysis import analysis
-from tjmonopix.analysis import plotting
+import tjmonopix.scan_base as scan_base
 
-from tqdm import tqdm
+local_configuration={"injlist": None, #np.arange(0.1,0.6,0.05),
+                     "thlist": None, # None, [0.82], np.arange(),
+                     "phaselist": None, # np.arange(0,16,1),
+                     "pix":[18,25],
+                     "n_mask_pix":12,
+                     "with_mon": False
+}
 
-from matplotlib import pyplot as plt
-
-
-class InjectionScan(ScanBase):
-
-    def scan(self, **kwargs):
+class InjectionScan(scan_base.ScanBase):
+    scan_id = "injection_scan"
+            
+    def scan(self,**kwargs):
         """ List of kwargs
             pix: list of pixel
             n_mask_pix: number of pixels injected at onece
             injlist: list of inj (inj_high-inj_low)
+            thlist: list of th
             phaselist: list of phase
-            with_tdc: get timestamp of mon (mon will be enabled)
+            with_mon: get timestamp of mon (mon will be enabled)
         """
+        ####################
+        ## get scan params from args
+        pix=kwargs.pop("pix")
+        if isinstance(pix[0],int):
+            pix=[pix]
 
-        # Get parameters from kwargs
-        n_mask_pix = min(kwargs.pop("n_mask_pix"), 1)
-        injlist = kwargs.pop("inj_list", [65])  # Use default charge if not given
-        phaselist = kwargs.pop("phaselist", [self.dut["inj"].get_phase()])  # Use default phase if not given
-        with_tdc = kwargs.pop("with_tdc")
+        n_mask_pix = min(kwargs.pop("n_mask_pix"),len(pix))
+        mask_n=int((len(pix)-0.5)/n_mask_pix+1)
 
-        # Stop readout and clean FIFO
-        self.dut.stop_all()
-        self.dut['fifo'].reset()
+        injlist=kwargs.pop("injlist")
+        inj_low=self.dut.get_vl_dacunits()
+        if injlist is None or len(injlist)==0:
+            injlist=[self.dut.get_vh_dacunits()-inj_low]
 
-        # Write scan_id (type) to file
-        self.meta_data_table.attrs.scan_id = "injection_scan"
+        thlist=kwargs.pop("thlist")
+        if thlist is None or len(thlist)==0:
+            thlist=[self.dut.get_idb_dacunits()]
 
-        # Why is this needed?
-        self.dut['data_rx'].set_en(True)
-        self.dut['fifo'].get_data()
-        self.dut['data_rx'].set_en(False)
+        phaselist=kwargs.pop("phaselist")
+        if phaselist is None or len(phaselist)==0:
+            phaselist=[self.dut["inj"].get_phase()]
+        inj_th_phase = np.reshape(np.stack(np.meshgrid(injlist,thlist,phaselist),axis=3),[-1,3])
+        
+        with_mon=kwargs.pop("with_mon")
+        
+        debug=kwargs.pop("debug",0)
+        
+        if (debug & 0x1)==1:
+            print "++++++++ injlist",len(injlist),injlist
+            print "++++++++ thlist",len(thlist),thlist
+            print "++++++++ phaselist",len(phaselist),phaselist
+            print "++++++++ with_mon",with_mon
 
-        # Setup injection
-        repeat = 100
-        delay = 5000
-        width = 350
-        phase = 0
+        param_dtype=[("scan_param_id","<i4"),("pix","<i2",(n_mask_pix,3))]
 
-        self.dut['inj'].set_delay(delay)
-        self.dut['inj'].set_width(width)
-        self.dut['inj'].set_repeat(repeat)
-        self.dut['inj'].set_phase(phase)
-        self.dut['inj'].set_en(0)
+        glist=[]
+        #for k,v in kwargs.iteritems():  TODO
+        #    param_dtype.append((k,"<u1"))
+        #    for v_e in v:
+        #        glist.append({k:v_e})
+        if len(glist)==0:
+            glist=[None]
 
-        self.dut.set_vl_dacunits(35)
-        self.dut.set_vh_dacunits(35)
-        self.dut.write_conf()
-
-        # Compute cartesian product to make list of all possible combinations of inj and phase
-        param_list = np.reshape(np.stack(np.meshgrid(injlist, phaselist), axis=2), [-1, 2])
-
-
-
-
-
-        param_dtype = [("scan_param_id", "<i4"), ("pix", "<i2", (n_mask_pix, 2))]
-
-        # Create a table for scan_params
-        description = np.zeros((1,), dtype=param_dtype).dtype
-        self.scan_param_table = self.h5_file.create_table(
-            self.h5_file.root,
-            name='scan_parameters',
-            title='scan_parameters',
-            description=description,
-            filters=tb.Filters(complib='blosc', complevel=5, fletcher32=False)
-        )
-        self.kwargs.append("inj_list")
-        self.kwargs.append(yaml.dump(param_list[:, 0]))
+        ####################
+        ## create a table for scan_params
+        description=np.zeros((1,),dtype=param_dtype).dtype
+        self.scan_param_table = self.h5_file.create_table(self.h5_file.root, 
+                      name='scan_parameters', title='scan_parameters',
+                      description=description, 
+                      filters=tb.Filters(complib='zlib', complevel=5, fletcher32=False))
+        self.kwargs.append("thlist")
+        self.kwargs.append(yaml.dump(inj_th_phase[:,1]))
+        self.kwargs.append("injlist")
+        self.kwargs.append(yaml.dump(inj_th_phase[:,0]))
         self.kwargs.append("phaselist")
-        self.kwargs.append(yaml.dump(param_list[:, 1]))
-
-        scan_param_id = 0
-        inj_delay_org = self.dut["inj"].get_delay()
-        inj_width_org = self.dut["inj"].get_width()
-
-        masks = self.dut.prepare_injection_mask(
-            start_col=18,
-            stop_col=20,
-            step_col=1,
-            start_row=99,
-            stop_row=100,
-            step_row=1
-        )
-
-        pbar = tqdm(total=len(masks))
-        for mask in masks:
-            # Enable injection in columns and rows for this mask step
-            self.dut['CONF_SR']['COL_PULSE_SEL'] = mask["col"]
-            self.dut['CONF_SR']['INJ_ROW'] = mask["row"]
-            self.dut.write_conf()
-
-            # if with_tdc:
-            #     self.dut.set_mon_en(mask_pix)### TODO
-
-            # if g is not None:
-            #    self.dut.set_global(**g) ### implement this function
+        self.kwargs.append(yaml.dump(inj_th_phase[:,2]))
+        
+        t0=time.time()
+        scan_param_id=0
+        inj_delay_org=self.dut["inj"].DELAY
+        inj_width_org=self.dut["inj"].WIDTH
+        for g in glist:
+          if g is not None:
+              self.monopix.set_global(**g)
+          for mask_i in range(mask_n):
+            mask_pix=[]
+            for i in range(mask_i,len(pix),mask_n):
+                    mask_pix.append(pix[i])
+                    self.dut.enable_injection(pix[i][0],pix[i][1],pix[i][2]) ##TODO use prepare_injection_mask
+            #if with_mon:  TODO
+            #    self.monopix.set_mon_en(mask_pix)
 
             ####################
-            # # start readout
+            ## start readout
             self.dut.set_monoread()
             self.dut.set_timestamp("inj")
-            if with_tdc:
+            if with_mon:
                 self.dut.set_timestamp("mon")
 
             ####################
-            # # save scan_param
+            ## save scan_param
             self.scan_param_table.row['scan_param_id'] = scan_param_id
-#             if g is not None:
-#                 for g_key in g.keys():
-#                     self.scan_param_table.row[g_key] = g[g_key]
+            mask_pix_tmp=mask_pix
+            for i in range(n_mask_pix-len(mask_pix)):
+                mask_pix_tmp.append([-1,-1])
+            self.scan_param_table.row['pix']=mask_pix_tmp
+            if g is not None:
+              for g_key in g.keys():
+                self.scan_param_table.row[g_key]=g[g_key]
             self.scan_param_table.row.append()
             self.scan_param_table.flush()
-
-            cnt = 0
-            with self.readout(scan_param_id=scan_param_id, fill_buffer=False, clear_buffer=True, readout_interval=0.001):
-                for inj, phase in param_list:  # Iterate through parameters
-                    inj_high = self.dut.get_vl_dacunits() + inj
-                    # Set injection and phase
-                    if inj_high > 0 and self.dut.get_vh_dacunits() != inj_high:
-                        self.dut.set_vh_dacunits(inj_high)
-                        self.dut.write_conf()
-                        self.dut.SET["INJ_HI"] = inj_high
-                    if phase > 0 and self.dut["inj"].get_phase() != phase:
-                        self.dut["inj"].set_phase(int(phase) % 16)
-                        self.dut["inj"].set_delay(inj_delay_org + int(phase) // 16)
-                        self.dut["inj"].set_width(inj_width_org - int(phase) // 16)
-
-                    # Inject
-                    self.dut["inj"].start()
-                    while not self.dut["inj"].is_done():
-                        time.sleep(0.005)
-
-                # Stop readout
-                self.dut.stop_all()
+            self.dut.cleanup_fifo(n=5)
+            ####################
+            ## start read fifo 
+            cnt=0
+            with self.readout(scan_param_id=scan_param_id,fill_buffer=False,clear_buffer=True,
+                              readout_interval=0.001):
+                for inj,th,phase in inj_th_phase:
+                  if th>0 and th!=self.dut.get_idb_dacunits():
+                    self.dut.set_idb_dacunits(th,(debug & 0x1))
+                  if inj>0 and inj!=self.dut.get_vh_dacunits()-inj_low:
+                    inj_high=inj+inj_low
+                    self.dut.set_vh_dacunits(inj_high,(debug & 0x1))
+                  self.dut.write_conf()
+                  if phase>0 and self.dut["inj"].get_phase()!=phase:
+                      self.dut["inj"].set_phase(int(phase)%16)
+                      self.dut["inj"].DELAY=inj_delay_org+int(phase)/16
+                      self.dut["inj"].WIDTH=inj_width_org-int(phase)/16
+                      if (debug & 0x1)==1:
+                         self.logger.info("inj phase=%x,period=%d"%(
+                         self.dut["inj"].PHASE_DES,self.dut["inj"].DELAY+self.dut["inj"].WIDTH))
+                  self.dut["inj"].start()
+                  while self.dut["inj"].is_done()!=1:
+                        time.sleep(0.002)
+                  pre_cnt=cnt
+                  
+                  if (debug & 0x2)==2:
+                    cnt=self.fifo_readout.get_record_count()
+                    self.logger.info('mask=%d th=%.3f inj=%.3f phase=%d dat=%d'%(
+                      scan_param_id,th,inj,self.dut["inj"].get_phase(),cnt-pre_cnt))    
+                       
+                ####################
+                ## stop readout
+                self.dut.stop_timestamp("inj")
+                self.dut.stop_timestamp("mon")
+                self.dut.stop_monoread()
                 time.sleep(0.2)
-                pre_cnt = cnt
-                cnt = self.fifo_readout.get_record_count()
+                pre_cnt=cnt
+                cnt=self.fifo_readout.get_record_count()
+                
+            self.logger.info('mask=%d pix=%s dat=%d'%(mask_i,str(mask_pix),cnt-pre_cnt))
+            scan_param_id=scan_param_id+1
 
-            self.logger.info('pix= dat=%d' % (cnt - pre_cnt))
-            scan_param_id += 1
-            pbar.update(1)
-        pbar.close()
+    @classmethod
+    def analyze(self,data_file=None):
 
-    def analyze(self, data_file=None, create_plots=True):
-        if data_file is None:
-            data_file = self.output_filename + '.h5'
-
-        fhit = data_file[:-6] + 'hit.h5'
-        fev = data_file[:-6] + 'ev.h5'
-
-        # Interpret and event_build
-        with analysis.Analysis(raw_data_file=data_file) as a:
-            a.analyze_data()
-
+        if data_file is not None:
+            fraw=data_file
+        else:
+            fraw=self.output_filename+'.h5'
+        fhit=fraw[:-7]+'hit.h5'
+        fev=fraw[:-7]+'ev.h5'
+        
+        ##interpret and event_build
+        import tjmonopix.analysis.interpreter_idx as interpreter_idx
+        interpreter_idx.interpret_idx_h5(fraw,fhit,debug=0x8+0x3)
+        #self.logger.info('interpreted %s'%(fhit))
         import tjmonopix.analysis.event_builder_inj as event_builder_inj
-        event_builder_inj.build_inj_h5(fhit, data_file, fev, n=10000000)
-        self.logger.info('timestamp assigned %s' % (fev))
-
-        # Analyze
+        event_builder_inj.build_inj_h5(fhit,fraw,fev,n=10000000)
+        #self.logger.info('timestamp assigned %s'%(fev))
+        
+        ##analyze
         import tjmonopix.analysis.analyze_hits as analyze_hits
-        ana = analyze_hits.AnalyzeHits(fev, data_file)
+        ana=analyze_hits.AnalyzeHits(fev,fraw)
         ana.init_hist_ev()
-        ana.init_injected()
         ana.init_cnts()
         ana.run()
+        return fev
 
-    def new_analyze(self, data_file=None):
-        if data_file is None:
-            data_file = self.output_filename + '.h5'
+    @classmethod    
+    def plot(self,data_file=None):
+        if data_file is not None:
+            fraw=data_file
+        else:
+            fraw=self.output_filename+'.h5'
 
-        n_inj = 100
-        phaselist = np.arange(0, 32)
-        # TODO: Read from file if run externally
-
-        # Interpret and event_build
-        with analysis.Analysis(raw_data_file=data_file) as a:
-            a.analyze_data()
-            hit_file = a.analyzed_data_file
-
-            with tb.open_file(hit_file, "r") as in_file:
-                hits = in_file.root.Hits[:]
-
-            out_buffer = np.empty(500000, dtype=[("col", "<u1"), ("row", "<u1"), ("tot", "<u1"), ("toa", "<u1"), ("phase", "<u1"), ("ts_inj", "<i8")])
-
-            result = get_phase(hits, out_buffer, n_inj, phaselist)
-
-            with tb.open_file(hit_file[:-3] + "_smallev.h5", "w") as out_file:
-                output_table = out_file.create_table(
-                    out_file.root, name='Hits',
-                    description=out_buffer.dtype,
-                    title='Hits',
-                    filters=tb.Filters(complib='blosc',
-                                       complevel=5,
-                                       fletcher32=False)
-                )
-                output_table.append(result)
-                output_table.flush()
-            le_hist = le_hist_2d(result)
-            print le_hist.shape
-            with plotting.Plotting(analyzed_data_file=a.analyzed_data_file) as p:
-                p._plot_histogram2d(le_hist, suffix='le_hist')
-
-    def plot(self):
-        fev = self.output_filename[:-4] + 'ev.h5'
-        fraw = self.output_filename + '.h5'
-        fpdf = self.output_filename + '.pdf'
-
-        import tjmonopix.analysis.plotting_base as plotting_base
-        with plotting_base.PlottingBase(fpdf, save_png=True) as plotting:
-            # Configuration
-            with tb.open_file(fraw) as f:
-                # TODO: format kwargs and firmware setting
-                dat = yaml.load(f.root.meta_data.attrs.status)
-                inj_n = dat["inj"]["REPEAT"]
-
-                dat = yaml.load(f.root.meta_data.attrs.dac_status)
-                dat.update(yaml.load(f.root.meta_data.attrs.power_status))
-                plotting.table_1value(dat, page_title="Chip configuration")
-
-                dat = yaml.load(f.root.meta_data.attrs.pixel_conf)
-                plotting.plot_2d_pixel_4(
-                    [dat["PREAMP_EN"], dat["INJECT_EN"], dat["MONITOR_EN"], dat["TRIM_EN"]],
-                    page_title="Pixel configuration",
-                    title=["Preamp", "Inj", "Mon", "TDAC"],
-                    z_min=[0, 0, 0, 0], z_max=[1, 1, 1, 15])
-            # Plot data
-            with tb.open_file(fev) as f:
-                dat = f.root.HistOcc[:]
-                plotting.plot_2d_pixel_hist(dat, title=f.root.HistOcc.title, z_axis_title="Hits",
-                                            z_max=inj_n)
-
-
-@numba.njit
-def get_phase(hits, output_buffer, n_inj, phaselist):
-    inj_cnt = -1
-    out_i = 0
-    for i in range(len(hits)):
-        if hits[i]["col"] == 252:
-            inj_cnt += 1
-            ts_inj = hits[i]["timestamp"]
-        elif hits[i]["col"] < 115 and inj_cnt >= 0:
-            output_buffer[out_i]["col"] = hits[i]["col"]
-            output_buffer[out_i]["row"] = hits[i]["row"]
-            output_buffer[out_i]["tot"] = (hits[i]["te"] - hits[i]["le"]) & 0x3F
-            output_buffer[out_i]["toa"] = hits[i]["le"]
-            output_buffer[out_i]["phase"] = phaselist[inj_cnt // n_inj]
-            output_buffer[out_i]["ts_inj"] = ts_inj
-            out_i += 1
-
-    return output_buffer[:out_i]
-
-
-@numba.njit
-def le_hist_2d(hits):
-    hist = np.zeros(shape=((np.amax(hits["phase"] - np.amin(hits["phase"]) + 1)), 64))
-    for hit in hits:
-        hist[hit["phase"], hit["toa"] - ((hit["ts_inj"] - hit["phase"]) >> 4) & 0x3F] += 1
-
-    return hist
+        fev=fraw[:-7]+'ev.h5'
+        fpdf = fraw[:-3] +'.pdf'
 
 
 if __name__ == "__main__":
-    from tjmonopix.tjmonopix import TJMonoPix
-    dut = TJMonoPix()
-
-    local_configuration = {"injlist": None,  # np.arange(0.1,0.6,0.05),
-                           "ithr": None,  # None, [0.82], np.arange(),
-                           "p": None,  # np.arange(0,16,1),
-                           "pix": [18, 25],
-                           "n_mask_pix": 12,
-                           "with_mon": False
-                           }
-
-    # fname=time.strftime("%Y%m%d_%H%M%S_simples_can")
-    # fname=(os.path.join(monopix_extra_functions.OUPUT_DIR,"simple_scan"),fname)
-
-    scan = InjectionScan(dut, online_monitor_addr="tcp://127.0.0.1:6500")
+    from monopix_daq import monopix
+    m=monopix.Monopix()
+    
+    #fname=time.strftime("%Y%m%d_%H%M%S_simples_can")
+    #fname=(os.path.join(monopix_extra_functions.OUPUT_DIR,"simple_scan"),fname)
+    
+    scan = ThScan(m,online_monitor_addr="tcp://127.0.0.1:6500")
     scan.start(**local_configuration)
     scan.analyze()
     scan.plot()

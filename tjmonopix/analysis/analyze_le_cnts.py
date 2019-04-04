@@ -5,8 +5,8 @@ import yaml
 import logging
 import matplotlib.pyplot as plt
 
-# import tjmonopix.analysis.utils as utils
-import tjmonopix.analysis.analysis_utils as utils
+import tjmonopix.analysis.utils as utils
+#import tjmonopix.analysis.analysis_utils as utils
 COL_SIZE = 112 
 ROW_SIZE = 224
 
@@ -272,8 +272,11 @@ class AnalyzeLECnts():
                 cnt=dat["cnt"][args]
                 inj=np.append(self.injlist[self.injlist<np.min(inj)],inj)
                 cnt=np.append(np.zeros(len(inj)-len(cnt)),cnt)
-                sigma = utils.get_noise(inj, cnt, self.inj_n, False)
-                fit = utils.fit_scurve(cnt, inj, self.inj_n, sigma_0=sigma, reverse=False)
+                if len(inj)<3:
+                     print "strange data", u_i,uni.dtype.names,u,inj,cnt
+                     fit=[float("nan")]*6
+                else:
+                     fit = utils.fit_scurve(inj, cnt, A=self.inj_n, reverse=False) ##TODO go back to better one
             for c in self.res["scurve_fit"]:
                 buf[u_i][c]=u[c]
             buf[u_i]["n"]=len(args)

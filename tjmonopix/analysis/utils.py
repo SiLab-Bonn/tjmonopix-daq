@@ -1,5 +1,5 @@
 import numpy as np
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 from scipy.special import erf
 from scipy.optimize import curve_fit, leastsq
 
@@ -90,7 +90,7 @@ def fit_scurve(xarray,yarray,A=None,cut_ratio=0.05,reverse=True,debug=0):
     yarray=yarray[arg]
     xarray=xarray[arg]
     if debug==1:
-        plt.plot(xarray,yarray,".")
+        plt.plot(xarray,yarray,"r.")
         
     #### cut
     cut=len(xarray)
@@ -99,14 +99,15 @@ def fit_scurve(xarray,yarray,A=None,cut_ratio=0.05,reverse=True,debug=0):
         no_cut=cut_low[0][0]
         if cut_low[-1][0] > 1:
             cut=cut_low[-1][0]
-
+    if debug==1:
+        print cut,
+        plt.plot(xarray[:cut],yarray[:cut],"b.")
     cut_high=np.argwhere(yarray>=A*(1+cut_ratio))    
     if len(cut_high)>0:
         if cut_high[0][0] > no_cut:
             cut=min(cut_high[0][0], cut)
     yarray=yarray[:cut]
     xarray=xarray[:cut]
-        
     mu=xarray[np.argmin(np.abs(yarray-A*0.5))]
     try:
         sig2=xarray[np.argwhere(yarray>A*cut_ratio)[0]][0]
