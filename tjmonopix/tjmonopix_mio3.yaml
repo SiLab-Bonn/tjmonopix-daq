@@ -107,6 +107,9 @@ registers:
     hw_driver   : gpio
     size        : 16
     fields :
+      - name    : EN_RST_BCID_WITH_TIMESTAMP
+        size    : 1
+        offset  : 10
       - name    : AB_SELECT
         size    : 1
         offset  : 5

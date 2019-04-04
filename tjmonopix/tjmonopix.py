@@ -132,21 +132,21 @@ class TJMonoPix(Dut):
         self['CONF']['RESET_BCID'] = 0
         self['CONF']['RESET'] = 0
         self['CONF'].write()
-
         self.default_conf()
-        self['CONF_SR'][fl].setall(True)
 
         self.set_icasn_dacunits(0, 0)
         self.set_vreset_dacunits(35, 0)
         self.set_ireset_dacunits(2, 1, 0)
         # self.set_ireset_dacunits(128 + 5, 0)
-        self.set_ithr_dacunits(30, 0)
+        self.set_ithr_dacunits(5, 0)
         self.set_idb_dacunits(50, 0)
-
         self.write_conf()
 
         self['CONF']['DEF_CONF_N'] = 1
         self['CONF'].write()
+
+        self['CONF_SR'][fl].setall(True)
+        self.write_conf()
 
         logging.info(str(self.get_power_status()))
 
@@ -655,7 +655,12 @@ class TJMonoPix(Dut):
 
     # def set_monoread(self, start_freeze=64, start_read=66, stop_read=68, stop_freeze=100, stop=105, en=True):
     def set_monoread(self, start_freeze=57, start_read=60, stop_read=62, stop_freeze=95, stop=100,
-                     en=True, read_shift=52):
+                     en=True, read_shift=52, sync_timestamp=True):
+        self['CONF']['EN_RST_BCID_WITH_TIMESTAMP'] = sync_timestamp
+        self['CONF']['RESET_BCID'] = 1
+        self['CONF'].write()
+
+        self['data_rx'].reset()
         self['data_rx'].CONF_START_FREEZE = start_freeze  # default 57
         self['data_rx'].CONF_STOP_FREEZE = stop_freeze  # default 95
         self['data_rx'].CONF_START_READ = start_read  # default 60
@@ -664,6 +669,8 @@ class TJMonoPix(Dut):
         self['data_rx'].CONF_READ_SHIFT = read_shift  # default 100
 
         self.cleanup_fifo(2)
+        self['CONF']['RESET_BCID'] = 0
+        self['CONF'].write()
         self['data_rx'].set_en(en)
 
     def stop_monoread(self):

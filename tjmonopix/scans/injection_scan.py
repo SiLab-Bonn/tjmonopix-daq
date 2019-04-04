@@ -161,56 +161,43 @@ class InjectionScan(scan_base.ScanBase):
             self.logger.info('mask=%d pix=%s dat=%d'%(mask_i,str(mask_pix),cnt-pre_cnt))
             scan_param_id=scan_param_id+1
 
-    def analyze(self):
-        fraw = self.output_filename +'.h5'
+    @classmethod
+    def analyze(self,data_file=None):
+
+        if data_file is not None:
+            fraw=data_file
+        else:
+            fraw=self.output_filename+'.h5'
         fhit=fraw[:-7]+'hit.h5'
         fev=fraw[:-7]+'ev.h5'
         
         ##interpret and event_build
-        import monopix_daq.analysis.interpreter_idx as interpreter_idx
+        import tjmonopix.analysis.interpreter_idx as interpreter_idx
         interpreter_idx.interpret_idx_h5(fraw,fhit,debug=0x8+0x3)
-        self.logger.info('interpreted %s'%(fhit))
-        import monopix_daq.analysis.event_builder_inj as event_builder_inj
+        #self.logger.info('interpreted %s'%(fhit))
+        import tjmonopix.analysis.event_builder_inj as event_builder_inj
         event_builder_inj.build_inj_h5(fhit,fraw,fev,n=10000000)
-        self.logger.info('timestamp assigned %s'%(fev))
+        #self.logger.info('timestamp assigned %s'%(fev))
         
         ##analyze
-        import monopix_daq.analysis.analyze_hits as analyze_hits
+        import tjmonopix.analysis.analyze_hits as analyze_hits
         ana=analyze_hits.AnalyzeHits(fev,fraw)
         ana.init_hist_ev()
-        ana.init_injected()
         ana.init_cnts()
         ana.run()
-        
-    def plot(self):
-        fev=self.output_filename[:-4]+'ev.h5'
-        fraw = self.output_filename +'.h5'
-        fpdf = self.output_filename +'.pdf'
+        return fev
 
-        import monopix_daq.analysis.plotting_base as plotting_base
-        with plotting_base.PlottingBase(fpdf,save_png=True) as plotting:
-            ### configuration 
-            with tb.open_file(fraw) as f:
-                ###TODO!! format kwargs and firmware setting
-                dat=yaml.load(f.root.meta_data.attrs.kwargs)
-                dat=yaml.load(f.root.meta_data.attrs.firmware)
-                inj_n=dat["inj"]["REPEAT"]
+    @classmethod    
+    def plot(self,data_file=None):
+        if data_file is not None:
+            fraw=data_file
+        else:
+            fraw=self.output_filename+'.h5'
 
-                dat=yaml.load(f.root.meta_data.attrs.dac_status)
-                dat.update(yaml.load(f.root.meta_data.attrs.power_status))
-                plotting.table_1value(dat,page_title="Chip configuration")
+        fev=fraw[:-7]+'ev.h5'
+        fpdf = fraw[:-3] +'.pdf'
 
-                dat=yaml.load(f.root.meta_data.attrs.pixel_conf)
-                plotting.plot_2d_pixel_4(
-                    [dat["PREAMP_EN"],dat["INJECT_EN"],dat["MONITOR_EN"],dat["TRIM_EN"]],
-                    page_title="Pixel configuration",
-                    title=["Preamp","Inj","Mon","TDAC"],
-                    z_min=[0,0,0,0], z_max=[1,1,1,15])
-            ### plot data
-            with tb.open_file(fev) as f:
-                dat=f.root.HistOcc[:]
-                plotting.plot_2d_pixel_hist(dat,title=f.root.HistOcc.title,z_axis_title="Hits",
-                                            z_max=inj_n)
+
 if __name__ == "__main__":
     from monopix_daq import monopix
     m=monopix.Monopix()

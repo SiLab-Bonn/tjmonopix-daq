@@ -122,7 +122,6 @@ def build_inj_h5(fhit, fraw, fout, n=500000, debug=0x2):
     inj_id = len(injlist) - 1
     inj_cnt = inj_n - 1
     pre_inj = 0
-    print phaselist
     with tables.open_file(fout, "w") as f_o:
         description = np.zeros((1,), dtype=buf_type).dtype
         hit_table = f_o.create_table(f_o.root, name="Hits", description=description, title='hit_data')

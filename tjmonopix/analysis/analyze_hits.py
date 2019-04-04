@@ -30,6 +30,7 @@ class AnalyzeHits():
                             break
                     if last["scan_param_id"] == h["scan_param_id"]:
                         print "ERROR data chunck is too small increase n"
+                hits["toa"] = np.uint8( (hits["toa"]- ((np.int64(hits["ts_inj"]) - np.int64(hits["phase"]))>>4) ) & 0x3F ) 
                 self.analyze(hits, f.root)
                 start = start + len(hits)
         self.save()
@@ -78,6 +79,30 @@ class AnalyzeHits():
         ts_inj40 = ((np.int64(hits["ts_token"]) >> 4) - np.int64(hits["tot"]) - (np.int64(hits["ts_inj"]) >> 4))
         return hits[ts_inj40 < self.res["apply_ts_inj_window"]]
 
+
+    def init_delete_noninjected(self):
+        with tb.open_file(self.fraw) as f: 
+            self.res["delete_noninjected"]=f.root.scan_parameters[:][["scan_param_id","pix"]]
+    def run_delete_noninjected(self, hits):
+        len0=len(hits)
+        uni,idx,cnt=np.unique(hits["scan_param_id"],return_index=True,return_counts=True)
+        buf=np.empty(0,dtype=hits.dtype)
+        for u_i,u in enumerate(uni):
+            #print "scan_param_id",u
+            tmp=hits[idx[u_i]:idx[u_i]+cnt[u_i]]
+            injected_pix=self.res["delete_noninjected"][self.res["delete_noninjected"]["scan_param_id"]==u]['pix'][0]
+            detected_pix=np.transpose(np.array([tmp["col"],tmp["row"]]))
+            mask=np.zeros(len(detected_pix),dtype=bool)
+            #print injected_pix
+            for ip in injected_pix:
+               #print "ip",ip
+               tmp_mask=np.bitwise_and(tmp["col"]==ip[0],tmp["col"]==ip[0])
+               #print len(np.argwhere(tmp_mask))
+               mask=np.bitwise_or(tmp_mask,mask)
+            buf=np.append(buf,tmp[mask])
+        print "delete_noninjected from %d to %d %.3f percent"%(len0,len(buf),100.0*len(buf)/len0)
+        return buf
+
     # le counts
     def init_le_cnts(self):
         with tb.open_file(self.fraw) as f:
@@ -106,11 +131,13 @@ class AnalyzeHits():
         print "AnalyzeHits: le_cnts will be analyzed"
 
     def run_le_cnts(self, hits, fhit_root):
-        hits["toa"] = (hits["toa"] - np.int64(hits["ts_inj"] - hits["phase"]) >> 4) & 0x3F
+          
         uni, cnt = np.unique(hits[self.res["le_cnts"]], return_counts=True)
         buf = np.empty(len(uni), dtype=fhit_root.LECnts.dtype)
         for c in self.res["le_cnts"]:
             buf[c] = uni[c]
+        print "toa",buf["toa"][:20]
+        print "toa",cnt[:20]
         buf["cnt"] = cnt
         # TODO copy scan_param_id to the data here
         fhit_root.LECnts.append(buf)
@@ -237,9 +264,9 @@ class AnalyzeHits():
         self.res["le_hist"]=phaselist
 
     def run_le_hist(self, hits, fhit_root):
+        #hits["toa"] = np.uint8( (hits["toa"]- ((np.int64(hits["ts_inj"]) - np.int64(hits["phase"]))>>4) ) & 0x3F )
         buf = np.empty(1, dtype=fhit_root.LEHist.dtype)
         buf_dist = np.empty(16 * 64, dtype=fhit_root.LEDist.dtype)
-
         uni, idx, cnt = np.unique(hits[['scan_param_id', 'col', 'row', 'inj']],
                           return_counts=True, return_index=True)
         for u_i, u in enumerate(uni):
@@ -248,7 +275,7 @@ class AnalyzeHits():
 
             for i, ph in enumerate(self.res["le_hist"]):
                 tmp = dat[dat["phase"] == ph]
-                buf[0]["LE"][i, :] = np.bincount(tmp["toa"] - (np.int64(tmp["ts_inj"] - ph) >> np.int64(4)) & 0x3F, minlength=64)
+                buf[0]["LE"][i, :] = np.bincount(tmp["toa"], minlength=64)
             for c in ['scan_param_id', 'col', 'row', 'inj']:
                 buf[0][c] = u[c]
             fhit_root.LEHist.append(buf)
