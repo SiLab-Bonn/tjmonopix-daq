@@ -601,7 +601,7 @@ def interpret_idx_h5(fin,fout,debug=3, n=100000000):
                 meta=meta[m_i:]
                 if d_i!=n_hit:
                     print "assing_scan has error data=%d, assigned=%d"%(n_hit,d_i)
-                print "%d %d %.3f%% %.3fs %dhits %derrs"%(start,r_i,100.0*(start+r_i+1)/end,time.time(),len(hit_dat),err)
+                print "%d %d %.3f%% %.3fs %dhits %derrs"%(start,r_i,100.0*(start+r_i+1)/end,time.time()-t0,len(hit_dat),err)
                 hit_table.append(hit_dat)
                 hit_table.flush()
                 start=start+r_i+1
