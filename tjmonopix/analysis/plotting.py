@@ -296,11 +296,11 @@ class Plotting(object):
         # is larger than given threshold (max_occ)
         scurves = scurves.reshape((scurves.shape[0] * scurves.shape[1], scurves.shape[2]))
 
-        scurves_masked = scurves[~np.any(scurves > max_occ, axis=1)]
+        scurves_masked = scurves[~np.any(scurves >= max_occ, axis=1)]
         n_pixel = scurves_masked.shape[0]
 
         for param in range(param_count):
-            hist[param] = np.bincount(scurves_masked[:, param], minlength=max_occ)
+            hist[param] = np.bincount(scurves_masked[:, param], minlength=max_occ)[:max_occ]
 
         fig = Figure()
         FigureCanvas(fig)
