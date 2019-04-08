@@ -137,11 +137,11 @@ class ThresholdScan(ScanBase):
             else:
                 analyzed_data_file = self.output_filename + '_interpreted.h5'
 
-            with plotting.Plotting(analyzed_data_file=analyzed_data_file) as p:
-                p.create_standard_plots()
-                p.create_threshold_map()
-                p.create_scurves_plot()
-                p.create_threshold_distribution_plot()
+        with plotting.Plotting(analyzed_data_file=analyzed_data_file) as p:
+            p.create_standard_plots()
+            p.create_threshold_map()
+            p.create_scurves_plot()
+            p.create_threshold_distribution_plot()
 
 
 if __name__ == "__main__":
