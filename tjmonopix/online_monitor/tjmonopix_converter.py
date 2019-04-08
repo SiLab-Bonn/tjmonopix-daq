@@ -3,7 +3,7 @@ from zmq.utils import jsonapi
 import numpy as np
 
 from online_monitor.utils import utils
-from tjmonopix.analysis.interpreter_old import Interpreter
+from tjmonopix.analysis.interpreter import get_row, get_col, get_tot, is_tjmono_data0
 
 
 class TJMonopixConverter(Transceiver):
@@ -11,7 +11,6 @@ class TJMonopixConverter(Transceiver):
     def setup_interpretation(self):
         self.n_hits = 0
         self.n_events = 0
-        self.inter = Interpreter()
 
     def deserialize_data(self, data):
         try:
@@ -36,8 +35,14 @@ class TJMonopixConverter(Transceiver):
             data[0][1]['meta_data'].update({'n_hits': self.n_hits, 'n_events': self.n_events})
             return [data[0][1]]
 
-        hits = self.inter.run(data[0][1], data_format=3)
+        selection = is_tjmono_data0(data[0][1])
+        hits = np.zeros(shape=np.count_nonzero(selection), dtype=[('col', 'u1'), ('row', '<u2'), ('tot', 'u1')])
+        hits["col"] = get_col(data[0][1][selection])
+        hits["row"] = get_row(data[0][1][selection])
+        hits["tot"] = get_tot(data[0][1][selection])
         self.n_hits = hits.shape[0]
+
+#         print hits
 
         interpreted_data = {
             'hits': hits

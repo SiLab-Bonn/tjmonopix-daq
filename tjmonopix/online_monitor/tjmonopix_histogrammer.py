@@ -97,16 +97,12 @@ class TJMonopixHistogrammer(Transceiver):
                 self.readout = 0
 
         hit_data = data[0][1]['hits']
-        # tmp = hit_data[hit_data["cnt"]==0] ## remove noise
         tmp = hit_data  # remove noise
         tmp = tmp[tmp["col"] < 112]  # remove TLU and timestamp
         hits = np.recarray(len(tmp), dtype=[('col', 'u2'), ('row', 'u2'), ('tot', 'u1')])
-        hits['tot'][:] = (tmp["te"] - tmp["le"]) & 0x3F
+        hits['tot'][:] = tmp["tot"]
         hits['col'][:] = tmp["col"]
         hits['row'][:] = tmp["row"]
-
-        tdc = hit_data[hit_data["cnt"] > 1]
-        # print 'histogrammer tdc: ', tdc
 
         if hits.shape[0] == 0:  # Empty array
             return
@@ -119,7 +115,7 @@ class TJMonopixHistogrammer(Transceiver):
         histogrammed_data = {
             'occupancies': self.occupancy,
             'tot': self.tot,
-            'tdc': tdc
+            'tdc': []
         }
 
         return [histogrammed_data]
