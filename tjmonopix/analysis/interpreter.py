@@ -21,7 +21,7 @@ class_spec = [
     ('le', numba.uint8),
     ('te', numba.uint8),
     ('noise', numba.uint8),
-    ('meta_idx', numba.uint16),
+    ('meta_idx', numba.uint32),
     ('raw_idx', numba.uint32)
 ]
 
