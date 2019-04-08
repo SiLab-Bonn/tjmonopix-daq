@@ -876,7 +876,7 @@ class TJMonoPix(Dut):
             self['CONF_SR']['MASKD'].setall(False)
             self['CONF_SR']['MASKV'][(self.fl_n + 1) * COL-1:(self.fl_n * COL)] = (int(COL)) * bitarray('1')
             self['CONF_SR']['MASKH'].setall(True)
-            self['CONF_SR']['MASKD'][i:0] = True
+            self['CONF_SR']['MASKD'][i:0] = (int(i)+1)*bitarray('1')
             for p_i in range(pix_i):
                 self.mask(pix[p_i]["fl"], pix[p_i]['col'], pix[p_i]['row'])
             self['CONF_SR'].write()
