@@ -85,7 +85,7 @@ class SimpleScan(ScanBase):
             self.dut.stop_monoread()
 
     @classmethod
-    def analyze(self, data_file=None, scan_param_id=True):
+    def analyze(self, data_file=None):
         if data_file is None:
             data_file = self.output_filename + '.h5'
 
