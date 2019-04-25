@@ -78,7 +78,8 @@ class ScanBase(object):
         self.meta_data_table.attrs.kwargs = yaml.dump(kwargs)
         self.meta_data_table.attrs.scan_id = self.scan_id
         status = self.dut.get_power_status()
-        self.logger.info('power status: {:s}'.format(str(status)))
+        self.logger.info('Power status: {:s}'.format(str(status)))
+        self.logger.info('Temperature: {:4.1f} C'.format(self.dut.get_temperature()))
         self.meta_data_table.attrs.power_before = yaml.dump(status)
         self.meta_data_table.attrs.status_before = yaml.dump(self.dut.get_configuration())
         self.meta_data_table.attrs.SET_before = yaml.dump(self.dut.SET)
@@ -110,6 +111,8 @@ class ScanBase(object):
         # Log and save power status and configuration
         status = self.dut.get_power_status()
         self.logger.info('Power status: {:s}'.format(str(status)))
+        self.logger.info('Temperature: {:4.1f} C'.format(self.dut.get_temperature()))
+
         self.meta_data_table.attrs.power = yaml.dump(status)
         self.meta_data_table.attrs.status = yaml.dump(self.dut.get_configuration())
         self.meta_data_table.attrs.SET = yaml.dump(self.dut.SET)
@@ -134,11 +137,11 @@ class ScanBase(object):
     @contextmanager
     def readout(self, *args, **kwargs):
         timeout = kwargs.pop('timeout', 10.0)
-        self.fifo_readout.readout_interval=kwargs.pop('readout_interval', 0.003)
-            
+        self.fifo_readout.readout_interval = kwargs.pop('readout_interval', 0.003)
+
         self._start_readout(*args, **kwargs)
         yield
-        self.fifo_readout.stop(timeout=timeout)
+        self._stop_readout(timeout)
 
     def _start_readout(self, *args, **kwargs):
         callback = kwargs.pop('callback', self._handle_data)
@@ -155,8 +158,8 @@ class ScanBase(object):
                                 errback=errback,
                                 no_data_timeout=no_data_timeout)
 
-    def _stop_readout(self):
-        self.fifo_readout.stop()
+    def _stop_readout(self, timeout):
+        self.fifo_readout.stop(timeout=timeout)
 
     def _handle_data(self, data_tuple):
 
