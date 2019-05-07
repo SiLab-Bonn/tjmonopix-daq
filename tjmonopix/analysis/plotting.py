@@ -88,28 +88,15 @@ class Plotting(object):
             if self.run_config['scan_id'] == 'threshold_scan':
                 scan_parameter_name = '$\Delta$ DU'
                 electron_axis = False
-                scan_parameter_range = np.arange(0, 64, 1)  # TODO: get parameters from run_config
-            elif self.run_config['scan_id'] == 'global_threshold_tuning':
-                scan_parameter_name = self.run_config['VTH_name']
-                electron_axis = False
-                scan_parameter_range = range(self.run_config['VTH_start'],
-                                             self.run_config['VTH_stop'],
-                                             -1 * self.run_config['VTH_step'])
-#             elif self.run_config['scan_id'] == 'local_threshold_tuning':
-#                 min_tdac, max_tdac, _ = au.get_tdac_range(
-#                     self.run_config['start_column'], self.run_config['stop_column'])
-#                 scan_parameter_name = 'TDAC'
-#                 electron_axis = False
-#                 scan_parameter_range = range(min_tdac, max_tdac)
 
             self._plot_scurves(scurves=self.HistSCurve[:, 112:220, :],
-                               scan_parameters=scan_parameter_range,
+                               scan_parameters=np.arange(0, self.HistSCurve[:, 112:220, :].shape[2], 1),
                                electron_axis=electron_axis,
                                scan_parameter_name=scan_parameter_name,
                                title="S-Curves removed deep p-well")
 
             self._plot_scurves(scurves=self.HistSCurve[:, :112, :],
-                               scan_parameters=scan_parameter_range,
+                               scan_parameters=np.arange(0, self.HistSCurve[:, 112:220, :].shape[2], 1),
                                electron_axis=electron_axis,
                                scan_parameter_name=scan_parameter_name,
                                title='S-Curves full deep p-well')

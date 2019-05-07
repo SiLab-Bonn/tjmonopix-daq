@@ -212,6 +212,8 @@ class Analysis():
                 self.logger.warning('Data is empty. Skip analysis!')
                 return
 
+            self.n_params = np.amax(meta_data["scan_param_id"])
+
             with tb.open_file(self.analyzed_data_file, "w") as out_file:
                 hit_table = None
 
@@ -262,7 +264,7 @@ class Analysis():
                     if self.cluster_hits:
                         _, cluster = self.clz.cluster_hits(hit_dat)
 #                         if self.analyze_tdc:
-#                             # Select only clusters where all hits have a vild TDC status
+#                             # Select only clusters where all hits have a valid TDC status
 #                             cluster_table.append(cluster[cluster['tdc_status'] == 1])
 #                         else:
                         cluster_table.append(cluster)
@@ -295,7 +297,7 @@ class Analysis():
     def _create_additional_hit_data(self):
         with tb.open_file(self.analyzed_data_file, 'r+') as out_file:
             hits = out_file.root.Hits[:]
-            scan_id = out_file.root.Hits.attrs["scan_id"]  # TODO: Read from proper dictionary (or similar)
+            scan_id = out_file.root.Hits.attrs["scan_id"]
 
             hist_occ = au.occ_hist2d(hits)
 
@@ -311,7 +313,7 @@ class Analysis():
 
             if scan_id in ["threshold_scan"]:
                 n_injections = 100  # TODO: get from run configuration
-                scan_param_range = np.arange(0, 64, 1)  # TODO: get from run configuration
+                scan_param_range = np.arange(0, self.n_params, 1)  # TODO: get from run configuration
 
                 hist_scurve = au.scurve_hist3d(hits, scan_param_range)
 
@@ -333,9 +335,9 @@ class Analysis():
                                                           complevel=5,
                                                           fletcher32=False))
 
-
                 self.threshold_map, self.noise_map, self.chi2_map = au.fit_scurves_multithread(
-                    hist_scurve.reshape(112 * 224, 64), scan_param_range, n_injections=n_injections, invert_x=False)
+                    hist_scurve.reshape(112 * 224, self.n_params), scan_param_range, n_injections=n_injections, invert_x=False
+                )
 
                 out_file.create_carray(out_file.root, name='ThresholdMap', title='Threshold Map', obj=self.threshold_map,
                                        filters=tb.Filters(complib='blosc', complevel=5, fletcher32=False))
