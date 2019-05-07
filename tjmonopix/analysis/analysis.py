@@ -230,6 +230,7 @@ class Analysis():
                     hist_cs_shape = np.zeros(shape=(300, ), dtype=np.int32)
 
                 start = 0
+
                 data_interpreter = interpreter.RawDataInterpreter(chunk_size=self.chunk_size)
                 pbar = tqdm(total=n_words)
                 while start < n_words:
@@ -313,7 +314,7 @@ class Analysis():
 
             if scan_id in ["threshold_scan"]:
                 n_injections = 100  # TODO: get from run configuration
-                scan_param_range = np.arange(0, self.n_params, 1)  # TODO: get from run configuration
+                scan_param_range = np.arange(0, self.n_params + 1, 1)  # TODO: get from run configuration
 
                 hist_scurve = au.scurve_hist3d(hits, scan_param_range)
 
@@ -336,7 +337,7 @@ class Analysis():
                                                           fletcher32=False))
 
                 self.threshold_map, self.noise_map, self.chi2_map = au.fit_scurves_multithread(
-                    hist_scurve.reshape(112 * 224, self.n_params), scan_param_range, n_injections=n_injections, invert_x=False
+                    hist_scurve.reshape(112 * 224, self.n_params + 1), scan_param_range, n_injections=n_injections, invert_x=False
                 )
 
                 out_file.create_carray(out_file.root, name='ThresholdMap', title='Threshold Map', obj=self.threshold_map,

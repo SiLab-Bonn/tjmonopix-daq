@@ -89,14 +89,14 @@ class Plotting(object):
                 scan_parameter_name = '$\Delta$ DU'
                 electron_axis = False
 
-            self._plot_scurves(scurves=self.HistSCurve[:, 112:220, :],
-                               scan_parameters=np.arange(0, self.HistSCurve[:, 112:220, :].shape[2], 1),
+            self._plot_scurves(scurves=self.HistSCurve[:, 112:224, :],
+                               scan_parameters=np.arange(0, self.HistSCurve[:, 112:224, :].shape[2], 1),
                                electron_axis=electron_axis,
                                scan_parameter_name=scan_parameter_name,
                                title="S-Curves removed deep p-well")
 
             self._plot_scurves(scurves=self.HistSCurve[:, :112, :],
-                               scan_parameters=np.arange(0, self.HistSCurve[:, 112:220, :].shape[2], 1),
+                               scan_parameters=np.arange(0, self.HistSCurve[:, :112, :].shape[2], 1),
                                electron_axis=electron_axis,
                                scan_parameter_name=scan_parameter_name,
                                title='S-Curves full deep p-well')
