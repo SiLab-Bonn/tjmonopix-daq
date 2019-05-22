@@ -26,6 +26,13 @@ class Plotting(object):
 
         self.save_png = save_png
         self.save_single_pdf = save_single_pdf
+        self.clustered = False
+
+        if pdf_file is None:
+            self.filename = '.'.join(analyzed_data_file.split('.')[:-1]) + '.pdf'
+        else:
+            self.filename = pdf_file
+        self.out_file = PdfPages(self.filename)
 
         with tb.open_file(analyzed_data_file, 'r') as in_file:
             self.hits = in_file.root.Hits[:]
@@ -39,11 +46,14 @@ class Plotting(object):
                 self.Chi2Map = in_file.root.Chi2Map[:, :]
                 self.NoiseMap = in_file.root.NoiseMap[:]
 
-        if pdf_file is None:
-            self.filename = '.'.join(analyzed_data_file.split('.')[:-1]) + '.pdf'
-        else:
-            self.filename = pdf_file
-        self.out_file = PdfPages(self.filename)
+            try:
+                self.Cluster = in_file.root.Cluster[:]
+                self.HistClusterSize = in_file.root.HistClusterSize[:]
+                self.HistClusterShape = in_file.root.HistClusterShape[:]
+                self.HistClusterTot = in_file.root.HistClusterTot[:]
+                self.clustered = True
+            except tb.NoSuchNodeError:
+                pass
 
     def __enter__(self):
         return self
@@ -56,6 +66,11 @@ class Plotting(object):
 
     def create_standard_plots(self):
         self.create_occupancy_map()
+
+        if self.clustered:
+            self.create_cluster_tot_plot()
+            self.create_cluster_shape_plot()
+            self.create_cluster_size_plot()
 
     def create_occupancy_map(self):
         try:
@@ -112,35 +127,141 @@ class Plotting(object):
         data_rdpw = data[:, 112:220].reshape(-1)
         data_fdpw = data[:, :112].reshape(-1)
 
+        print np.std(data_rdpw)
+
         hist_rdpw, edges_rdpw = np.histogram(
             data_rdpw,
-            bins=np.arange(np.floor(np.mean(data_rdpw) - 3 * np.std(data_rdpw)) - .5, np.ceil(np.mean(data_rdpw) + 3 * np.std(data_rdpw)) + .5, 1),
-            range=(np.mean(data_rdpw) - 3 * np.std(data_rdpw), np.mean(data_rdpw) + 3 * np.std(data_rdpw))
+            bins=np.arange(0.5, 80.5, 1),
+            range=(1, 81)
         )
-        self._plot_histogram1d(hist=hist_rdpw,
-                               edges=edges_rdpw,
-                               title="Threshold distribution removed deep p-well",
-                               suffix='threshold_distribution')
+
+        mids_rdpw = edges_rdpw[:-1] + .5
+        self._plot_1d_hist(hist=hist_rdpw,
+                           plot_range=mids_rdpw.astype(int),
+                           title="Threshold distribution removed deep p-well",
+                           x_label='Threshold / DU',
+                           suffix='threshold_distribution')
 
         hist_fdpw, edges_fdpw = np.histogram(
             data_fdpw,
-            bins=np.arange(np.floor(np.mean(data_fdpw) - 3 * np.std(data_fdpw)) - .5, np.ceil(np.mean(data_fdpw) + 3 * np.std(data_fdpw)) + .5, 1),
-            range=(np.mean(data_fdpw) - 3 * np.std(data_fdpw), np.mean(data_fdpw) + 3 * np.std(data_fdpw))
+            bins=np.arange(0.5, 80.5, 1),
+            range=(1, 81)
         )
-        self._plot_histogram1d(hist=hist_fdpw,
-                               edges=edges_fdpw,
-                               title="Threshold distribution full deep p-well",
-                               suffix='threshold_distribution')
 
-    def _plot_histogram1d(self, hist, edges, title='Distribution', suffix=None):
-        # TODO: histogram data
+        mids_fdpw = edges_fdpw[:-1] + .5
+        self._plot_1d_hist(hist=hist_fdpw,
+                           plot_range=mids_fdpw.astype(int),
+                           title="Threshold distribution full deep p-well",
+                           x_label='Threshold / DU',
+                           suffix='threshold_distribution')
 
+    def create_cluster_size_plot(self):
+        try:
+            self._plot_cl_size(self.HistClusterSize)
+        except Exception:
+            self.logger.error('Could not create cluster size plot!')
+
+    def create_cluster_tot_plot(self):
+        try:
+            self._plot_cl_tot(self.HistClusterTot)
+        except Exception:
+            self.logger.error('Could not create cluster TOT plot!')
+
+    def create_cluster_shape_plot(self):
+        try:
+            self._plot_cl_shape(self.HistClusterShape)
+        except Exception:
+            self.logger.error('Could not create cluster shape plot!')
+
+    def _plot_cl_size(self, hist):
+        ''' Create 1D cluster size plot w/wo log y-scale '''
+        self._plot_1d_hist(hist=hist, title='Cluster size',
+                           log_y=False, plot_range=range(0, 10),
+                           x_label='Cluster size',
+                           y_label='# of clusters', suffix='cluster_size')
+        self._plot_1d_hist(hist=hist, title='Cluster size (log)',
+                           log_y=True, plot_range=range(0, 100),
+                           x_label='Cluster size',
+                           y_label='# of clusters', suffix='cluster_size_log')
+
+    def _plot_cl_tot(self, hist):
+        ''' Create 1D cluster size plot w/wo log y-scale '''
+        self._plot_1d_hist(hist=hist, title='Cluster ToT',
+                           log_y=False, plot_range=range(0, 64),
+                           x_label='Cluster ToT [25 ns]',
+                           y_label='# of clusters', suffix='cluster_tot')
+
+    def _plot_cl_shape(self, hist):
+        ''' Create a histogram with selected cluster shapes '''
+        x = np.arange(12)
+        fig = Figure()
+        _ = FigureCanvas(fig)
+        ax = fig.add_subplot(111)
+
+        selected_clusters = hist[[1, 3, 5, 6, 9, 13, 14, 7, 11, 19, 261, 15]]
+        ax.bar(x, selected_clusters, align='center')
+        ax.xaxis.set_ticks(x)
+        fig.subplots_adjust(bottom=0.2)
+        ax.set_xticklabels([u"\u2004\u2596",
+                            # 2 hit cluster, horizontal
+                            u"\u2597\u2009\u2596",
+                            # 2 hit cluster, vertical
+                            u"\u2004\u2596\n\u2004\u2598",
+                            u"\u259e",  # 2 hit cluster
+                            u"\u259a",  # 2 hit cluster
+                            u"\u2599",  # 3 hit cluster, L
+                            u"\u259f",  # 3 hit cluster
+                            u"\u259b",  # 3 hit cluster
+                            u"\u259c",  # 3 hit cluster
+                            # 3 hit cluster, horizontal
+                            u"\u2004\u2596\u2596\u2596",
+                            # 3 hit cluster, vertical
+                            u"\u2004\u2596\n\u2004\u2596\n\u2004\u2596",
+                            # 4 hit cluster
+                            u"\u2597\u2009\u2596\n\u259d\u2009\u2598"])
+        ax.set_title('Cluster shapes', color=TITLE_COLOR)
+        ax.set_xlabel('Cluster shape')
+        ax.set_ylabel('# of clusters')
+        ax.grid(True)
+        ax.set_yscale('log')
+        ax.set_ylim(ymin=1e-1)
+
+        self._save_plots(fig, suffix='cluster_shape')
+
+    def _plot_1d_hist(self, hist, yerr=None, plot_range=None, x_label=None, y_label=None, title=None, x_ticks=None, color='C0', log_y=False, suffix=None):
         fig = Figure()
         FigureCanvas(fig)
         ax = fig.add_subplot(111)
-        ax.set_title(title + ' for %d pixel(s)' % (np.sum(hist)), color=TITLE_COLOR)
 
-        ax.bar(edges[:-1], hist, align="edge", width=((edges[-1] - edges[0]) / (len(edges) - 1)))
+        hist = np.array(hist)
+        if plot_range is None:
+            plot_range = range(0, len(hist))
+        plot_range = np.array(plot_range)
+        plot_range = plot_range[plot_range < len(hist)]
+        if yerr is not None:
+            ax.bar(x=plot_range, height=hist[plot_range],
+                   color=color, align='center', yerr=yerr)
+        else:
+            ax.bar(x=plot_range,
+                   height=hist[plot_range], color=color, align='center')
+        ax.set_xlim((min(plot_range) - 0.5, max(plot_range) + 0.5))
+
+        ax.set_title(title, color=TITLE_COLOR)
+        if x_label is not None:
+            ax.set_xlabel(x_label)
+        if y_label is not None:
+            ax.set_ylabel(y_label)
+        if x_ticks is not None:
+            ax.set_xticks(plot_range)
+            ax.set_xticklabels(x_ticks)
+            ax.tick_params(which='both', labelsize=8)
+        if np.allclose(hist, 0.0):
+            ax.set_ylim((0, 1))
+        else:
+            if log_y:
+                ax.set_yscale('log')
+                ax.set_ylim((1e-1, np.amax(hist) * 2))
+        ax.grid(True)
 
         self._save_plots(fig, suffix=suffix)
 
@@ -324,14 +445,6 @@ class Plotting(object):
 
         if electron_axis:
             self._add_electron_axis(fig, ax)
-
-#         if self.qualitative:
-#             ax.xaxis.set_major_formatter(plt.NullFormatter())
-#             ax.xaxis.set_minor_formatter(plt.NullFormatter())
-#             ax.yaxis.set_major_formatter(plt.NullFormatter())
-#             ax.yaxis.set_minor_formatter(plt.NullFormatter())
-#             cb.formatter = plt.NullFormatter()
-#             cb.update_ticks()
 
         self._save_plots(fig, suffix='scurves')
 

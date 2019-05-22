@@ -85,11 +85,11 @@ class SimpleScan(ScanBase):
             self.dut.stop_monoread()
 
     @classmethod
-    def analyze(self, data_file=None):
+    def analyze(self, data_file=None, cluster_hits=False):
         if data_file is None:
             data_file = self.output_filename + '.h5'
 
-        with analysis.Analysis(raw_data_file=data_file, cluster_hits=False) as a:
+        with analysis.Analysis(raw_data_file=data_file, cluster_hits=cluster_hits) as a:
             a.analyze_data()
             self.analyzed_data_file = a.analyzed_data_file
         return self.analyzed_data_file

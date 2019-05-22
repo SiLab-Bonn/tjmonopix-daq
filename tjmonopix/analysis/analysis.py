@@ -56,7 +56,7 @@ class Analysis():
                            ('te', '<u1'),
                            ('cnt', '<u4'),
                            ('tot', '<u1'),
-                           ('scan_param_id', '<i8')]
+                           ('scan_param_id', '<i4')]
 
         cluster_fields = {'event_number': 'event_number',
                           'column': 'column',
@@ -81,7 +81,7 @@ class Analysis():
                                ('dist_col', '<u4'),
                                ('dist_row', '<u4'),
                                ('cluster_shape', '<i8'),
-                               ('scan_param_id', '<i8')]
+                               ('scan_param_id', '<i4')]
 
 #         # Add TDC data entries
 #         if self.analyze_tdc:
@@ -203,7 +203,10 @@ class Analysis():
 
     def analyze_data(self):
         self.analyzed_data_file = self.raw_data_file[:-3] + '_interpreted.h5'
-        hit_dtype = [('col', 'u1'), ('row', '<u2'), ('le', 'u1'), ('te', 'u1'), ('cnt', '<u4'), ('timestamp', '<i8'), ('scan_param_id', '<u4')]
+        hit_dtype = [('col', 'u1'), ('row', '<u2'), ('le', 'u1'), ('te', 'u1'), ('cnt', '<u4'), ('timestamp', '<i8'), ('scan_param_id', '<i4')]
+        if self.cluster_hits:
+            hit_dtype.append(('tot', 'u1'))
+            hit_dtype.append(('event_number', '<i8'))
         with tb.open_file(self.raw_data_file) as in_file:
             n_words = in_file.root.raw_data.shape[0]
             meta_data = in_file.root.meta_data[:]
@@ -240,12 +243,9 @@ class Analysis():
 
                     hit_dat = data_interpreter.interpret(raw_data, meta_data, hit_buffer)
 
-                    if self.build_event:
-                        # TODO
-                        pass
-#                     else:
-#                         hit_dat["tot"] = (hit_dat["te"] - hit_dat["le"]) & 0x3F
-#                         hit_dat["event_number"] = hit_dat["timestamp"]
+                    if self.cluster_hits:
+                        hit_dat["tot"] = ((hit_dat["te"] - hit_dat["le"]) & 0x3F) + 1  # Add one to get also hits where LE = TE
+                        hit_dat["event_number"] = hit_dat["timestamp"]
 
                     if hit_table is None:
                         hit_table = out_file.create_table(
@@ -289,7 +289,7 @@ class Analysis():
                 # TODO: Copy all attributes properly to output_file, maybe own table
                 out_file.root.Hits.attrs.scan_id = in_file.root.meta_data.attrs.scan_id
                 self._create_additional_hit_data()
-                print data_interpreter.get_error_count()
+                self.logger.info("{:d} errors occured during analysis".format(data_interpreter.get_error_count()))
 
 #                 self._create_additional_hit_data()
                 if self.cluster_hits:
