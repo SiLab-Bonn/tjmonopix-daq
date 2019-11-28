@@ -47,8 +47,8 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
             if rx_flg == 0x0:
                 rx_flg = 0x1
             else:
-                return 1, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
-
+                print("ERROR TJMONO",r_i,rx_flg)
+                rx_flg=0
         elif (r & 0xF0000000 == 0x10000000):
             timestamp = (timestamp & MASK1_UPPER) | (
                 np.uint64(r)<<np.uint64(4) & MASK1_LOWER)
@@ -58,8 +58,8 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
             if rx_flg == 0x1:
                 rx_flg = 0x2
             else:
-                return 2, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
-
+                print("ERROR TJMONO",r_i,rx_flg,r)
+                rx_flg=0
         elif (r & 0xF0000000 == 0x20000000):
             timestamp = (timestamp & MASK1_LOWER) | (
                 (np.uint64(r) << np.uint64(32)) & MASK1_UPPER)
@@ -76,10 +76,10 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
                 buf_i = buf_i+1
                 rx_flg = 0
             else:
-                return 3, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
-
+                print("ERR TJMONO2",r_i,rx_flg,r)
+                rx_flg=0
         ########################
-        # TIMESTMP (MIMOSA_MKD)
+        # TIMESTMP_RX1 (MIMOSA_MKD)
         ########################
         elif r & 0xFF000000 == 0x50000000:
             pass  # TODO get count
@@ -102,7 +102,15 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
                     buf[buf_i]["cnt"] = ts_cnt
                     buf_i = buf_i+1
             else:
-                return 6, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+                print("ERR TS_RX12",r_i,ts_flg,r)
+                buf[buf_i]["col"] = 0xEE
+                buf[buf_i]["row"] = 2
+                buf[buf_i]["le"] = 0
+                buf[buf_i]["te"] = 0
+                buf[buf_i]["timestamp"] = 0
+                buf[buf_i]["cnt"] = ts_flg
+                buf_i = buf_i+1
+                ts_flg =0
         elif r & 0xFF000000 == 0x52000000:  # timestamp
             ts_timestamp = (ts_timestamp & TS_MASK2) | \
                 (np.uint64(r & TS_MASK_DAT) << np.uint64(28))
@@ -111,7 +119,15 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
             if ts_flg == 0x1:
                 ts_flg = 0x2
             else:
-                return 5, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+                print("ERR TS_RX11",r_i,ts_flg,r)
+                buf[buf_i]["col"] = 0xEE
+                buf[buf_i]["row"] = 1
+                buf[buf_i]["le"] = 0
+                buf[buf_i]["te"] = 0
+                buf[buf_i]["timestamp"] = 0
+                buf[buf_i]["cnt"] = ts_flg
+                buf_i = buf_i+1
+                ts_flg =0
         elif r & 0xFF000000 == 0x53000000:  # timestamp
             ts_pre = ts_timestamp
             ts_timestamp = (ts_timestamp & TS_MASK3) | \
@@ -121,10 +137,17 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
             if ts_flg == 0x0:
                 ts_flg = 0x1
             else:
-                return 4, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
-
+                print("ERR TS_RX10",r_i,ts_flg,r)
+                buf[buf_i]["col"] = 0xEE
+                buf[buf_i]["row"] = 0
+                buf[buf_i]["le"] = 0
+                buf[buf_i]["te"] = 0
+                buf[buf_i]["timestamp"] = 0
+                buf[buf_i]["cnt"] = ts_flg
+                buf_i = buf_i+1
+                ts_flg =0
         ########################
-        # TIMESTMP_DIV2 (TDC)
+        # TIMESTMP_MON
         ########################
         elif r & 0xFF000000 == 0x60000000:
             pass  # TODO get count
@@ -134,7 +157,6 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
             ts2_cnt = ts2_cnt+1
             # if debug & 0x4 ==0x4:
             #print r_i,hex(r),"timestamp1",hex(ts_timestamp),ts_cnt
-
             if ts2_flg == 2:
                 ts2_flg = 0
                 if debug & 0x1 == 0x1:
@@ -146,7 +168,15 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
                     buf[buf_i]["cnt"] = ts2_tot
                     buf_i = buf_i+1
             else:
-                return 10, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+                print("ERR TS_MON",r_i,ts2_flg,r)
+                buf[buf_i]["col"] = 0xED
+                buf[buf_i]["row"] = 2
+                buf[buf_i]["le"] = 0
+                buf[buf_i]["te"] = 0
+                buf[buf_i]["timestamp"] = 0
+                buf[buf_i]["cnt"] = ts2_flg
+                buf_i = buf_i+1
+                ts2_flg =0
         elif r & 0xFF000000 == 0x62000000:  # timestamp
             ts2_timestamp = (ts2_timestamp & np.uint64(0xFFFF000000FFFFFF)) | \
                 (np.uint64(r & TS_MASK_DAT) << np.uint64(24))
@@ -156,7 +186,15 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
             if ts2_flg == 0x1:
                 ts2_flg = 0x2
             else:
-                return 9, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+                print("ERR TS_MON1",r_i,ts2_flg,r)
+                buf[buf_i]["col"] = 0xED
+                buf[buf_i]["row"] = 1
+                buf[buf_i]["le"] = 0
+                buf[buf_i]["te"] = 0
+                buf[buf_i]["timestamp"] = 0
+                buf[buf_i]["cnt"] = ts2_flg
+                buf_i = buf_i+1
+                ts2_flg =0
         elif r & 0xFF000000 == 0x63000000:  # timestamp
             ts2_timestamp = (ts2_timestamp & np.uint64(0x0000FFFFFFFFFFFF)) | \
                 (np.uint64(r & TS_DIV_MASK_DAT) << np.uint64(48))
@@ -167,10 +205,17 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
             if ts2_flg == 0x0:
                 ts2_flg = 0x1
             else:
-                return 8, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
-
+                print("ERR TS_MON0",r_i,ts2_flg,r)
+                buf[buf_i]["col"] = 0xED
+                buf[buf_i]["row"] = 0
+                buf[buf_i]["le"] = 0
+                buf[buf_i]["te"] = 0
+                buf[buf_i]["timestamp"] = 0
+                buf[buf_i]["cnt"] = ts2_flg
+                buf_i = buf_i+1
+                ts2_flg =0
         ########################
-        # TIMESTMP_DIV3 (TLU)
+        # TIMESTMP_TLU
         ########################
         elif r & 0xFF000000 == 0x70000000:
             pass  # TODO get count
@@ -192,8 +237,8 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
                     buf[buf_i]["cnt"] = ts3_cnt
                     buf_i = buf_i+1
             else:
-                return 10, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
-
+                print("ERR TS_TLU2",r_i,ts3_flg,r)
+                ts3_flg =0
         elif r & 0xFF000000 == 0x72000000:  # timestamp
             ts3_timestamp = (ts3_timestamp & np.uint64(0xFFFF000000FFFFFF)) | \
                 (np.uint64(r & TS_MASK_DAT) << np.uint64(24))
@@ -202,7 +247,8 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
             if ts3_flg == 0x1:
                 ts3_flg = 0x2
             else:
-                return 9, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
+                print("ERR TS_TLU1",r_i,ts3_flg,r)
+                ts3_flg =0
         elif r & 0xFF000000 == 0x73000000:  # timestamp
             ts3_timestamp = (ts3_timestamp & np.uint64(0x0000FFFFFFFFFFFF)) + \
                 (np.uint64(r & TS_MASK_DAT) << np.uint64(48))
@@ -212,8 +258,8 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
             if ts3_flg == 0x0:
                 ts3_flg = 0x1
             else:
-                return 8, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
-
+                print("ERR TS_TLU0",r_i,ts3_flg,r)
+                ts3_flg =0
         ########################
         # TLU
         ########################
@@ -228,13 +274,8 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
                 buf[buf_i]["timestamp"] = tlu_timestamp
                 buf[buf_i]["cnt"] = tlu
                 buf_i = buf_i+1
-
         else:
-            # if debug & 0x4 == 0x4:
-            #    print r_i,hex(r),"trash"
-
-            return 7, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
-
+            print("ERR Trash",r_i,r)
     return 0, buf[:buf_i], r_i, col, row, le, te, noise, timestamp, rx_flg, ts_timestamp, ts_pre, ts_flg, ts_cnt, ts2_timestamp, ts2_tot, ts2_flg, ts2_cnt, ts3_timestamp, ts3_flg, ts3_cnt
 
 def interpret_h5(fin, fout, data_format=0x3, n=100000000):

@@ -75,14 +75,14 @@ class ScanBase(object):
             description=MetaTable,
             title='meta_data',
             filters=tb.Filters(complib='zlib', complevel=5, fletcher32=False))
-        self.meta_data_table.attrs.kwargs = yaml.dump(kwargs)
+        self.meta_data_table.attrs.kwargs = kwargs
         self.meta_data_table.attrs.scan_id = self.scan_id
         status = self.dut.get_power_status()
         self.logger.info('Power status: {:s}'.format(str(status)))
         self.logger.info('Temperature: {:4.1f} C'.format(self.dut.get_temperature()))
-        self.meta_data_table.attrs.power_before = yaml.dump(status)
+        self.meta_data_table.attrs.power_before = status
         self.meta_data_table.attrs.status_before = yaml.dump(self.dut.get_configuration())
-        self.meta_data_table.attrs.SET_before = yaml.dump(self.dut.SET)
+        self.meta_data_table.attrs.SET_before = self.dut.SET
         self.kwargs = self.h5_file.create_vlarray(
             self.h5_file.root,
             name='kwargs',
@@ -162,7 +162,6 @@ class ScanBase(object):
         self.fifo_readout.stop(timeout=timeout)
 
     def _handle_data(self, data_tuple):
-
         total_words = self.raw_data_earray.nrows
         len_raw_data = data_tuple[0].shape[0]
 

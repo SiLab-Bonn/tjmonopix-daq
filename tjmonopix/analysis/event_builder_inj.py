@@ -9,8 +9,8 @@ TS_INJ = 252
 TS_MON = 253
 TS_GATE = 254
 TLU = 255
-COL_SIZE = 36
-ROW_SIZE = 129
+COL_SIZE = 224
+ROW_SIZE = 448
 
 # debug
 # 1 = 1: contined to next file read 0: data is the end of file DONOT use this bit
@@ -21,18 +21,18 @@ ROW_SIZE = 129
 
 
 @njit
-def _build_inj(dat, injlist, thlist, phaselist, inj_period, inj_n, mode, buf, scan_param_id, pre_inj, inj_id, inj_cnt):
+def _build_inj(dat, injlist, thlist, phaselist, rowlist, inj_period, inj_n, mode, buf, scan_param_id, pre_inj, inj_id, inj_cnt):
     buf_i = 0
     dat_i = 0
     err = 0
     while dat_i < len(dat):
-        if scan_param_id != dat[dat_i]["index"]:
+        if scan_param_id != dat[dat_i]["scan_param_id"]:
             if inj_id != len(injlist) - 1 or inj_cnt != inj_n - 1:
                 print ("ERROR: Broken data, wrong ts_inj idx, inj_cnt,inj_n-1,inj_id,len(injlist)-1"),
                 print (dat_i, inj_cnt, inj_n - 1, inj_id, len(injlist) - 1)
             inj_id = -1
             inj_cnt = inj_n - 1
-        scan_param_id = dat[dat_i]["index"]
+        scan_param_id = dat[dat_i]["scan_param_id"]
         if dat[dat_i]["col"] == TS_INJ:
             d_ii = dat_i + 1
             while d_ii < len(dat):
@@ -82,6 +82,7 @@ def _build_inj(dat, injlist, thlist, phaselist, inj_period, inj_n, mode, buf, sc
                         buf[buf_i]["inj"] = injlist[inj_id]
                         buf[buf_i]["th"] = thlist[inj_id]
                         buf[buf_i]["phase"] = phaselist[inj_id]
+                        buf[buf_i]["inj_row"] = rowlist[inj_id]
                         buf[buf_i]["ts_mon"] = ts_mon
                         buf[buf_i]["ts_inj"] = ts_inj
                         buf[buf_i]["ts_token"] = ts_token
@@ -101,7 +102,7 @@ buf_type = [  # ("event_number","<i8"),
     ("scan_param_id", "<i4"), ("inj_id", "<i4"),  # ## this is redundant. can be deleted later..
     ("col", "<u1"), ("row", "<u1"), ("tot", "<u1"), ("toa", "<u1"), ("flg", "<u1"),
     ("ts_inj", "<u8"), ("ts_mon", "<u8"), ("ts_token", "<u8"), ("tot_mon", "<u8"),
-    ("inj", "<f4"), ("th", "<f4"), ("phase", "<u1")
+    ("inj", "<f4"), ("th", "<f4"), ("phase", "<u1"),("inj_row", "<u1")
 ]
 
 
@@ -116,6 +117,8 @@ def build_inj_h5(fhit, fraw, fout, n=500000, debug=0x2):
                 thlist = yaml.safe_load(f.root.kwargs[i + 1])
             elif f.root.kwargs[i] == "phaselist":
                 phaselist = yaml.safe_load(f.root.kwargs[i + 1])
+            elif f.root.kwargs[i] == "rowlist":
+                rowlist = yaml.safe_load(f.root.kwargs[i + 1])
     inj_period = status['inj']["WIDTH"] + status['inj']["DELAY"]
     inj_n = status['inj']["REPEAT"]
     sid = -1
@@ -144,10 +147,9 @@ def build_inj_h5(fhit, fraw, fout, n=500000, debug=0x2):
                     mode = 1 | debug
                 (err, d_i, hit_dat, sid, pre_inj, inj_id, inj_cnt) = _build_inj(
                     dat,
-                    injlist, thlist, phaselist,  # # not well written.
+                    injlist, thlist, phaselist, rowlist, # # not well written.
                     inj_period, inj_n, mode, buf,
-                    sid, pre_inj, inj_id, inj_cnt
-                )
+                    sid, pre_inj, inj_id, inj_cnt)
                 hit_table.append(hit_dat)
                 hit_table.flush()
                 print "%d %d %.3f%% %.3fs %dhits %derrs" % (start, d_i, 100.0 * (start + d_i) / end, time.time() - t0, len(hit_dat), err)

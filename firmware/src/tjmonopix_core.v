@@ -1,4 +1,3 @@
-
 `timescale 1ns / 1ps
 `default_nettype none
 
@@ -105,7 +104,7 @@ localparam TS_RX1_HIGHADDR = 16'h0D00-1;
 reg RD_VERSION;
 always@(posedge BUS_CLK)
     if(BUS_ADD == 16'h0000 && BUS_RD)
-        RD_VERSION <= 1;
+        RD_VERSION <= 2;
     else
         RD_VERSION <= 0;
 
@@ -133,6 +132,7 @@ wire RESET_CONF, RESET_BCID_CONF;
 wire EN_BX_CLK_CONF, EN_OUT_CLK_CONF, SELECTAB;
 wire READ_AB, FREEZE_AB, OUT_AB, TOK_AB;
 wire EN_RST_BCID_WITH_TIMESTAMP;
+wire SELECTTX1,TX1;
 
 assign RESET_CONF = GPIO_OUT[0];
 assign RESET_BCID_CONF = GPIO_OUT[1];
@@ -141,6 +141,8 @@ assign EN_OUT_CLK_CONF = GPIO_OUT[3];
 assign DEF_CONF = ~GPIO_OUT[4];
 assign SELECTAB = GPIO_OUT[5];
 assign EN_RST_BCID_WITH_TIMESTAMP = GPIO_OUT[10];
+assign SELECTTX1 = GPIO_OUT[11];
+assign TX1 = GPIO_OUT[12];
 
 wire CONF_CLK;
 assign CONF_CLK = CLK8;
@@ -404,6 +406,7 @@ timestamp640
     .FIFO_DATA(TS_TLU_FIFO_DATA)
 );
 
+wire DEBUG;
 tjmono_data_rx #(
    .BASEADDR(DATA_RX_BASEADDR),
    .HIGHADDR(DATA_RX_HIGHADDR),
@@ -428,7 +431,7 @@ tjmono_data_rx #(
     .FIFO_EMPTY(FE_FIFO_EMPTY),
     .FIFO_DATA(FE_FIFO_DATA),
     
-    .LOST_ERROR()
+    .LOST_ERROR(DEBUG)
     
 );
 
@@ -464,7 +467,8 @@ assign LED[3] = 0;
 assign LED[4] = 0;
 
 assign LEMO_TX[0] = TLU_CLOCK; // trigger clock; also connected to RJ45 output
-assign LEMO_TX[1] = TLU_BUSY;  // TLU_BUSY signal; also connected to RJ45 output. Asserted when TLU FSM has 
+//assign LEMO_TX[1] = TLU_BUSY;  // TLU_BUSY signal; also connected to RJ45 output. Asserted when TLU FSM has 
+assign LEMO_TX[1] = (SELECTTX1)? TX1:TLU_BUSY;
 assign LEMO_TX[2] = INJECTION_MON; //injection output for monitoring, triggering external devices 
 
 endmodule

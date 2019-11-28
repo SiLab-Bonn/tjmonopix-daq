@@ -24,9 +24,9 @@ hw_drivers:
     type      : GPAC
     hw_driver : i2c
     base_addr : 0x00000
-#    init:
-#        no_calibration : True
-#        no_power_reset : False
+    init:
+        no_calibration : False
+        no_power_reset : False
 
   - name      : fifo
     type      : sram_fifo
@@ -107,6 +107,12 @@ registers:
     hw_driver   : gpio
     size        : 16
     fields :
+      - name    : TX1
+        size    : 1
+        offset  : 12
+      - name    : TX1_SELECT
+        size    : 1
+        offset  : 11
       - name    : EN_RST_BCID_WITH_TIMESTAMP
         size    : 1
         offset  : 10

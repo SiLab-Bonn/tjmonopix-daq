@@ -96,29 +96,8 @@ class TJMonoPix(Dut):
         # do this before powering up
         self['CONF_SR'].set_size(3925)
         self['CONF']['DEF_CONF_N'] = 0
-        if fl == "EN_HV" or fl == 'EN_PMOS':
-            self['CONF']['AB_SELECT'] = True
-        else:
-            self['CONF']['AB_SELECT'] = False
-
-        self.SET['fl'] = fl
-        if fl == "EN_PMOS_NOSF":
-            self.fl_n = 0
-        elif fl == "EN_PMOS":
-            self.fl_n = 1
-        elif fl == "EN_COMP":
-            self.fl_n = 2
-        elif fl == "EN_HV":
-            self.fl_n = 3
-
-        self['CONF'].write()
-
-        self['data_rx'].CONF_START_FREEZE = 57  # default 57
-        self['data_rx'].CONF_STOP_FREEZE = 95  # default 95
-        self['data_rx'].CONF_START_READ = 60  # default 60
-        self['data_rx'].CONF_STOP_READ = 62  # default 62
-        self['data_rx'].CONF_STOP = 100  # default 100
-
+        
+        self.switch_flavor(fl)
         self.power_on()
 
         self['CONF']['RESET_BCID'] = 1
@@ -132,21 +111,12 @@ class TJMonoPix(Dut):
         self['CONF']['RESET_BCID'] = 0
         self['CONF']['RESET'] = 0
         self['CONF'].write()
+        
         self.default_conf()
-
-        self.set_icasn_dacunits(0, 0)
-        self.set_vreset_dacunits(35, 0)
-        self.set_ireset_dacunits(2, 1, 0)
-        # self.set_ireset_dacunits(128 + 5, 0)
-        self.set_ithr_dacunits(5, 0)
-        self.set_idb_dacunits(50, 0)
         self.write_conf()
 
         self['CONF']['DEF_CONF_N'] = 1
         self['CONF'].write()
-
-        self['CONF_SR'][fl].setall(True)
-        self.write_conf()
 
         logging.info(str(self.get_power_status()))
 
@@ -155,7 +125,7 @@ class TJMonoPix(Dut):
         self['CONF_SR']['EN_HITOR_OUT'].setall(True)
         self['CONF_SR']['nEN_OUT'].setall(True)
 
-        self['CONF_SR']['EN_OUT'].setall(False)  ## active low
+        self['CONF_SR']['EN_OUT'].setall(True)  ## active low
         self['CONF_SR']['EN_HV'].setall(False)
         self['CONF_SR']['EN_COMP'].setall(False)
         self['CONF_SR']['EN_PMOS'].setall(False)
@@ -186,8 +156,6 @@ class TJMonoPix(Dut):
         self['CONF_SR']['SET_IBUFP_R'] = 0b0101
         self['CONF_SR']['SET_IBUFN_R'] = 0b1001
 
-        self['CONF_SR']['SET_IRESET_BIT'] = 1
-
         self['CONF_SR']['SET_VCLIP'].setall(False)
         self['CONF_SR']['SET_VRESET_D'].setall(False)
         self['CONF_SR']['SET_VRESET_D'][45] = 1
@@ -200,17 +168,12 @@ class TJMonoPix(Dut):
         self['CONF_SR']['SET_VRESET_P'].setall(False)
         self['CONF_SR']['SET_VRESET_P'][16] = 1
 
-        # Be careful! Because the type is BitLogic, the slicing is verilog type not python, this means the limits are inclusive. Also MSB must be first in the slice
-        self['CONF_SR']['SET_ICASN'].setall(False)
-        self['CONF_SR']['SET_ICASN'][82:45] = True
-        self['CONF_SR']['SET_IRESET'].setall(False)
-        self['CONF_SR']['SET_IRESET'][71:57] = True
-        self['CONF_SR']['SET_ITHR'].setall(False)
-        self['CONF_SR']['SET_ITHR'][67:60] = True
-        self['CONF_SR']['SET_IDB'].setall(False)
-        self['CONF_SR']['SET_IDB'][78:50] = True
-        self['CONF_SR']['SET_IBIAS'].setall(False)
-        self['CONF_SR']['SET_IBIAS'][86:41] = True
+        self.set_icasn_dacunits(0,0)
+        self.set_vreset_dacunits(35,0)
+        self.set_ireset_dacunits(2,1,0)
+        self.set_ithr_dacunits(5,0)
+        self.set_idb_dacunits(50,0)
+        self.set_ibias_dacunits(45,1) 
 
         self['CONF_SR']['DIG_MON_SEL'].setall(False)
 
@@ -226,38 +189,50 @@ class TJMonoPix(Dut):
         self.conf_flg = 0
 
     def load_config(self, filename):
-
         with open(filename) as f:
             conf = yaml.safe_load(f)
+        self.SET['fl'] = conf["SET"]["fl"]
+        if fl == "EN_PMOS_NOSF":
+            self.fl_n = 0
+        elif fl == "EN_PMOS":
+            self.fl_n = 1
+        elif fl == "EN_COMP":
+            self.fl_n = 2
+        elif fl == "EN_HV":
+            self.fl_n = 3
+        self['CONF'] = conf["CONF"]
+        self['CONF'].write()
         self.default_conf()
         self.write_conf()
-        time.sleep(0.1)  # mabe not needed?
-
-        # maybe update power here also?
-
-        self.set_all_mask(mask=conf['CONF_SR'])
+        self.reset_ibias()
+        self.power_on(VDDA=conf["SET"]["VDDA"],
+                      VDDP=conf["SET"]["VDDP"],
+                      VDDA_DAC=conf["SET"]["VDDA_DAC"],
+                      VDDD=conf["SET"]["VDDD"],
+                      VPCSWSF=conf["SET"]["VPCSWSF"],
+                      VPC=conf["SET"]["VPC"],
+                      BiasSF=conf["SET"]["BiasSF"])
+        self['CONF_SR']=conf['CONF_SR']
         self.write_conf()
-        time.sleep(0.1)  # mabe not needed?
-
-        # update gloable setting
-        # TODO !!
-        self.write_conf()
+        self.reset_ibias()        
 
     def save_config(self, filename=None):
-        conf = self.get_power_status()
-        conf.update(self.dut.get_configuration())
-        conf['conf_flg'] = self.conf_flg
         if filename is None:
-            filename = None
-            # time.strf TODO!
-        with open(filename, 'w') as f:
-            f.write(yaml.dump(conf))
+            filename = os.path.join(DATDIR, time.strftime("config_%s_%Y%m%d-%H%M%S.yaml"%fmt))
+        conf = self.get_configuration()
+        conf["SET"] = self.SET
+        with open(filename, "w") as f:
+            yaml.dump(conf, f)
+        logging.info("save_config filename: %s" % filename)
+        return filename
 
-    def power_on(self, VDDA=1.8, VDDP=1.8, VDDA_DAC=1.8, VDDD=1.8, VPCSWSF=0.5, VPC=1.3, BiasSF=100, INJ_LO=0.2, INJ_HI=3.6):
+    def power_on(self, VDDA=1.8, VDDP=1.8, VDDA_DAC=1.8, VDDD=1.8, VPCSWSF=0.5, VPC=1.3, BiasSF=100):
         # Set power
 
         # Sense resistor is 0.1Ohm, so 300mA=60mA*5
         self['VDDP'].set_current_limit(60, unit='mA')
+        self['VDDP'].set_voltage(VDDP, unit='V')
+        self.SET["VDDP"] = VDDP
 
         self['VPCSWSF'].set_voltage(VPCSWSF, unit='V')
         self.SET["VPCSWSF"] = VPCSWSF
@@ -267,71 +242,57 @@ class TJMonoPix(Dut):
 
         self['BiasSF'].set_current(BiasSF, unit='uA')
         self.SET["BiasSF"] = BiasSF
+        
+        self['VDDA'].set_voltage(VDDA, unit='V')
+        self.SET["VDDA"] = VDDA
+        self['VDDA'].set_enable(True)
+        time.sleep(0.01)
 
-        self['VDDP'].set_voltage(VDDP, unit='V')
         self['VDDP'].set_enable(True)
-        self.SET["VDDP"] = VDDP
-
+        
         self['VDDA_DAC'].set_voltage(VDDA_DAC, unit='V')
         self['VDDA_DAC'].set_enable(True)
         self.SET["VDDA_DAC"] = VDDA_DAC
-
-        self['VDDA'].set_voltage(VDDA, unit='V')
-        self['VDDA'].set_enable(True)
-        self.SET["VDDA"] = VDDA
 
         self['VDDD'].set_voltage(VDDD, unit='V')
         self['VDDD'].set_enable(True)
         self.SET["VDDD"] = VDDD
 
-        self['INJ_LO'].set_voltage(INJ_LO, unit='V')
-        self.SET["INJ_LO"] = INJ_LO
-        self['INJ_HI'].set_voltage(INJ_HI, unit='V')
-        self.SET["INJ_HI"] = INJ_HI
-
-        DACMON_ICASN = 0
-        self['DACMON_ICASN'].set_current(DACMON_ICASN, unit='uA')
-        self.SET["DACMON_ICASN"] = DACMON_ICASN
+        #DACMON_ICASN = 0
+        #self['DACMON_ICASN'].set_current(DACMON_ICASN, unit='uA')
+        #self.SET["DACMON_ICASN"] = DACMON_ICASN
 
     def power_off(self):
-        self['INJ_LO'].set_voltage(0.2, unit='V')
-        self.SET["INJ_LO"] = 0.2
-        self['INJ_HI'].set_voltage(0.2, unit='V')
-        self.SET["INJ_LO"] = 0.2
         # Deactivate all
         for pwr in ['VDDP', 'VDDD', 'VDDA', 'VDDA_DAC']:
             self[pwr].set_enable(False)
 
     def get_power_status(self):
         status = {}
-
         for pwr in ['VDDP', 'VDDD', 'VDDA', 'VDDA_DAC', 'VPCSWSF', 'VPC', 'BiasSF']:
             status[pwr + ' [V]'] = self[pwr].get_voltage(unit='V')
-            status[pwr + ' [mA]'] = 5 * self[pwr].get_current(unit='mA') if pwr in [
-                "VDDP", "VDDD", "VDDA", "VDDA_DAC"] else self[pwr].get_current(unit='mA')
-
+            if pwr in ["VDDP", "VDDD", "VDDA", "VDDA_DAC"]:
+                 status[pwr + ' [mA]'] = 5 * self[pwr].get_current(unit='mA')
+                 status[pwr + ' OC'] = self[pwr].get_over_current()
+            else:
+                 status[pwr + ' [mA]'] = self[pwr].get_current(unit='mA')
+            
         return status
 
-    def set_inj_amplitude(self, inj_high=3.6, inj_low=0.2):
-        self['INJ_LO'].set_voltage(inj_low, unit='V')
-        self.SET['INJ_LO'] = inj_low
-        self['INJ_HI'].set_voltage(inj_high, unit='V')
-        self.SET['INJ_HI'] = inj_high
+    def set_inj_all(self,vh=79,vl=44,inj_delay=800,inj_width=250,inj_n=100,inj_phase=0):
+        self["inj"].reset()
+        self["inj"].set_width(inj_width)
+        self["inj"].set_delay(inj_delay)
+        self["inj"].set_repeat(inj_n)
+        if inj_phase > -1 :
+            self["inj"].set_phase(inj_phase)
+        self["inj"].set_en(0)
+        self.set_vl_dacunits(vl,1)
+        self.set_vh_dacunits(vh,1)
+        self.write_conf()
 
-    def interpret_raw_data(self, raw_data):
-        hit_data_sel = ((raw_data & 0xF0000000) == 0)
-        hit_data = raw_data[hit_data_sel]
-        hit_dtype = np.dtype(
-            [("col", "<u1"), ("row", "<u2"), ("le", "<u1"), ("te", "<u1"), ("noise", "<u1")])
-        ret = np.empty(hit_data.shape[0], dtype=hit_dtype)
-
-        ret['col'] = (hit_data & 0x3F)
-        ret['row'] = (hit_data & 0x7FC0) >> 6
-        ret['te'] = (hit_data & 0x1F8000) >> 15
-        ret['le'] = (hit_data & 0x7E00000) >> 21
-        ret['noise'] = (hit_data & 0x8000000) >> 27
-
-        return ret
+    def inject(self):
+        self["inj"].start()
 
     def interpret_data(self, raw_data):
         hit_data_sel = ((raw_data & 0xF0000000) == 0)
@@ -340,51 +301,12 @@ class TJMonoPix(Dut):
             [("col", "<u1"), ("row", "<u2"), ("le", "<u1"), ("te", "<u1"), ("noise", "<u1")])
         ret = np.empty(hit_data.shape[0], dtype=hit_dtype)
 
-        ret['col'] = 2 * (hit_data & 0x3F) + \
-            (((hit_data & 0x7FC0) >> 6) // 256)
+        ret['col'] = 2 * (hit_data & 0x3F) + (((hit_data & 0x7FC0) >> 6) // 256)
         ret['row'] = ((hit_data & 0x7FC0) >> 6) % 256
         ret['te'] = (hit_data & 0x1F8000) >> 15
         ret['le'] = (hit_data & 0x7E00000) >> 21
         ret['noise'] = (hit_data & 0x8000000) >> 27
-
         return ret
-
-    def set_all_mask(self, mask=None):
-        self.conf_flg = 1
-        if mask is None:
-            self['CONF_SR']['MASKD'].setall(False)
-            self['CONF_SR']['MASKH'].setall(False)
-            self['CONF_SR']['MASKV'].setall(False)
-            # hit_or
-            self['CONF_SR']['DIG_MON_SEL'].setall(False)
-            # ENABLES OR DISABLES THE NORMAL HITOR PADS, HITOR0-3 =  1-4 flavor, ACTIVE LOW
-            self['CONF_SR']['EN_HITOR_OUT'].setall(True)
-            self['CONF_SR']['nEN_HITOR_OUT'].setall(True)
-            # readout
-            self['CONF_SR']['EN_PMOS_NOSF'].setall(False)
-            self['CONF_SR']['EN_PMOS'].setall(False)
-            self['CONF_SR']['EN_COMP'].setall(False)
-            self['CONF_SR']['EN_HV'].setall(False)
-            # ENABLES OR DISABLES THE NORMAL OUTPUT PADS, ACTIVE LOW
-            self['CONF_SR']['EN_OUT'].setall(True)
-            # ENABLES OR DISABLES THE COMPLEMENTARY OUTPUT PADS, ACTIVE LOW
-            self['CONF_SR']['nEN_OUT'].setall(True)
-            # injection
-            self['CONF_SR']['INJ_ROW'].setall(False)
-            self['CONF_SR']['INJ_IN_MON_R'] = 0
-            self['CONF_SR']['INJ_IN_MON_L'] = 0
-            self['CONF_SR']['COL_PULSE_SEL'].setall(False)
-            self.write_conf()
-        else:
-            for m in ['DIG_MON_SEL', 'EN_HITOR_OUT', 'nEN_HITOR_OUT',
-                      'EN_PMOS_NOSF', 'EN_COMP', 'EN_OUT', 'nEN_OUT',
-                      'INJ_ROW', 'INJ_IN_MON_R', 'INJ_IN_MON_L', 'COL_PULSE_SEL']:
-                logger.info('set_all_mask %s: %s' % (m, str(mask[m])))
-                self['CONF_SR'][m] = mask[m]
-                self.write_conf()
-            for m in ['EN_HV', 'EN_PMOS', 'MASKD', 'MASKH', 'MASKV']:
-                self['CONF_SR'][m] = bitarray(mask[m])[::-1]
-                self.write_conf()
 
     def mask(self, flavor, col, row):
         assert 0 <= flavor <= 3, 'Flavor must be between 0 and 3'
@@ -395,7 +317,7 @@ class TJMonoPix(Dut):
         self['CONF_SR']['MASKD'][md] = False
         self['CONF_SR']['MASKV'][mcol] = False
         self['CONF_SR']['MASKH'][row] = False
-
+        
     def enable_injection(self, flavor, col, row):
         """ Enables injection in one selected pixel
 
@@ -435,7 +357,7 @@ class TJMonoPix(Dut):
             masks.append({'col': ba_col, 'row': ba_row})
         return masks
 
-    def enable_column_hitor(self, flavor, col):
+    def enable_hitor(self, flavor, col,row):
         """ Enables hit or in given column for given flavor
 
         Parameters:
@@ -449,15 +371,79 @@ class TJMonoPix(Dut):
             raise ValueError("Flavor number must be between 0 and 3")
         if col < 0 or col > 112:
             raise ValueError("Column number must be between 0 and 111")
-
+        self['CONF_SR']['EN_HITOR_OUT'][flavor] = 0 # active low
         self['CONF_SR']['DIG_MON_SEL'][(flavor * 112) + col] = 1
+        self['CONF_SR']['MASKH'][row] = 0 # active low to HITOR (besure enable pixel with D or V)
 
-    # SET BIAS CURRENTS AND VOLTAGES
+    def enable_pixel(self,flavor,col,row,mask=[]):
+        if flavor!=self.fl_n:
+            logger.warn('you are trying to enable fl=%d but %d is set'%(flavor,self.fl_n))
+        if flavor==0:
+            fl="EN_PMOS_NOSF"
+        elif flavor==1:
+            fl="EN_PMOS"
+        elif flavor==2:
+            fl="EN_COMP"
+        elif flavor==3:
+            fl="EN_HV"
+        if col<0:
+            self['CONF_SR']['MASKD'].setall(True)
+            self['CONF_SR']['MASKH'].setall(True)
+            self['CONF_SR']['MASKV'].setall(True)
+            self['CONF_SR'][fl].setall(True)
+        else:
+            mcol = flavor * 112 + col
+            md = mcol - row if (mcol - row) >= 0 else 448 + mcol - row
+            self['CONF_SR']['MASKD'][md]=True
+            self['CONF_SR'][fl][col/2]=True
+        self['CONF_SR']["EN_OUT"][flavor]=False
+        for m in mask:
+            self.mask(*m)
+            
+    def enable_analog(self,col="all",row=-1):
+        if col=="all": 
+            self["CONF_SR"]["INJ_IN_MON_L"] =True
+            self["CONF_SR"]["INJ_IN_MON_R"] =True
+            self["CONF_SR"]["INJ_ROW"][223] =True
+            self["CONF_SR"]["INJ_ROW"][222] =True
+            self["CONF_SR"]["INJ_ROW"][221] =True
+            self["CONF_SR"]["INJ_ROW"][220] =True
+        elif col=="l": 
+            self["CONF_SR"]["INJ_IN_MON_L"] =True
+        elif col=="r": 
+            self["CONF_SR"]["INJ_IN_MON_R"] =True
+        if row == -1:
+            self["CONF_SR"]["INJ_ROW"][223] =True
+            self["CONF_SR"]["INJ_ROW"][222] =True
+            self["CONF_SR"]["INJ_ROW"][221] =True
+            self["CONF_SR"]["INJ_ROW"][220] =True
+        else:
+            self["CONF_SR"]["INJ_ROW"][220+row] =True
+            
+    def switch_flavor(self,fl):
+        if fl[:3]!="EN_":
+            fl="EN_%s"%fl
+        if fl == "EN_HV" or fl == 'EN_PMOS':
+            self['CONF']['AB_SELECT'] = True
+        else:
+            self['CONF']['AB_SELECT'] = False
 
+        self.SET['fl'] = fl
+        if fl == "EN_PMOS_NOSF":
+            self.fl_n = 0
+        elif fl == "EN_PMOS":
+            self.fl_n = 1
+        elif fl == "EN_COMP":
+            self.fl_n = 2
+        elif fl == "EN_HV":
+            self.fl_n = 3
+
+        self['CONF'].write()
+       
     def set_ibias_dacunits(self, dacunits, printen=False):
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
-        low = (128 - dacunits) // 2
-        high = (dacunits // 2) + (128 // 2)
+        low = (128-(dacunits+1))/2
+        high = ((dacunits+1)/2)+63
         self['CONF_SR']['SET_IBIAS'].setall(False)
         self['CONF_SR']['SET_IBIAS'][high:low] = (high - low + 1) * bitarray([True])
         if (printen == 1):
@@ -475,9 +461,9 @@ class TJMonoPix(Dut):
 
     def set_idb_dacunits(self, dacunits, printen=False):
         dacunits=int(dacunits)
-        assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
-        low = (128 - dacunits) // 2
-        high = (dacunits // 2) + (128 // 2)
+        assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127 but %d'%dacunits
+        low = (128-(dacunits+1))/2
+        high = ((dacunits+1)/2)+63
         self['CONF_SR']['SET_IDB'].setall(False)
         self['CONF_SR']['SET_IDB'][high:low] = (high - low + 1) * bitarray([True])
         if (printen == 1):
@@ -495,8 +481,8 @@ class TJMonoPix(Dut):
     def set_ithr_dacunits(self, dacunits, printen=False):
         dacunits=int(dacunits)
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
-        low = (128 - dacunits) // 2
-        high = (dacunits // 2) + (128 // 2)
+        low = (128-(dacunits+1))/2
+        high = ((dacunits+1)/2)+63
         self['CONF_SR']['SET_ITHR'].setall(False)
         self['CONF_SR']['SET_ITHR'][high:low] = (high - low + 1) * bitarray([True])
         if printen:
@@ -504,11 +490,12 @@ class TJMonoPix(Dut):
             logger.info('ithr = ' + str(17.5 * ((dacunits + 1) / 128.0)) + 'nA')
 
     def set_icasn_dacunits(self, dacunits, printen=False):
-        assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
-        low = (128 - dacunits) // 2
-        high = (dacunits // 2) + (128 // 2)
+        assert -1 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
         self['CONF_SR']['SET_ICASN'].setall(False)
-        self['CONF_SR']['SET_ICASN'][high:low] = (high - low + 1) * bitarray([True])
+        if dacunits>-1:
+            low = (128-(dacunits+1))/2
+            high = ((dacunits+1)/2)+63
+            self['CONF_SR']['SET_ICASN'][high:low] = (high - low + 1) * bitarray([True])
         if (printen == 1):
             logger.info('icasn = ' + str(dacunits))
             logger.info('icasn = ' + str(560.0 * ((dacunits + 1) / 128.0)) + 'nA')
@@ -516,8 +503,8 @@ class TJMonoPix(Dut):
     def set_ireset_dacunits(self, dacunits, mode, printen=False):
         assert 0 <= dacunits <= 127, 'Dac Units must be between 0 and 127'
         assert 0 <= mode <= 1, 'Mode must be 0 (low leakage) or 1 (high leakage)'
-        low = (128 - dacunits) // 2
-        high = (dacunits // 2) + (128 // 2)
+        low = (128-(dacunits+1))/2
+        high = ((dacunits+1)/2)+63
         self['CONF_SR']['SET_IRESET_BIT'] = mode
         self['CONF_SR']['SET_IRESET'].setall(False)
         self['CONF_SR']['SET_IRESET'][high:low] = (high - low + 1) * bitarray([True])
@@ -616,7 +603,7 @@ class TJMonoPix(Dut):
         self["tlu"]["TRIGGER_SELECT"] = 0
         self["timestamp_tlu"]["RESET"] = 1
         self["timestamp_tlu"]["EXT_TIMESTAMP"] = 1
-        self["timestamp_tlu"]["ENABLE_TOT"] = 0
+        self["timestamp_tlu"]["ENABLE_TRAILING"] = 0
         logging.info("set_tlu: tlu_delay=%d" % tlu_delay)
 
         self["timestamp_tlu"]["ENABLE_EXTERN"] = 1
@@ -633,15 +620,15 @@ class TJMonoPix(Dut):
         self["timestamp_{}".format(src)].reset()
         self["timestamp_{}".format(src)]["EXT_TIMESTAMP"] = True
         if src == "rx1":
-            self["timestamp_rx1"]["ENABLE_TOT"] = 0
+            self["timestamp_rx1"]["ENABLE_TRAILING"] = 0
             self["timestamp_rx1"]["ENABLE"] = 1
         elif src == "mon":
-            self["timestamp_mon"]["ENABLE_TOT"] = 1
+            self["timestamp_mon"]["ENABLE_TRAILING"] = 1
             self["timestamp_mon"]["ENABLE"] = 1
         elif src == "inj":
             self["timestamp_inj"]["ENABLE"] = 1
         elif src == "tlu":
-            self["timestamp_tlu"]["ENABLE_TOT"] = 0
+            self["timestamp_tlu"]["ENABLE_TRAILING"] = 0
             self["timestamp_tlu"]["ENABLE_EXTERN"] = 1
 
         logging.info("Set timestamp: src={}".format(src))
@@ -653,14 +640,15 @@ class TJMonoPix(Dut):
             logging.warn("Stop timestamp: src={} lost_cnt={:d}".format(src, lost_cnt))
         return lost_cnt
 
-    # def set_monoread(self, start_freeze=64, start_read=66, stop_read=68, stop_freeze=100, stop=105, en=True):
-    def set_monoread(self, start_freeze=57, start_read=60, stop_read=62, stop_freeze=95, stop=100,
-                     en=True, read_shift=52, sync_timestamp=True):
+    def set_monoread(self, start_freeze=64, start_read=66, stop_read=68, stop_freeze=100, stop=105,
+    #def set_monoread(self, start_freeze=57, start_read=60, stop_read=62, stop_freeze=95, stop=100,
+                     en=True, read_shift=52, sync_timestamp=True,disable_gray_decorder=False):
         self['CONF']['EN_RST_BCID_WITH_TIMESTAMP'] = sync_timestamp
         self['CONF']['RESET_BCID'] = 1
         self['CONF'].write()
 
         self['data_rx'].reset()
+        self['data_rx'].DISSABLE_GRAY_DECODER=disable_gray_decorder
         self['data_rx'].CONF_START_FREEZE = start_freeze  # default 57
         self['data_rx'].CONF_STOP_FREEZE = stop_freeze  # default 95
         self['data_rx'].CONF_START_READ = start_read  # default 60
@@ -707,17 +695,8 @@ class TJMonoPix(Dut):
             temp[i] = self["NTC"].get_temperature("C")
         return np.average(temp[temp != float("nan")])
 
-    def save_config(self, filename=None):
-        if filename is None:
-            filename = os.path.join(DATDIR, time.strftime("config_%Y%m%d-%H%M%S.yaml"))
-        conf = self.get_configuration()
-        conf["SET"] = self.SET
-        with open(filename, "w") as f:
-            yaml.dump(conf, f)
-        logging.info("save_config filename: %s" % filename)
-        return filename
 
-    def get_disabled_pixel(self, maskV=None, maskH=None, maskD=None):
+    def get_disabled_pixel(self,maskV=None,maskH=None,maskD=None):
         if maskV is None:
             maskV = self['CONF_SR']['MASKV']
         if maskH is None:
@@ -725,7 +704,7 @@ class TJMonoPix(Dut):
         if maskD is None:
             maskD = self['CONF_SR']['MASKD']
 
-        mask = np.ones([COL * 4, ROW], dtype=int) * 7
+        mask = np.ones([COL * 4, ROW], dtype=int) * 0x7
         for i in range(COL * 4):
             for j in range(ROW):
                 if maskV[i] is False:
@@ -737,7 +716,54 @@ class TJMonoPix(Dut):
                 elif (i - j) < 0 and maskD[448 + i - j] is False:
                     mask[i, j] = (mask[i, j] & 0x3)
         return mask
+    def get_pixel_status(self,mode="all",mask=None):
+        if mask is None:
+          mask = np.ones([4, COL, ROW], dtype=int) * 0x1FF
+          for k in range(4):
+            for l in range(COL):
+              i=k*COL+l
+              for j in range(ROW):
+                if self['CONF_SR']['MASKV'][i] is False:
+                    mask[k, l, j] = mask[k, l, j] & (0x1FF-0x1)
+                if self['CONF_SR']['MASKH'][j] is False:
+                    mask[k, l, j] = mask[k, l, j] & (0x1FF-0x2)
+                if (i - j) >= 0 and self['CONF_SR']['MASKD'][i - j] is False:
+                    mask[k, l, j] = mask[k, l, j] & (0x1FF-0x4)
+                elif (i - j) < 0 and self['CONF_SR']['MASKD'][448 + i - j] is False:
+                    mask[k, l, j] = mask[k, l, j] & (0x1FF-0x4)
 
+                if k==0 and self["CONF_SR"]["EN_PMOS_NOSF"][l/2] is False:
+                       mask[k, l, j]=mask[k, l, j] & (0x1FF-0x8) 
+                elif k==1 and self["CONF_SR"]["EN_PMOS"][l/2] is False:
+                       mask[k, l, j]=mask[k, l, j] & (0x1FF-0x8) 
+                elif k==2 and self["CONF_SR"]["EN_COMP"][l/2] is False:
+                       mask[k, l, j]=mask[k, l, j] & (0x1FF-0x8) 
+                elif k==3 and self["CONF_SR"]["EN_HV"][l/2] is False:
+                       mask[k, l, j]=mask[k, l, j] & (0x1FF-0x8) 
+                if self['CONF_SR']['EN_OUT'][k]: # active low len=4
+                       mask[k, l, j]=mask[k, l, j] & (0x1FF-0x10)
+
+                if self['CONF_SR']['DIG_MON_SEL'][i] is False: #len=448
+                       mask[k, l, j]=mask[k, l, j] & (0x1FF-0x20)
+                if self['CONF_SR']['EN_HITOR_OUT'][k]: # active low len=4
+                       mask[k, l, j]=mask[k, l, j] & (0x1FF-0x40)
+
+                if self['CONF_SR']['COL_PULSE_SEL'][i] is False:  #len=448
+                       mask[k, l, j]=mask[k, l, j] & (0x1FF-0x80)
+                if self['CONF_SR']['INJ_ROW'][j] is False: #len
+                       mask[k, l, j]=mask[k, l, j] & (0x1FF-0x100)
+             
+        if mode=="preamp":
+            return (mask & 0x7) !=0
+        elif mode=="monoread":
+            return np.bitwise_and((mask & 0x7)!=0 ,(mask & 0x18)==0x18)
+        elif mode=="mon":
+            return np.bitwise_and((mask & 0x5)!=0 ,(mask & 0x62)==0x60)
+        elif mode=="inj":
+            return np.bitwise_and((mask & 0x7)!=0 ,(mask & 0x180)==0x180)
+        else:
+            return mask
+            
 ########################## scans  #############################################
     def inj_scan_1pix(self, flavor, col, row, VL, VHLrange, start_dif, delay, width, repeat, noise_en, analog_en, sleeptime):
 
@@ -784,11 +810,10 @@ class TJMonoPix(Dut):
                         cnt += 1
 
             hits[i] = cnt
-
         return hits
 
     def auto_mask(self, th=2, step=10, exp=0.2):
-        logger.info("auto_mask th=%d step=%d exp=%d fl=%s" % (th, step, exp, self.SET['fl']))
+        logger.info("auto_mask th=%d step=%d exp=%f fl=%s" % (th, step, exp, self.SET['fl']))
         self['CONF_SR'][self.SET['fl']].setall(False)
         self['CONF_SR']['EN_OUT'][self.fl_n] = False
         self['CONF_SR']['MASKD'].setall(False)
@@ -803,7 +828,7 @@ class TJMonoPix(Dut):
             self["fifo"].reset()
             time.sleep(0.1)
 
-        pix = np.empty(ROW * COL, dtype=[('fl', 'u1'), ('col', 'u1'), ('row', '<u2')])
+        pix = np.empty(ROW * COL, dtype=[('flavor', 'u1'), ('col', 'u1'), ('row', '<u2')])
         pix_i = 0
 
         # Iterate over MASKH to find noisy pixels
@@ -813,7 +838,7 @@ class TJMonoPix(Dut):
             self['CONF_SR']['MASKH'].setall(False)
             self['CONF_SR']['MASKH'][i:0] = (int(i) + 1) * bitarray('1')
             for p_i in range(pix_i):
-                self.mask(pix[p_i]["fl"], pix[p_i]['col'], pix[p_i]['row'])
+                self.mask(pix[p_i]["flavor"], pix[p_i]['col'], pix[p_i]['row'])
             self['CONF_SR'].write()
 
             # Set ibias to zero and back again to eliminate oscillations from mask switching
@@ -834,7 +859,7 @@ class TJMonoPix(Dut):
                 else:
                     pix[pix_i]["col"] = p['col']
                     pix[pix_i]["row"] = p['row']
-                    pix[pix_i]["fl"] = self.fl_n
+                    pix[pix_i]["flavor"] = self.fl_n
                     pix_i = pix_i + 1
             logging.info("Number of noisy pixels: %d" % pix_i)
 
@@ -845,7 +870,7 @@ class TJMonoPix(Dut):
             self['CONF_SR']['MASKH'].setall(True)
             self['CONF_SR']['MASKV'][i + (self.fl_n * COL):(self.fl_n * COL)] = (int(i) + 1) * bitarray('1')
             for p_i in range(pix_i):
-                self.mask(pix[p_i]["fl"], pix[p_i]['col'], pix[p_i]['row'])
+                self.mask(pix[p_i]["flavor"], pix[p_i]['col'], pix[p_i]['row'])
             self['CONF_SR'].write()
 
             # Set ibias to zero and back again to eliminate oscillations from mask switching
@@ -867,7 +892,7 @@ class TJMonoPix(Dut):
                 else:
                     pix[pix_i]["col"] = p['col']
                     pix[pix_i]["row"] = p['row']
-                    pix[pix_i]["fl"] = self.fl_n
+                    pix[pix_i]["flavor"] = self.fl_n
                     pix_i = pix_i + 1
             logging.info("Number of noisy pixels: %d" % pix_i)
 
@@ -878,7 +903,7 @@ class TJMonoPix(Dut):
             self['CONF_SR']['MASKH'].setall(True)
             self['CONF_SR']['MASKD'][i:0] = (int(i)+1)*bitarray('1')
             for p_i in range(pix_i):
-                self.mask(pix[p_i]["fl"], pix[p_i]['col'], pix[p_i]['row'])
+                self.mask(pix[p_i]["flavor"], pix[p_i]['col'], pix[p_i]['row'])
             self['CONF_SR'].write()
 
             # Set ibias to zero and back again to eliminate oscillations from mask switching
@@ -901,13 +926,13 @@ class TJMonoPix(Dut):
                 else:
                     pix[pix_i]["col"] = p['col']
                     pix[pix_i]["row"] = p['row']
-                    pix[pix_i]["fl"] = self.fl_n
+                    pix[pix_i]["flavor"] = self.fl_n
                     pix_i = pix_i + 1
             logging.info("Number of noisy pixels: %d" % pix_i)
 
         # Mask all previously found pixels and check again
         for p_i in range(pix_i):
-            self.mask(pix[p_i]["fl"], pix[p_i]['col'], pix[p_i]['row'])
+            self.mask(pix[p_i]["flavor"], pix[p_i]['col'], pix[p_i]['row'])
         self['CONF_SR'].write()
 
         # Set ibias to zero and back again to eliminate oscillations from mask switching
@@ -929,13 +954,13 @@ class TJMonoPix(Dut):
             else:
                 pix[pix_i]["col"] = p['col']
                 pix[pix_i]["row"] = p['row']
-                pix[pix_i]["fl"] = self.fl_n
+                pix[pix_i]["flavor"] = self.fl_n
                 pix_i = pix_i + 1
         logging.info("Number of noisy pixels: %d" % pix_i)
 
         # Mask additionally found noisy pixels
         for p_i in range(pix_i):
-            self.mask(pix[p_i]["fl"], pix[p_i]['col'], pix[p_i]['row'])
+            self.mask(pix[p_i]["flavor"], pix[p_i]['col'], pix[p_i]['row'])
         self['CONF_SR'].write()
         self['fifo'].reset()
         time.sleep(0.3)
@@ -950,67 +975,8 @@ class TJMonoPix(Dut):
         total_enabled = np.shape(np.argwhere(mask[(self.fl_n * 112):(self.fl_n + 1) * 112, :] != 0))[0]
         total_disabled = np.shape(np.argwhere(mask[(self.fl_n * 112):(self.fl_n + 1) * 112, :] == 0))[0]
         logging.info("Number of enabled pixels: {}".format(str(total_enabled)))
-        logging.info("Number of disabled pixels (noisy plus unintentionally masked): {}".format(str(total_disabled)))
-
-    def en_inflavours(self, fl=1, enable=True, start=0, end=55):
-        if fl == 0:
-            self['CONF_SR']['EN_PMOS_NOSF'][end:start] = True
-        elif fl == 1:
-            self['CONF_SR']['EN_PMOS'][end:start] = True
-        elif fl == 2:
-            self['CONF_SR']['EN_COMP'][end:start] = True
-        elif fl == 3:
-            self['CONF_SR']['EN_HV'][end:start] = True
-        else:
-            logger.warn('The value of flavor given as input (' + str(fl) + ') is not a valid one. EN_PMOS will be enabled instead.')
-            self['CONF_SR']['EN_PMOS'][end:start] = True
-
-    def hitor_inarea(self, hitorpix=[56, 102], flav=1, col_rad=5, row_rad=5, first=True):
-
-        if first is True:
-            self['CONF_SR']['MASKD'].setall(False)
-            self['CONF_SR']['MASKH'].setall(False)
-            self['CONF_SR']['MASKV'].setall(False)
-
-            self['CONF_SR']['EN_PMOS_NOSF'].setall(False)
-            self['CONF_SR']['EN_PMOS'].setall(False)
-            self['CONF_SR']['EN_COMP'].setall(False)
-            self['CONF_SR']['EN_HV'].setall(False)
-
-            self['CONF_SR']['DIG_MON_SEL'].setall(False)
-            self['CONF_SR']['EN_HITOR_OUT'].setall(True)
-            self['CONF_SR'].write()
-        else:
-            pass
-
-        column = hitorpix[0]
-        row = hitorpix[1]
-
-        first_col = column - col_rad
-        last_col = column + col_rad
-        dcol_start = int(np.floor(first_col / 2))
-        dcol_end = int(np.ceil(last_col / 2))
-        self.en_inflavours(fl=flav, enable=True, start=dcol_start, end=dcol_end)
-
-        mcol = (flav * 112) + column
-        md = mcol - row if (mcol - row) >= 0 else 448 + mcol - row
-        # diag = (flav * 112) - row
-        self['CONF_SR']['EN_HITOR_OUT'][flav] = False
-        self.enable_column_hitor(flav, column)
-        self['CONF_SR']['MASKH'][row] = False
-
-        for r in range(row - row_rad, row + row_rad + 1):
-            if r == row:
-                self['CONF_SR']['MASKH'][r] = False
-            else:
-                self['CONF_SR']['MASKH'][r] = True
-
-        for c in range(first_col, last_col + 1):
-                self['CONF_SR']['MASKV'][c] = True
-
-        for d in range(md - col_rad - 1, md + col_rad + 2):
-                self['CONF_SR']['MASKD'][d] = True
-        self['CONF_SR'].write()
+        logging.info("Number of disabled pixels (noisy plus unintentionally masked): {}".format(str(total_disabled))) 
+        return pix
 
 
 if __name__ == '__main__':

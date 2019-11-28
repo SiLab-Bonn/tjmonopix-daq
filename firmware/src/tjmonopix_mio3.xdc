@@ -280,7 +280,7 @@ set_property PACKAGE_PIN AE23 [get_ports TOK_B]
 set_property IOSTANDARD LVCMOS33 [get_ports TOK_B]
 #set_property PACKAGE_PIN AE23 [get_ports {DIN[6]}]
 
-# INJECTION connected to INJ_STRB
+#INJECTION connected to INJ_STRB
 #set_property PACKAGE_PIN F20 [get_ports INJECTION]
 #set_property IOSTANDARD LVCMOS33 [get_ports INJECTION]
 

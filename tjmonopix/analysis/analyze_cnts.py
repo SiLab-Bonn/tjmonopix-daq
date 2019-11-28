@@ -89,12 +89,12 @@ class AnalyzeCnts():
             t=f.create_table(f.root,name="Scurve",
                                description=buf.dtype,
                                title='Superimposed scurve')
-            t.attrs.xbins=yaml.dump(list(xbins))
-            t.attrs.ybins=yaml.dump(list(ybins))
+            t.attrs.xbins=list(xbins)
+            t.attrs.ybins=list(ybins)
 
     def run_scurve(self,dat,fdat_root):
-        xbins=yaml.safe_load(fdat_root.Scurve.attrs.xbins)
-        ybins=yaml.safe_load(fdat_root.Scurve.attrs.ybins)
+        xbins=fdat_root.Scurve.attrs.xbins
+        ybins=fdat_root.Scurve.attrs.ybins
         uni=np.unique(dat[self.res["scurve"]])
         buf=np.zeros(len(uni),dtype=fdat_root.Scurve.dtype)
         for u_i,u in enumerate(uni):
@@ -129,7 +129,7 @@ class AnalyzeCnts():
            uni=np.unique(dat[p_names])
            dat_type=np.empty(0,dtype=dat_type+[("mu","<f4",(COL_SIZE,ROW_SIZE))]).dtype
            try:
-               f.root.remove_node("ThDist")
+               f.remove_node(f.root,"ThDist")
            except:
                pass
            table=f.create_table(f.root,name="ThDist",
@@ -164,7 +164,7 @@ class AnalyzeCnts():
            uni=np.unique(dat[p_names])
            dat_type=np.empty(0,dtype=dat_type+[("sigma","<f4",(COL_SIZE,ROW_SIZE))]).dtype
            try:
-               f.root.remove_node("ThDist")
+               f.remove_node(f.root,"NoiseDist")
            except:
                pass
            table=f.create_table(f.root,name="NoiseDist",
@@ -191,7 +191,6 @@ class AnalyzeCnts():
                     break
             self.res["scurve_fit"]={"cols":list(np.empty(0,dtype=dat_dtype).dtype.names),
                                     "x": x}
-
             dat_dtype = dat_dtype + [('A', "<f4"),('A_err', "<f4"),
                         ('mu', "<f4"),('mu_err', "<f4"),('sigma',"<f4"),('sigma_err', "<f4"),
                         #("cnt","<i4",(len(self.injlist),))
@@ -205,8 +204,8 @@ class AnalyzeCnts():
                            title='scurve_fit %s'%x)
             if x=="inj":
                 t.attrs.injlist=self.injlist
-            # elif x=="th":
-            #     t.attrs.thlist=self.thlist
+            elif x=="th":
+                t.attrs.thlist=self.thlist
 
     def run_scurve_fit(self,dat,fdat_root):
         uni=np.unique(dat[self.res["scurve_fit"]["cols"]])

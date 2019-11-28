@@ -25,46 +25,42 @@ def fit_scurve1(xarray,yarray,A=None,cut_ratio=0.05,reverse=True,debug=0):
         plt.plot(xarray,yarray,".")
         
     #### cut
-    no_cut=np.argwhere(yarray==A)
-    #print no_cut
-    if len(no_cut)>0:
-        no0=no_cut[0][0]
-        for n in no_cut[1:]:
-           #print n,no0
-           if n[0]==no0+1:
-              no0=n[0]
-           else:
-              break
-           #print n,n[0],no0
-        no_cut=min(max(no_cut[0][0]+5,no0),len(yarray))
+    no_cut=np.argwhere(yarray>A*(1-cut_ratio))
+    if len(no_cut)==0:
+        cut=len(xarray) ## if there are no data higher than A*0.95 then take all data
     else:
-        no_cut=len(xarray)
-    #print "fit------",no_cut,xarray[no_cut-1:no_cut],yarray[:no_cut]
-    cut_low=np.argwhere(yarray[:]>=A*(1-cut_ratio))
-    if len(cut_low)>0:
-        cut=min(no_cut,cut_low[-1][0])
-    else:
-        cut=len(xarray)
-    cut_high=np.argwhere(yarray[:]>=A*(1+cut_ratio))
-    if len(cut_high)>0:
-        cut=min(cut_high[0][0],cut)
+        no_cut=no_cut[0][0] 
+        cut_high=np.argwhere(yarray[no_cut:]>=A*(1+cut_ratio))
+        if len(cut_high)==0:
+            cut=len(xarray) # if there are no data higher than A*1.05, then take all data
+        else:
+            cut=no_cut+cut_high[0][0]
+        cut_low=np.argwhere(yarray[no_cut:cut]<A*(1-2*cut_ratio))
+        if len(cut_low)>0:
+            cut=min(no_cut+cut_low[0][0],cut)
     yarray=yarray[:cut]
     xarray=xarray[:cut]
+    if debug:
+         print no_cut,cut, xarray,yarray
         
     mu=xarray[np.argmin(np.abs(yarray-A*0.5))]
     try:
         sig2=xarray[np.argwhere(yarray>A*cut_ratio)[0]][0]
         sig1=xarray[np.argwhere(yarray>A*(1-cut_ratio))[0]][0]
-        #print('estimation of simga did not work')
         sigma=abs(sig1-sig2)/3.5
     except:
+        if debug==1:
+            print('estimation of simga did not work')
         sigma=1
     if debug==1:
         print "estimation",A,mu,sigma
 
     if debug==1:
         plt.plot(xarray,yarray,"o")
-        plt.plot(xarray,scurve_rev(xarray,A,mu,sigma),"--")
+        if reverse:
+            plt.plot(xarray,scurve_rev(xarray,A,mu,sigma),"--")
+        else:
+            plt.plot(xarray,scurve(xarray,A,mu,sigma),"--")
     try:
         if reverse:
             p,cov = curve_fit(scurve_rev, xarray, yarray, p0=[A,mu,sigma])
@@ -72,7 +68,7 @@ def fit_scurve1(xarray,yarray,A=None,cut_ratio=0.05,reverse=True,debug=0):
             p,cov = curve_fit(scurve, xarray, yarray, p0=[A,mu,sigma])
     except RuntimeError:
         if debug==2:
-            print('fit did not work')
+            print('fit did not work',xarray,yarray)
         return A,mu,sigma,float("nan"),float("nan"),float("nan")
     err=np.sqrt(np.diag(cov))
     return p[0],p[1],p[2],err[0],err[1],err[2]

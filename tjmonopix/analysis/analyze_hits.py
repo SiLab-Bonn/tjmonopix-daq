@@ -40,6 +40,10 @@ class AnalyzeHits():
             hits = self.run_apply_ts_inj_window(hits)
         if "delete_noise" in self.res.keys():
             hits = self.run_delete_noise(hits)
+        if "delete_noninjected" in self.res.keys():
+            hits = self.run_delete_noninjected(hits)
+        if "delete_cetainvalue" in self.res.keys():
+            hits = self.run_delete_cetainvalue(hits)
         if "hist_occ" in self.res.keys():
             self.run_hist(hits)
         if "hist_occ_ev" in self.res.keys():
@@ -82,26 +86,32 @@ class AnalyzeHits():
 
     def init_delete_noninjected(self):
         with tb.open_file(self.fraw) as f: 
-            self.res["delete_noninjected"]=f.root.scan_parameters[:][["scan_param_id","pix"]]
+            self.res["delete_noninjected"]=f.root.scan_parameters[:][["scan_param_id","collist"]]
     def run_delete_noninjected(self, hits):
         len0=len(hits)
+        hits=hits[hits['inj_row']==hits['row']] ##TODO inject to multiple rows
+        len1=len(hits)
         uni,idx,cnt=np.unique(hits["scan_param_id"],return_index=True,return_counts=True)
         buf=np.empty(0,dtype=hits.dtype)
         for u_i,u in enumerate(uni):
-            #print "scan_param_id",u
             tmp=hits[idx[u_i]:idx[u_i]+cnt[u_i]]
-            injected_pix=self.res["delete_noninjected"][self.res["delete_noninjected"]["scan_param_id"]==u]['pix'][0]
-            detected_pix=np.transpose(np.array([tmp["col"],tmp["row"]]))
-            mask=np.zeros(len(detected_pix),dtype=bool)
-            #print injected_pix
-            for ip in injected_pix:
-               #print "ip",ip
-               tmp_mask=np.bitwise_and(tmp["col"]==ip[0],tmp["col"]==ip[0])
-               #print len(np.argwhere(tmp_mask))
-               mask=np.bitwise_or(tmp_mask,mask)
+            injected_cols=self.res["delete_noninjected"][self.res["delete_noninjected"]["scan_param_id"]==u]['collist'][0]
+
+            mask=np.zeros(len(tmp),dtype=bool)
+            for ic in injected_cols:
+               mask=np.bitwise_or(tmp["col"]==ic,mask)
             buf=np.append(buf,tmp[mask])
-        print "delete_noninjected from %d to %d %.3f percent"%(len0,len(buf),100.0*len(buf)/len0)
+        print "delete_noninjected from %d to %d to %d %.3f percent"%(len0,len1,len(buf),100.0*len(buf)/len0)
         return buf
+    def init_delete_cetainvalue(self,delvalues={"inj":0.0}):
+        with tb.open_file(self.fraw) as f: 
+            self.res["delete_cetainvalue"]=delvalues
+    def run_delete_cetainvalue(self, hits):
+        len0=len(hits)
+        for k,v in self.res["delete_cetainvalue"].iteritems():
+            hits=hits[hits[k]!=v]
+        print "delete_cetainvalue from %d to %d %.3f percent"%(len0,len(hits),100.0*len(hits)/len0)
+        return hits
 
     # le counts
     def init_le_cnts(self):
@@ -146,10 +156,14 @@ class AnalyzeHits():
         with tb.open_file(self.fraw) as f:
             param_len = len(f.root.scan_parameters)
             cnt_dtype = f.root.scan_parameters.dtype
-        n_mask_pix = cnt_dtype["pix"].shape[0]
+        n_mask_pix = cnt_dtype["collist"].shape[0] ##TODO inject to multiple rows
         cnt_dtype = cnt_dtype.descr
         for i in range(len(cnt_dtype)):
-            if cnt_dtype[i][0] == "pix":
+            if cnt_dtype[i][0] == "collist":
+                cnt_dtype.pop(i)
+                break
+        for i in range(len(cnt_dtype)):
+            if cnt_dtype[i][0] == "sub_id":
                 cnt_dtype.pop(i)
                 break
         cnt_dtype = cnt_dtype + [('col', "<i2"), ('row', "<i2"), ('inj', "<f4"), ('phase', "<i4"), ('cnt', "<i4")]

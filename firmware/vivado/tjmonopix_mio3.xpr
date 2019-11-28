@@ -3,7 +3,7 @@
 <!--                                                         -->
 <!-- Copyright 1986-2016 Xilinx, Inc. All Rights Reserved.   -->
 
-<Project Version="7" Minor="12" Path="/home/user/workspace/tjmonopix/tjmonopix_inj/firmware/vivado/tjmonopix_mio3.xpr">
+<Project Version="7" Minor="12" Path="/home/user/workspace/tjmonopix/tjmonopix_30/firmware/vivado/tjmonopix_mio3.xpr">
   <DefaultLaunch Dir="$PRUNDIR"/>
   <Configuration>
     <Option Name="Id" Val="25e90b18d3ad41a98b8911fbbc91521b"/>
