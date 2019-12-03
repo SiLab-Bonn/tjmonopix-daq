@@ -1,0 +1,18 @@
+dut :
+    file: "/home/silab/git/tjmonopix-daq/tjmonopix/tjmonopix_mio3.yaml"
+    flavor: "PMOS"
+    vreset_dacunits : 25
+    icasn_dacunits : 0
+    ireset_dacunits :
+        value: 2 
+        mode: 1 
+    ithr_dacunits : 5
+    idb_dacunits : 20
+    ibias_dacunits : 20 
+
+scan :
+    online_monitor: "tcp://131.220.162.239:5500"
+
+mask:
+    [[3,  13, 132],
+     ]
