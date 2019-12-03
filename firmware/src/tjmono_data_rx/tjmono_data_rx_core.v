@@ -300,9 +300,12 @@ end
 wire posssible_noise;
 assign posssible_noise = (state == WAIT_NEXT);
     
-wire [5:0] col;
+// wire [7:0] row;
+// wire [6:0] col;
 wire [8:0] row;
+wire [5:0] col;
 wire [5:0] te_gray, le_gray, te, le;
+//assign {col[6:1], te_gray, le_gray, col[0],row} = data_out;
 assign {col, te_gray, le_gray, row} = data_out;
     
 bin_to_gray6 bin_to_gray_te(.gray_input(te_gray), .bin_out(te) );
@@ -337,8 +340,8 @@ always@(posedge BUS_CLK)
     if(RST)
         byte2_cnt <= 0;
     else if(!cdc_fifo_empty && !fifo_full && byte2_cnt == 0 ) 
-        //byte2_cnt <= 3;
-        byte2_cnt <= 4;
+        byte2_cnt <= 3;
+        //byte2_cnt <= 4;
     else if (!fifo_full & byte2_cnt != 0)
         byte2_cnt <= byte2_cnt - 1;
 
@@ -348,11 +351,10 @@ always@(posedge BUS_CLK)
         data_buf <= cdc_data_out;
 
 wire [29:0] fifo_write_data_byte [3:0];
-assign fifo_write_data_byte[3]={2'b00, data_buf[27:0]};
-assign fifo_write_data_byte[2]={2'b01, data_buf[55:28]};
-assign fifo_write_data_byte[1]={2'b10, data_buf[83:56]};
+assign fifo_write_data_byte[2]={2'b00, data_buf[27:0]};
+assign fifo_write_data_byte[1]={2'b01, data_buf[55:28]};
+assign fifo_write_data_byte[0]={2'b10, data_buf[83:56]};
 //assign fifo_write_data_byte[0]={2'b11, data_buf[111:84]}; 
-assign fifo_write_data_byte[0]={2'b11, 28'h0000000}; 
 
 wire [29:0] fifo_data_in;
 assign fifo_data_in = fifo_write_data_byte[byte2_cnt];
@@ -369,7 +371,8 @@ gerneric_fifo #(.DATA_SIZE(30), .DEPTH(1023))  fifo_i
 
 assign FIFO_DATA[31:30]  =  IDENTYFIER; 
 
-assign LOST_ERROR = LOST_DATA_CNT != 0;
+//assign LOST_ERROR = LOST_DATA_CNT != 0;
+assign LOST_ERROR = data_out_strobe;
 
 endmodule
 

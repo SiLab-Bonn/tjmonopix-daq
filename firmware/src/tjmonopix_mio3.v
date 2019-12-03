@@ -74,7 +74,7 @@ module tjmonopix_mio3(
     output wire LD_CONF,
     output wire RST_N,
     
-    output wire INJECTION,
+    output wire INJECTION,    //DOUT12
     input  wire INJECTION_IN, //flatcable 6
     output wire INJECTION_OUT, //flatcable 5
     
@@ -91,7 +91,7 @@ module tjmonopix_mio3(
     input wire OUT_A,
     input wire OUT_B,
     input wire HITOR_A, 
-    input wire HITOR_B, 
+    input wire HITOR_B,
     
     // I2C
     inout wire SDA,

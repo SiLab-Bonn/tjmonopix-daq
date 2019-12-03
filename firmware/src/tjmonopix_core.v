@@ -33,17 +33,17 @@ module tjmonopix_core (
     input wire RJ45_RESET,
     input wire RJ45_TRIGGER,
 
-    input wire SO_CONF,
-    output wire CLK_CONF,
-    output wire DEF_CONF,
-    output wire SI_CONF,
-    output wire LD_CONF,
-    output wire RST_N,
+    input wire SO_CONF,   // DIN0
+    output wire CLK_CONF, // DOUT10
+    output wire DEF_CONF, // DOUT11
+    output wire SI_CONF,  // DOUT8
+    output wire LD_CONF,  // DOUT9
+    output wire RST_N,    // DOUT7
     
     output wire INJECTION,
     input wire INJECTION_IN,
     
-    output wire CLK_BX,
+    output wire CLK_BX,  //DOUT6
     output wire CLK_OUT,
     output wire READ_A,
     output wire READ_B,

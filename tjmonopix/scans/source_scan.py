@@ -12,6 +12,8 @@ class SourceScan(ScanBase):
         with_rx1 = kwargs.pop('with_rx1', True)
         with_mon = kwargs.pop('with_mon', True)
         scan_timeout = kwargs.pop('scan_time', 10)
+        start_freeze = kwargs.pop('start_freeze', 64)
+        stop_freeze = kwargs.pop('stop_freeze', 100)
 
         cnt = 0
         scanned = 0
@@ -22,7 +24,7 @@ class SourceScan(ScanBase):
 
         # Start readout
         if with_tj:
-            self.dut.set_monoread()
+            self.dut.set_monoread(start_freeze=start_freeze)
         for _ in range(5):  # Reset FIFO to clean up
             time.sleep(0.05)
             self.dut['fifo'].reset()
@@ -39,8 +41,9 @@ class SourceScan(ScanBase):
         # Start FIFO readout
         with self.readout(scan_param_id=0, fill_buffer=False, clear_buffer=True, readout_interval=0.2, timeout=0):
             t0 = time.time()
-            self.logger.info(
-                "*****{} is running **** don't forget to start tlu ****".format(self.__class__.__name__))
+            if with_tlu:
+                self.logger.info(
+                    "*****{} is running **** don't forget to start tlu ****".format(self.__class__.__name__))
             while True:
                 pre_cnt = cnt
                 cnt = self.fifo_readout.get_record_count()
@@ -91,8 +94,8 @@ class SourceScan(ScanBase):
         elif event_build=="tlu":
             fhit=analyzed_data_file
             analyzed_data_file=fraw[:-7]+"ev.h5"
-            import tjmonopix.analysis.event_builder2 as event_builder
-            build_h5(fhit,analyzed_data_file,debug=0x0)
+            import tjmonopix.analysis.event_builder_tlu as event_builder
+            event_builder.build_h5(fraw,fhit,analyzed_data_file)
         
         if clusterize and (event_build=="token" or event_build=="tlu"):
            fev=analyzed_data_file

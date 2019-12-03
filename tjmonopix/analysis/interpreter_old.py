@@ -238,6 +238,13 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
                     buf_i = buf_i+1
             else:
                 print("ERR TS_TLU2",r_i,ts3_flg,r)
+                buf[buf_i]["col"] = 0xEC
+                buf[buf_i]["row"] = 2
+                buf[buf_i]["le"] = ts3_flg
+                buf[buf_i]["te"] = 0xFF
+                buf[buf_i]["timestamp"] = 0x0
+                buf[buf_i]["cnt"] = ts3_cnt
+                buf_i = buf_i+1
                 ts3_flg =0
         elif r & 0xFF000000 == 0x72000000:  # timestamp
             ts3_timestamp = (ts3_timestamp & np.uint64(0xFFFF000000FFFFFF)) | \
@@ -248,6 +255,13 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
                 ts3_flg = 0x2
             else:
                 print("ERR TS_TLU1",r_i,ts3_flg,r)
+                buf[buf_i]["col"] = 0xEC
+                buf[buf_i]["row"] = 1
+                buf[buf_i]["le"] = ts3_flg
+                buf[buf_i]["te"] = 0xFF
+                buf[buf_i]["timestamp"] = 0x0
+                buf[buf_i]["cnt"] = ts3_cnt
+                buf_i = buf_i+1
                 ts3_flg =0
         elif r & 0xFF000000 == 0x73000000:  # timestamp
             ts3_timestamp = (ts3_timestamp & np.uint64(0x0000FFFFFFFFFFFF)) + \
@@ -259,6 +273,13 @@ def _interpret(raw, buf, col, row, le, te, noise, timestamp, rx_flg, ts_timestam
                 ts3_flg = 0x1
             else:
                 print("ERR TS_TLU0",r_i,ts3_flg,r)
+                buf[buf_i]["col"] = 0xEC
+                buf[buf_i]["row"] = 1
+                buf[buf_i]["le"] = ts3_flg
+                buf[buf_i]["te"] = 0xFF
+                buf[buf_i]["timestamp"] = 0x0
+                buf[buf_i]["cnt"] = ts3_cnt
+                buf_i = buf_i+1
                 ts3_flg =0
         ########################
         # TLU
