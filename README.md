@@ -104,11 +104,11 @@ It contains the DUT settings as well as addresses for [Online Monitor](https://g
     4. Select Program. A window will pop-up. Select bit file
     5. Click OK
 6. Write to Flash
-    1) Right click at xc7k160t_0
-    2) Add flash (n25q256-3.3v-spi-x1_x2_x4_0)
-    3) Select bin file
-    4) Select pull-up 
-    5) Click OK and wait a bit
+    1. Right click at xc7k160t_0
+    2. Add flash (n25q256-3.3v-spi-x1_x2_x4_0)
+    3. Select bin file
+    4. Select pull-up 
+    5. Click OK and wait a bit
 
 
 
