@@ -93,19 +93,20 @@ It contains the DUT settings as well as addresses for [Online Monitor](https://g
 2. Start vivado, open project and select firmware/vivado/tjmonopix.xpr
 3. In Flow Manager -> Project Manager->Project Setting -> General -> Language Options -> Verilog options
     1. delete all basil directories in Verilog Include Files Search Paths
-    2. add basil 
+    2. add basil directories 
          1. <path_to_basil>/basil/firmware/modules
          2. <path_to_basil>/basil/firmware/modules/utils
 4. Click Flow Manager -> Program and Debug -> Generates Bitstream
 5. Program FPGA 
     1. Right click Flow Manager -> Program and Debug -> Hardware manager -> Open Target
     2. then select AutoConnect
-    3. Right click xc7k160t_0
+    3. Right click xc7k160t
     4. Select Program. A window will pop-up. Select bit file
     5. Click OK
 6. Write to Flash
+    0. add register
     1. Right click at xc7k160t_0
-    2. Add flash (n25q256-3.3v-spi-x1_x2_x4_0)
+    2. Add flash (n25q256-3.3v-spi-x1_x2_x4)_
     3. Select bin file
     4. Select pull-up 
     5. Click OK and wait a bit
