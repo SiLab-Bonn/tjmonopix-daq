@@ -1,15 +1,13 @@
 # coding: utf-8
 
 import time
-import numpy as np
 import logging
+import numpy as np
+from tqdm import tqdm
 
 from tjmonopix.scan_base import ScanBase
 from tjmonopix.analysis import analysis
 from tjmonopix.analysis import plotting
-
-from tqdm import tqdm
-
 
 class ThresholdScan(ScanBase):
     scan_id = 'threshold_scan'
@@ -21,6 +19,7 @@ class ThresholdScan(ScanBase):
 
         inj_low_limit = kwargs.pop('inj_low_limit', 35)
         inj_high_limit = kwargs.pop('inj_high_limit', 100)
+        mask_not_injected = kwargs.pop('mask_not_injected', False)
 
         # Stop readout and clean FIFO
         self.dut.stop_all()
@@ -93,6 +92,11 @@ class ThresholdScan(ScanBase):
                 for mask in masks:
                     self.dut['CONF_SR']['COL_PULSE_SEL'] = mask["col"]
                     self.dut['CONF_SR']['INJ_ROW'] = mask["row"]
+                    if mask_not_injected:
+                        col_enable = mask["col"][self.dut.fl_n * 112: (self.dut.fl_n + 1) * 112]
+                        self.dut['CONF_SR'][self.dut.SET['fl']] = col_enable[::2] | col_enable[1::2]
+                        self.dut['CONF_SR']['MASKH'].setall(False)
+                        self.dut['CONF_SR']['MASKH'] = mask["row"]
                     self.dut.write_conf()
                     self.dut.reset_ibias()
                     time.sleep(0.05)  # This needs to be long enough (0.05 works, maybe less) TODO: optimize wait time
@@ -127,10 +131,17 @@ class ThresholdScan(ScanBase):
             print(np.median(a.threshold_map[:, 112:220][np.nonzero(a.threshold_map[:, 112:220])]))
             print(np.median(a.threshold_map[:, :112][np.nonzero(a.threshold_map[:, :112])]))
 
-            # logging.info("Mean threshold for removed DPW region is %i DAC units" % (int(mean_thr_rdpw)))
+            logging.info("Mean threshold for removed DPW region is %i DAC units" % (int(mean_thr_rdpw)))
             logging.info("Mean threshold for full DPW region is %i DAC units" % (int(mean_thr_fdpw)))
 
     def plot(self, analyzed_data_file=None):
+        """Plot threshold scan results
+
+        Parameters:
+        -----------
+        analyzed_data_file: str, optional
+            Path to analyzed data file including file extension
+        """
         if analyzed_data_file is None:
             if hasattr(self, "analyzed_data_file"):
                 analyzed_data_file = self.analyzed_data_file
@@ -148,6 +159,3 @@ if __name__ == "__main__":
     scan = ThresholdScan()
     scan.scan()
     scan.analyze()
-
-#     ThresholdScan.analyze(data_file="/media/silab/Maxtor/tjmonopix-data/development/threshold_scan/thr_W04R08_PMOS_-6_-6_idb30_interpreted_test.h5")
-    # ThresholdScan.analyze("/home/silab/tjmonopix/data/Threshold_scans/threshold_test.h5", create_plots=True)
