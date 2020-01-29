@@ -7,7 +7,7 @@ import zmq
 from online_monitor.utils import utils
 
 from contextlib import contextmanager
-from tjmonopix import TJMonoPix
+from tjmonopix.tjmonopix import TJMonoPix
 from fifo_readout import FifoReadout
 
 
@@ -196,28 +196,28 @@ class ScanBase(object):
 
 
 def send_data(socket, data, scan_par_id, name='ReadoutData'):
-        '''Sends the data of every read out (raw data and meta data)
+    '''Sends the data of every read out (raw data and meta data)
 
-            via ZeroMQ to a specified socket.
-            Uses a serialization provided by the online_monitor package
-        '''
+        via ZeroMQ to a specified socket.
+        Uses a serialization provided by the online_monitor package
+    '''
 
-        data_meta_data = dict(
-            name=name,
-            dtype=str(data[0].dtype),
-            shape=data[0].shape,
-            timestamp_start=data[1],  # float
-            timestamp_stop=data[2],  # float
-            readout_error=data[3],  # int
+    data_meta_data = dict(
+        name=name,
+        dtype=str(data[0].dtype),
+        shape=data[0].shape,
+        timestamp_start=data[1],  # float
+        timestamp_stop=data[2],  # float
+        readout_error=data[3],  # int
         scan_par_id=scan_par_id
-        )
-        try:
+    )
+    try:
         data_ser = utils.simple_enc(data[0], meta=data_meta_data)
         # socket.send_json(data_meta_data, flags=zmq.SNDMORE | zmq.NOBLOCK)
         # socket.send(data[0], flags=zmq.NOBLOCK)
         socket.send(data_ser, flags=zmq.NOBLOCK)
-        except zmq.Again:
-            pass
+    except zmq.Again:
+        pass
 
 
 class MetaTable(tb.IsDescription):

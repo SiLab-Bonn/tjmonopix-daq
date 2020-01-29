@@ -5,7 +5,7 @@ import datetime
 from time import sleep, time, mktime
 from threading import Thread, Event, Lock
 from collections import deque
-from Queue import Queue, Empty
+from queue import Queue, Empty
 
 data_iterable = ("data", "timestamp_start", "timestamp_stop", "error")
 
