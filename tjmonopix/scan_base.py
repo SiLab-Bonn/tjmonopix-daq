@@ -1,9 +1,10 @@
+import time
 import os
 import logging
 import yaml
-import time
 import tables as tb
-import online_monitor.sender
+import zmq
+from online_monitor.utils import utils
 
 from contextlib import contextmanager
 from tjmonopix import TJMonoPix
@@ -43,7 +44,8 @@ class ScanBase(object):
         self.output_filename = os.path.join(self.working_dir, self.run_name)
 
         # Online Monitor
-        self.socket = send_addr
+        # self.socket = send_addr
+        self.send_addr = send_addr
 
         self.logger = logging.getLogger()
         flg = 0
@@ -93,15 +95,18 @@ class ScanBase(object):
         self.kwargs.append(yaml.dump(kwargs))
 
         # Setup socket for Online Monitor
-        if self.socket == "":
-            self.socket = None
-        else:
+        socket_addr = self.send_addr
+        if socket_addr:
             try:
-                self.socket = online_monitor.sender.init(self.socket)
-                self.logger.info('ScanBase.start:data_send.data_send_init connected')
-            except Exception:
-                self.logger.warn('ScanBase.start:data_send.data_send_init failed addr={:s}'.format(self.socket))
+                self.context = zmq.Context()
+                self.socket = self.context.socket(zmq.PUB)  # publisher socket
+                self.socket.bind(socket_addr)
+                self.logger.debug('Sending data to server %s', socket_addr)
+            except zmq.error.ZMQError:
+                self.log.exception('Cannot connect to socket for data sending.')
                 self.socket = None
+        else:
+            self.socket = None
 
         # Execute scan
         self.fifo_readout = FifoReadout(self.dut)
@@ -180,16 +185,8 @@ class ScanBase(object):
         self.meta_data_table.row.append()
         self.meta_data_table.flush()
 
-        if self.socket is not None:
-            try:
-                online_monitor.sender.send_data(self.socket, data_tuple)
-            except Exception:
-                self.logger.warn('ScanBase.handle_data:sender.send_data failed')
-                try:
-                    online_monitor.sender.close(self.socket)
-                except Exception:
-                    pass
-                self.socket = None
+        if self.socket:
+            send_data(self.socket, data=data_tuple)
 
     def _handle_err(self, exc):
         msg = str(exc[1])
@@ -197,6 +194,30 @@ class ScanBase(object):
             self.logger.error(msg)
         else:
             self.logger.error("Aborting run...")
+
+
+def send_data(socket, data, scan_parameters={}, name='ReadoutData'):
+        '''Sends the data of every read out (raw data and meta data)
+
+            via ZeroMQ to a specified socket.
+            Uses a serialization provided by the online_monitor package
+        '''
+
+        data_meta_data = dict(
+            name=name,
+            dtype=str(data[0].dtype),
+            shape=data[0].shape,
+            timestamp_start=data[1],  # float
+            timestamp_stop=data[2],  # float
+            readout_error=data[3],  # int
+            scan_parameters=scan_parameters
+        )
+        try:
+            # data_ser = utils.simple_enc(data[0], meta=data_meta_data)
+            socket.send_json(data_meta_data, flags=zmq.SNDMORE | zmq.NOBLOCK)
+            socket.send(data[0], flags=zmq.NOBLOCK)
+        except zmq.Again:
+            pass
 
 
 class MetaTable(tb.IsDescription):
