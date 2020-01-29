@@ -103,7 +103,7 @@ class ScanBase(object):
                 self.socket.bind(socket_addr)
                 self.logger.debug('Sending data to server %s', socket_addr)
             except zmq.error.ZMQError:
-                self.log.exception('Cannot connect to socket for data sending.')
+                self.logger.exception('Cannot connect to socket for data sending.')
                 self.socket = None
         else:
             self.socket = None
@@ -126,11 +126,10 @@ class ScanBase(object):
         self.h5_file.close()
 
         # Close socket from Online Monitor
-        if self.socket is not None:
-            try:
-                online_monitor.sender.close(self.socket)
-            except Exception:
-                pass
+        if self.socket:
+            self.logger.debug('Closing socket connection')
+            self.socket.close()
+            self.socket = None
         return self.output_filename + '.h5'
 
     def stop(self):
@@ -186,17 +185,17 @@ class ScanBase(object):
         self.meta_data_table.flush()
 
         if self.socket:
-            send_data(self.socket, data=data_tuple)
+            send_data(self.socket, data=data_tuple, scan_par_id=self.scan_param_id)
 
     def _handle_err(self, exc):
         msg = str(exc[1])
         if msg:
-            self.logger.error(msg)
+            self.logger.error('%s Aborting run...', msg)
         else:
             self.logger.error("Aborting run...")
 
 
-def send_data(socket, data, scan_parameters={}, name='ReadoutData'):
+def send_data(socket, data, scan_par_id, name='ReadoutData'):
         '''Sends the data of every read out (raw data and meta data)
 
             via ZeroMQ to a specified socket.
@@ -210,12 +209,13 @@ def send_data(socket, data, scan_parameters={}, name='ReadoutData'):
             timestamp_start=data[1],  # float
             timestamp_stop=data[2],  # float
             readout_error=data[3],  # int
-            scan_parameters=scan_parameters
+        scan_par_id=scan_par_id
         )
         try:
-            # data_ser = utils.simple_enc(data[0], meta=data_meta_data)
-            socket.send_json(data_meta_data, flags=zmq.SNDMORE | zmq.NOBLOCK)
-            socket.send(data[0], flags=zmq.NOBLOCK)
+        data_ser = utils.simple_enc(data[0], meta=data_meta_data)
+        # socket.send_json(data_meta_data, flags=zmq.SNDMORE | zmq.NOBLOCK)
+        # socket.send(data[0], flags=zmq.NOBLOCK)
+        socket.send(data_ser, flags=zmq.NOBLOCK)
         except zmq.Again:
             pass
 
