@@ -23,7 +23,7 @@ class ThresholdScan(ScanBase):
 
         # Stop readout and clean FIFO
         self.dut.stop_all()
-        self.dut['fifo'].reset()
+        self.dut.reset_fifo()
 
         # Why is this needed?
         self.dut['data_rx'].set_en(True)
@@ -103,7 +103,7 @@ class ThresholdScan(ScanBase):
 
                     # Read out trash data
                     for _ in range(5):
-                        self.dut["fifo"].reset()
+                        self.dut.reset_fifo()
                         time.sleep(0.005)
 
                     # Start injection and read data
@@ -127,9 +127,6 @@ class ThresholdScan(ScanBase):
             self.analyzed_data_file = a.analyzed_data_file
             mean_thr_rdpw = np.median(a.threshold_map[:, 112:220][np.nonzero(a.threshold_map[:, 112:220])])
             mean_thr_fdpw = np.median(a.threshold_map[:, :112][np.nonzero(a.threshold_map[:, :112])])
-
-            print(np.median(a.threshold_map[:, 112:220][np.nonzero(a.threshold_map[:, 112:220])]))
-            print(np.median(a.threshold_map[:, :112][np.nonzero(a.threshold_map[:, :112])]))
 
             logging.info("Mean threshold for removed DPW region is %i DAC units" % (int(mean_thr_rdpw)))
             logging.info("Mean threshold for full DPW region is %i DAC units" % (int(mean_thr_fdpw)))

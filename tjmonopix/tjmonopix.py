@@ -599,7 +599,10 @@ class TJMonoPix(Dut):
     def cleanup_fifo(self, n=10):
         for _ in range(n):
             time.sleep(0.1)
-            self['fifo'].reset()
+            self.reset_fifo()
+
+    def reset_fifo(self):
+        self['fifo']['RESET']
 
     def set_tlu(self, tlu_delay=8):
         self["tlu"]["RESET"] = 1
@@ -819,7 +822,7 @@ class TJMonoPix(Dut):
             # Set ibias to zero and back again to eliminate oscillations from mask switching
             self.reset_ibias()
             self.reset_ibias()
-            self['fifo'].reset()
+            self.reset_fifo()
             time.sleep(exp)
             dat = self.interpret_data(self['fifo'].get_data())
 
@@ -852,7 +855,7 @@ class TJMonoPix(Dut):
             self.reset_ibias()
             self.reset_ibias()
 
-            self['fifo'].reset()
+            self.reset_fifo()
             time.sleep(exp)
             dat = self.interpret_data(self['fifo'].get_data())
 
@@ -885,7 +888,7 @@ class TJMonoPix(Dut):
             self.reset_ibias()
             self.reset_ibias()
 
-            self['fifo'].reset()
+            self.reset_fifo()
             time.sleep(exp)
             dat = self.interpret_data(self['fifo'].get_data())
 
@@ -914,7 +917,7 @@ class TJMonoPix(Dut):
         self.reset_ibias()
         self.reset_ibias()
 
-        self['fifo'].reset()
+        self.reset_fifo()
         time.sleep(exp)
         dat = self.interpret_data(self['fifo'].get_data())
         pix_tmp, cnt = np.unique(dat[['col', 'row']], return_counts=True)

@@ -29,12 +29,8 @@ hw_drivers:
 #        no_power_reset : False
 
   - name      : fifo
-    type      : sram_fifo
+    type      : sitcp_fifo
     interface : intf
-#    base_addr : 0x18000              # MIO
-#    base_data_addr: 0x1000000000000  # MIO
-#    base_addr : 0x200000000           # MIO3
-#    base_data_addr : 0x100000000      # MIO3
     base_addr : 0x200000000
     base_data_addr : 0x100000000
         

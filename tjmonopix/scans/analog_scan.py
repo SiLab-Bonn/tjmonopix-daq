@@ -22,7 +22,7 @@ class AnalogScan(ScanBase):
 
         # Stop readout and clean FIFO
         self.dut.stop_all()
-        self.dut['fifo'].reset()
+        self.dut.reset_fifo()
 
         # Why is this needed?
         self.dut['data_rx'].set_en(True)
@@ -82,7 +82,7 @@ class AnalogScan(ScanBase):
 
                 # Read out trash data
                 for _ in range(5):
-                    self.dut["fifo"].reset()
+                    self.dut.reset_fifo()
                     time.sleep(0.005)
 
                 # Start injection and read data
@@ -105,14 +105,21 @@ class AnalogScan(ScanBase):
             self.analyzed_data_file = a.analyzed_data_file
 
     def plot(self, analyzed_data_file=None):
+        """Plot analog scan results
+
+        Parameters:
+        -----------
+        analyzed_data_file: str, optional
+            Path to analyzed data file including file extension
+        """
         if analyzed_data_file is None:
             if hasattr(self, "analyzed_data_file"):
                 analyzed_data_file = self.analyzed_data_file
             else:
                 analyzed_data_file = self.output_filename + '_interpreted.h5'
 
-            with plotting.Plotting(analyzed_data_file=analyzed_data_file) as p:
-                p.create_standard_plots()
+        with plotting.Plotting(analyzed_data_file=analyzed_data_file) as p:
+            p.create_standard_plots()
 
 
 if __name__ == "__main__":
