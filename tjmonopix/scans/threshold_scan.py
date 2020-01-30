@@ -152,7 +152,7 @@ class ThresholdScan(ScanBase):
             p.create_standard_plots()
             p.create_threshold_map()
             p.create_scurves_plot()
-            p.create_threshold_distribution_plot()
+            p.create_threshold_plot()
 
 
 if __name__ == "__main__":
