@@ -1,0 +1,25 @@
+dut :
+    file: "../tjmonopix/tjmonopix_mio3.yaml"
+    flavor: "EN_PMOS"
+    vreset_dacunits : 43
+    vcasn_dacunits : 40
+    icasn_dacunits : 0
+    ireset_dacunits :
+        value: 10
+        mode: 0
+    ithr_dacunits : 10
+    idb_dacunits : 50
+    ibias_dacunits : 45
+
+scan :
+    online_monitor: "tcp://127.0.0.1:5500"
+
+mask:
+    [
+        [1,  1, 141], [1,  3, 116], [1,  4, 213], [1,  8, 221], [1,  9, 108],
+        [1, 18, 178], [1, 23, 106], [1, 26,  45], [1, 27, 137], [1, 32, 120],
+        [1, 34,  91], [1, 35,   6], [1, 45, 104], [1, 46, 120], [1, 46, 151],
+        [1, 50,  68], [1, 51,  31], [1, 52, 141], [1, 65,  39], [1, 69,  72],
+        [1, 79,  73], [1, 81,  60], [1, 86,  45], [1, 89,  44], [1, 99,  49]
+    ]
+

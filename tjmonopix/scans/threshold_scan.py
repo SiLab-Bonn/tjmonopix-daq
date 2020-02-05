@@ -117,7 +117,6 @@ class ThresholdScan(ScanBase):
         # Stop readout
         self.dut.stop_all()
 
-    @classmethod
     def analyze(self, data_file=None):
         if data_file is None:
             data_file = self.output_filename + '.h5'
