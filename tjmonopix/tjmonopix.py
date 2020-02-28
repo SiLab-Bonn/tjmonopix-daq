@@ -169,17 +169,21 @@ class TJMonoPix(Dut):
         self['VPC'].set_voltage(1.3, unit='V')
         self['BiasSF'].set_current(100, unit='uA')
 
-        self['VDDA'].set_voltage(1.8, unit='V')
-        self['VDDA'].set_enable(True)
-        time.sleep(0.01)
-
+	print "POWERING ON VDDP"
         self['VDDP'].set_enable(True)
 
+	print "POWERING ON VDDA_DAC"
         self['VDDA_DAC'].set_voltage(1.8, unit='V')
         self['VDDA_DAC'].set_enable(True)
 
-        self['VDDD'].set_voltage(1.8, unit='V')
+	print "POWERING ON VDDA"
+        self['VDDA'].set_voltage(1.8, unit='V')
+        self['VDDA'].set_enable(True)
+
+	print "POWERING ON VDDD"
+        self['VDDD'].set_voltage(1.7, unit='V')
         self['VDDD'].set_enable(True)
+
 
     def power_off(self):
         # Deactivate all
@@ -333,7 +337,60 @@ class TJMonoPix(Dut):
 
 ###############################################################################################
 
-    def inj_scan_row(self, flavor, col, startrow, rownumber, VL, VHLrange, start_dif, delay, width, repeat, noise_en, analog_en, sleeptime):
+    def inj_scan_row(self, flavor, col, startrow, rownumber, VH, VHLrange, start_dif, delay, width, repeat, noise_en, analog_en, sleeptime, ibias):
+
+        hits = np.zeros((rownumber, VHLrange+1), dtype=int)
+
+        self['inj'].set_delay(delay)
+        self['inj'].set_width(width)
+        self['inj'].set_repeat(repeat)
+        self['inj'].set_en(0)
+
+        self['CONF_SR']['INJ_ROW'].setall(False)
+        if analog_en == 1:
+            self['CONF_SR']['INJ_ROW'][223]=True
+        self['CONF_SR']['COL_PULSE_SEL'].setall(False)
+        for i in range (startrow, startrow+rownumber):
+            self.enable_injection(flavor,col,i)  
+        self.set_vh_dacunits(VH,0)
+        self.set_vl_dacunits(VH-start_dif,0)
+        #self.set_ibias_dacunits(0,0)
+        self.write_conf()
+        #time.sleep(0.05)
+        #self.set_ibias_dacunits(ibias,0)
+        #self.write_conf()
+
+        for _ in range(5):
+            x2 = self['fifo'].get_data()
+            time.sleep(0.01)
+
+        for i in range(VHLrange+1):
+            if i!=0:
+                self.set_vl_dacunits(VH-i-start_dif,0)
+                self.write_conf()
+
+            while not self['inj'].is_ready:
+                time.sleep(0.001)
+            for _ in range(10):
+                self['inj'].is_ready
+            self["inj"].start()
+
+            time.sleep(sleeptime)
+            x = self['fifo'].get_data()
+            ix = self.interprete_data(x)
+            ixd=np.delete(ix, np.where((ix['col']!=col)|(ix['row']<startrow)|(ix['row']>=startrow+rownumber))[0])
+            if noise_en == 1:
+                ixd=np.delete(ixd, np.where((ix['noise'] == 1))[0])
+
+            uniquerow, countrow = np.unique(ixd['row'], return_counts=True)
+
+            if (uniquerow.size != 0):
+                hits[uniquerow-startrow,i]=countrow
+
+        return hits
+        
+        
+    def inj_scan_rowvh(self, flavor, col, startrow, rownumber, VL, VHLrange, start_dif, delay, width, repeat, noise_en, analog_en, sleeptime, ibias):
 
         hits = np.zeros((rownumber, VHLrange+1), dtype=int)
 
@@ -350,6 +407,10 @@ class TJMonoPix(Dut):
             self.enable_injection(flavor,col,i)  
         self.set_vl_dacunits(VL,0)
         self.set_vh_dacunits(VL+start_dif,0)
+        self.set_ibias_dacunits(0,0)
+        self.write_conf()
+        time.sleep(0.05)
+        self.set_ibias_dacunits(ibias,0)
         self.write_conf()
 
         for _ in range(5):
@@ -380,16 +441,21 @@ class TJMonoPix(Dut):
                 hits[uniquerow-startrow,i]=countrow
 
         return hits
+        
+        
 
-    def inj_scan(self, flavor=None, col_high=111, col_low=0, row_high=111, row_low=0, rowstep=20, VL=40, VHLrange=40, start_dif=0, delay=1500, width=350, repeat=500, noise_en=0, analog_en=1, sleeptime=0.05, sleeptime_step=0.01, partname=None):
+    def inj_scan(self, flavor=None, col_high=111, col_low=0, row_high=111, row_low=0, rowstep=20, VH=40, VHLrange=40, start_dif=0, delay=1500, width=350, repeat=500, noise_en=0, analog_en=1, sleeptime=0.05, sleeptime_step=0.01, partname=None, ibias=45, folder=None):
 
 	if (row_high and row_low) is None:
+	    savewithparts=True
 	    if partname == 'bot':
 		row_high=111
 		row_low=0
 	    if partname == 'top':
 		row_high=223
 		row_low=112
+	else:
+		savewithparts=False
 
 	col_no=col_high-col_low+1
 	row_no=row_high-row_low+1
@@ -401,7 +467,7 @@ class TJMonoPix(Dut):
 	for col in range(col_low,col_high+1):
     	    for row in range(row_low,row_high+1-rowstep,rowstep):
                 #print 'row=%d' %row
-                hits = self.inj_scan_row(flavor, col, row, rowstep, VL, VHLrange, start_dif, delay, width, repeat, noise_en, analog_en, sleeptime)
+                hits = self.inj_scan_row(flavor, col, row, rowstep, VH, VHLrange, start_dif, delay, width, repeat, noise_en, analog_en, sleeptime, ibias)
                 print 'i=%d' %i
                 #print hits
                 scurve[i:i+20] = hits
@@ -411,7 +477,7 @@ class TJMonoPix(Dut):
         
             #print 'row=%d' %(row+rowstep)
             print 'i=%d' %i        
-            hits = self.inj_scan_row(flavor, col, row+rowstep, (row_high%(row+rowstep))+1, VL, VHLrange, start_dif, delay, width, repeat, noise_en, analog_en, sleeptime)
+            hits = self.inj_scan_row(flavor, col, row+rowstep, (row_high%(row+rowstep))+1, VH, VHLrange, start_dif, delay, width, repeat, noise_en, analog_en, sleeptime, ibias)
             #print hits
             scurve[i:i+((row_high%(row+rowstep))+1)] = hits
             i += (row_high%(row+rowstep))+1
@@ -420,8 +486,13 @@ class TJMonoPix(Dut):
             time.sleep(sleeptime_step)
 
         #print scurve
-        np.save('scurvedata'+partname+'.npy',scurve)
-	logger.info('Injection scan finished successfully, data saved with filename:%s' %('scurvedata'+partname+'.npy')) 
+	if savewithparts==True:
+		np.save('./'+folder+'/scurvedata'+partname+'.npy',scurve)
+		logger.info('Injection scan finished successfully, data saved with filename:%s' %('scurvedata'+partname+'.npy'))
+	else:
+		np.save('./'+folder+'/scurvedata.npy',scurve)
+		logger.info('Injection scan finished successfully, data saved with filename:%s' %('scurvedata.npy')) 	
+
 
 if __name__ == '__main__':
     chip = TJMonoPix()
