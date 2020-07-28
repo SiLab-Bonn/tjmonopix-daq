@@ -22,21 +22,21 @@ class SimpleScan(ScanBase):
 
         # Stop readout and clean FIFO
         self.dut.stop_all()
-        self.dut['fifo'].reset()
+        self.dut.reset_fifo()
 
         # Start readout
         if with_tj:
             self.dut.set_monoread()
         for _ in range(5):  # Reset FIFO to clean up
             time.sleep(0.05)
-            self.dut['fifo'].reset()
+            self.dut.reset_fifo()
         if with_tdc:
             self.dut.set_timestamp("mon")
         if with_tlu:
             tlu_delay = kwargs.pop('tlu_delay', 8)
             self.dut.set_tlu(tlu_delay)
         if with_timestamp:
-            self.dut.set_timestamp("rx_1")
+            self.dut.set_timestamp("rx1")
 
         self.dut.reset_ibias()
 
@@ -48,7 +48,7 @@ class SimpleScan(ScanBase):
             t0 = time.time()
 
             self.logger.info(
-                "*****{} is running **** don't forget to start tlu ****".format(self.__class__.__name__))
+                "***** {} is running **** don't forget to start tlu ****".format(self.__class__.__name__))
             while True:
                 pre_cnt = cnt
                 cnt = self.fifo_readout.get_record_count()
@@ -74,7 +74,7 @@ class SimpleScan(ScanBase):
         if with_timestamp:
             self.dut.stop_all()
             self.meta_data_table.attrs.timestamp_status = yaml.dump(
-                self.dut["timestamp"].get_configuration())
+                self.dut["timestamp_rx1"].get_configuration())
         if with_tlu:
             self.dut.stop_tlu()
             self.meta_data_table.attrs.tlu_status = yaml.dump(
@@ -85,11 +85,11 @@ class SimpleScan(ScanBase):
             self.dut.stop_monoread()
 
     @classmethod
-    def analyze(self, data_file=None, cluster_hits=False):
+    def analyze(self, data_file=None, cluster_hits=False, build_events=False):
         if data_file is None:
             data_file = self.output_filename + '.h5'
 
-        with analysis.Analysis(raw_data_file=data_file, cluster_hits=cluster_hits) as a:
+        with analysis.Analysis(raw_data_file=data_file, cluster_hits=cluster_hits, build_events=build_events) as a:
             a.analyze_data()
             self.analyzed_data_file = a.analyzed_data_file
         return self.analyzed_data_file
@@ -106,5 +106,3 @@ if __name__ == "__main__":
     scan = SimpleScan()
     scan.scan()
     scan.analyze()
-
-    # SimpleScan.analyze("/media/silab/Maxtor/tjmonopix-data/measurements/source_scan/modified_process/pmos/W04R08_-6_-6_idb30.h5", create_plots=True)

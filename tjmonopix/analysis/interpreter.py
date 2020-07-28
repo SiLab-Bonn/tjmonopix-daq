@@ -10,6 +10,11 @@ class_spec = [
     ('inj_timestamp_flag', numba.uint8),
     ('tlu_timestamp_flag', numba.uint8),
     ('tj_timestamp', numba.int64),
+    ('last_dut_timestamp', numba.int64),
+    ('trigger_number', numba.int64),
+    ('event_number', numba.int64),
+    ('trigger_timestamp', numba.int64),
+    ('finished_event', numba.boolean),
     ('hitor_timestamp', numba.int64),
     ('hitor_charge', numba.int16),
     ('ext_timestamp', numba.int64),
@@ -116,7 +121,7 @@ def is_tlu(word):
 
 
 @numba.njit
-def get_tlu_word(word):
+def get_tlu_number(word):
     return word & 0xFFFF
 
 
@@ -184,13 +189,21 @@ def is_inj_timestamp2(word):
 def is_inj_timestamp3(word):
     return word & 0xFF000000 == 0x53000000
 
+TRIGGER_TIMESTAMP_OVERFLOW = 0x00000004  # Indicating the overflow of the trigger timestamp
+TRIGGER_NUMBER_OVERFLOW = 0x00000008  # Indicating the overflow of the trigger number
+
 
 class Interpreter(object):
-    def __init(self):
-        self.reset()
-
     def interpret_data(self, raw_data, meta_data, chunk_size=1000000):
-        hit_dtype = [('col', 'u1'), ('row', '<u2'), ('le', 'u1'), ('te', 'u1'), ('cnt', '<u4'), ('timestamp', '<i8'), ('scan_param_id', '<u4')]
+        hit_dtype = [
+            ('col', 'u1'),
+            ('row', '<u2'),
+            ('le', 'u1'),
+            ('te', 'u1'),
+            ('cnt', '<u4'),
+            ('timestamp', '<i8'),
+            ('scan_param_id', '<u4'),
+        ]
 
         pbar = tqdm(total=len(raw_data))
         start = 0
@@ -233,10 +246,20 @@ class RawDataInterpreter(object):
         self.inj_timestamp = 0
         self.tlu_timestamp = 0
 
+        self.last_dut_timestamp = 0
+        self.trigger_timestamp = -1
+        self.trigger_number = -1
+        self.event_number = 0
+
     def get_error_count(self):
         return self.error_cnt
 
-    def interpret(self, raw_data, meta_data, hit_data):
+    def interpret(self, raw_data, meta_data, hit_data, trigger_data, event_data):
+        dut_data, trigger_data = self._interpret_raw_data(raw_data, meta_data, hit_data, trigger_data)
+        hit_data = self._build_events(dut_data[dut_data["col"] < 112], trigger_data, event_data)
+        return dut_data, trigger_data, hit_data
+
+    def _interpret_raw_data(self, raw_data, meta_data, hit_data, trigger_data):
         """ This function is interpreting the data recorded with TJ MonoPix.
         It consists at minimum of TJ data, but can contain several timestamps (HitOr, TLU, external) and further data
         (TLU word, TDC charge)
@@ -266,6 +289,7 @@ class RawDataInterpreter(object):
         """
 
         hit_index = 0
+        trigger_data_index = 0
 
         for raw_data_word in raw_data:
             #############################
@@ -301,6 +325,7 @@ class RawDataInterpreter(object):
 
                 # Merge upper and lower part of TJMonoPix timestamp
                 self.tj_timestamp = self.tj_timestamp | get_tjmono_ts_upper(raw_data_word)
+                self.last_dut_timestamp = self.tj_timestamp
 
                 # TODO: token[3:0] is in this data word
                 self.tj_data_flag = 3
@@ -522,7 +547,45 @@ class RawDataInterpreter(object):
             ##############################
 
             elif is_tlu(raw_data_word):
-                tlu_word = get_tlu_word(raw_data_word)
+                trigger_status = 0
+                # Get latest telescope timestamp and set trigger timestamp
+                last_trigger_timestamp = self.trigger_timestamp
+                # Get largest M26 timestamp
+                if self.last_dut_timestamp > self.trigger_timestamp:
+                    self.trigger_timestamp = self.last_dut_timestamp
+                self.trigger_timestamp = (0x7ffffffffff80000 & self.trigger_timestamp) | get_tlu_timestamp(raw_data_word)
+
+                if last_trigger_timestamp >= 0 and self.trigger_timestamp <= last_trigger_timestamp:
+                    trigger_status |= TRIGGER_TIMESTAMP_OVERFLOW
+                    self.trigger_timestamp = np.int64(2**19) + self.trigger_timestamp
+
+                # last_trigger_number = self.trigger_number
+
+                # Check for 16bit trigger number overflow
+                if self.trigger_number >= 0 and get_tlu_number(raw_data_word) <= (self.trigger_number & 0x000000000000FFFF):
+                    trigger_status |= TRIGGER_NUMBER_OVERFLOW
+                    self.trigger_number = np.int64(2**16) + self.trigger_number
+                # Get trigger number from raw data word
+                if self.trigger_number < 0:
+                    self.trigger_number = get_tlu_number(raw_data_word)
+                else:
+                    self.trigger_number = (0x7fffffffffff0000 & self.trigger_number) | get_tlu_number(raw_data_word)
+
+                # Increase index
+                trigger_data_index += 1
+                # extend trigger data array if neccessary
+                if trigger_data_index >= trigger_data.shape[0]:
+                    trigger_data_tmp = np.zeros(shape=max(1, int(raw_data.shape[0] / 6)), dtype=trigger_data.dtype)
+                    trigger_data = np.concatenate((trigger_data, trigger_data_tmp))
+                # Increase event number
+                self.event_number += 1
+                # Store trigger data
+                trigger_data[trigger_data_index]['event_number'] = self.event_number  # Timestamp of TLU word
+                trigger_data[trigger_data_index]['trigger_number'] = self.trigger_number
+                trigger_data[trigger_data_index]['trigger_timestamp'] = self.trigger_timestamp  # Timestamp of TLU word
+                trigger_data[trigger_data_index]['trigger_status'] = trigger_status  # Trigger status
+
+                tlu_word = get_tlu_number(raw_data_word)
                 tlu_timestamp_low_res = get_tlu_timestamp(raw_data_word)  # TLU data contains a 16bit timestamp
 
                 hit_data[hit_index]["col"] = 0xFF
@@ -530,7 +593,8 @@ class RawDataInterpreter(object):
                 hit_data[hit_index]["le"] = 0
                 hit_data[hit_index]["te"] = 0
                 hit_data[hit_index]["cnt"] = tlu_word
-                hit_data[hit_index]["timestamp"] = tlu_timestamp_low_res
+                # hit_data[hit_index]["timestamp"] = tlu_timestamp_low_res
+                hit_data[hit_index]["timestamp"] = self.trigger_timestamp
                 hit_data[hit_index]["scan_param_id"] = self.raw_idx
 
                 # Prepare for next data block. Increase hit index
@@ -541,6 +605,7 @@ class RawDataInterpreter(object):
 
         # Trim hit_data buffer to interpreted data hits
         hit_data = hit_data[:hit_index]
+        trigger_data = trigger_data[1:trigger_data_index]
 
         # Find correct scan_param_id in meta data and attach to hit
         for scan_idx, param_id in enumerate(hit_data["scan_param_id"]):
@@ -550,4 +615,41 @@ class RawDataInterpreter(object):
                     break
                 elif param_id >= meta_data[self.meta_idx]['index_stop']:
                     self.meta_idx += 1
+
+        # print(trigger_data)
+        # print(hit_data[hit_data["col"] < 112].shape[0], trigger_data.shape[0])
+        return hit_data, trigger_data
+
+    def _build_events(self, dut_data, trigger_data, hit_data):
+        curr_trigger_data_index = 0
+        curr_hits_index = 0
+
+        while curr_trigger_data_index <= len(trigger_data):
+            curr_dut_data_index = 0
+
+            trigger_event_number = trigger_data[curr_trigger_data_index]['event_number']
+            trigger_number = trigger_data[curr_trigger_data_index]['trigger_number']
+            trigger_timestamp = trigger_data[curr_trigger_data_index]['trigger_timestamp']
+            trigger_status = trigger_data[curr_trigger_data_index]['trigger_status']
+
+            while curr_dut_data_index <= len(dut_data):
+                hit_timestamp_start = dut_data[curr_dut_data_index]['timestamp'] - 1000
+                hit_timestamp_stop = dut_data[curr_dut_data_index]['timestamp'] + 10000
+
+                if trigger_timestamp >= hit_timestamp_start and trigger_timestamp < hit_timestamp_stop:
+                    hit_data[curr_hits_index]['event_number'] = trigger_event_number
+                    hit_data[curr_hits_index]['trigger_number'] = trigger_number
+                    hit_data[curr_hits_index]['column'] = dut_data[curr_dut_data_index]['col'] + 1
+                    hit_data[curr_hits_index]['row'] = dut_data[curr_dut_data_index]['row'] + 1
+                    hit_data[curr_hits_index]['charge'] = (dut_data[curr_dut_data_index]['te'] - dut_data[curr_dut_data_index]['le']) & 0x3F
+                    hit_data[curr_hits_index]['frame'] = 1
+
+                    curr_hits_index += 1
+                elif hit_timestamp_start > trigger_timestamp:
+                    break
+                curr_dut_data_index += 1
+            curr_trigger_data_index += 1
+        hit_data = hit_data[:curr_hits_index]
+
         return hit_data
+
