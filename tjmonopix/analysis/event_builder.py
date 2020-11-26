@@ -1,225 +1,122 @@
+import numba
 import numpy as np
 import tables as tb
-import numba
-import yaml
+import logging
+
+from tqdm import tqdm
+
+logging.basicConfig(
+    format="%(asctime)s - [%(name)-8s] - %(levelname)-7s %(message)s", level=logging.INFO,
+)
+
+logger = logger = logging.getLogger(__name__)
+
+class_spec = [
+    ("chunk_size", numba.uint32),
+    ("tlu_index", numba.int64),
+    ("trigger_number", numba.int64),
+    ("trigger_timestamp", numba.int64),
+]
 
 
-def increase_only(array):
-    return False if np.count_nonzero(np.diff(array) >= 0) is 0 else True
+def build_events(hit_data, chunk_size=1000000):
+    event_dtype = [
+        ("event_number", "<i8"),
+        ("frame", "u1"),
+        ("column", "u1"),
+        ("row", "u1"),
+        ("charge", "u1"),
+    ]
+
+    builder = EventBuilder()
+    events = np.array([], dtype=event_dtype)
+
+    start = 0
+    n_hits = len(hit_data)
+    end_of_last_chunk = np.zeros(23, dtype=hit_data.dtype)
+
+    logger.info("Building events")
+    pbar = tqdm(total=n_hits)
+    while start < n_hits:
+        tmp_end = min(n_hits, start + chunk_size)
+        hits = hit_data[start:tmp_end]
+        ev_buffer = np.zeros(len(hits), dtype=event_dtype)
+        event_chunk, end_of_last_chunk = builder.build_events(hits, ev_buffer, end_of_last_chunk)
+
+        events = np.append(events, event_chunk)
+        pbar.update(tmp_end - start)
+        start = tmp_end
+    pbar.close()
+    logger.info("%s events build" % len(events))
+
+    return events
 
 
-def check_tlu_sync(tlu_timestamp, tlu_ts_timestamp, tlu_offset):
-    """ Check if TLU words and high resolution TLU timestamp are synchronized
-
-    Parameters:
-    -----------
-    tlu_timestamp: int
-        Timestamp from TLU word (16bit)
-    tlu_ts_timestamp: int
-        Timestamp from 640 MHu TLU timestamp (64bit)
-    tlu_offset: int
-        Expected delay of TLU word. Used to determine limits for sync condition
-
-    Returns:
-    --------
-    boolean (True if in sync, False otherwise)
-    """
-    if (tlu_timestamp - tlu_ts_timestamp) & 0x7FFFF > (tlu_offset - 16) and (tlu_timestamp - tlu_ts_timestamp) & 0x7FFFF < (tlu_offset + 16 * 2):
-        # Timestamps are between tlu_offset - 16 and tlu_offset + 2 * 16 clock cycles apart
-        return True
-    else:
-        return False
-
-
-@numba.njit
-def align_tlu_timestamp(tlu_data, tlu_ts_data, output_buffer, tlu_offset):
-    """ Attach high resolution timestamp to tlu word
-
-    Parameters:
-    -----------
-    tlu_data: np.recarray(["cnt", "timestamp"])
-        Data with TLU words and low resolution timestamp
-    tlu_ts_data: np.recarray(["timestamp"])
-        High-resolution TLU timestamp
-    Returns:
-    --------
-    output_buffer: np.recarray(["tlu_number", "tlu_timestamp", "ts_timestamp"])
-    """
-    tlu_i = 0
-    ts_i = 0
-    out_i = 0
-
-    while tlu_i < len(tlu_data) and ts_i < len(tlu_ts_data) and out_i < len(output_buffer):
-        if (tlu_data[tlu_i]["timestamp"] - tlu_ts_data[ts_i]["timestamp"] - (tlu_offset + 16 * 2)) & 0x7FFFF <= 0x40000:
-            raise ValueError("TLU and TLU TS data is not synchronized!")
-        elif ((tlu_data[tlu_i]["timestamp"] - tlu_ts_data[ts_i]["timestamp"] - (tlu_offset - 16)) & 0x7FFFF) > 0x40000:
-            raise ValueError("TLU and TLU TS data is not synchronized!")
-        else:
-            # Found matching pair of TLU word and high-res TLU timestamp
-            output_buffer[out_i]["tlu_number"] = tlu_data[tlu_i]["cnt"]
-            output_buffer[out_i]["tlu_timestamp"] = tlu_data[tlu_i]["timestamp"]
-            output_buffer[out_i]["ts_timestamp"] = tlu_ts_data[ts_i]["timestamp"]
-            ts_i = ts_i + 1
-            tlu_i = tlu_i + 1
-            out_i = out_i + 1
-    return output_buffer[:out_i]
-
-
-@numba.njit
-def align_hit_data(tlu_data, hit_data, output_buffer, upper_lim=0x400, lower_lim=0x4000):
-    """ Align hit data with TLU number by high resolution timestamp
-
-    Parameters:
-    -----------
-    tlu_data: np.recarray(["tlu_number", "tlu_timestamp", "ts_timestamp"])
-        Array of TLU numbers aligned with high resolution timestamp (ts_timestamp)
-    hit_data: np.recarray(["col", "row", "le", "te", "cnt", "timestamp", "scan_param_id"])
-        Array with DUT hit data
-    output_buffer: np.recarray(["col", "row", "le", "te", "flg", "tlu_number", "tlu_timestamp", "ts_timestamp"])
-
-    Returns:
-    --------
-    output_buffer: np.recarray
-        Filled output_buffer
-    """
-    hit_i, tlu_i, out_i = 0, 0, 0
-    while tlu_i < len(tlu_data) and hit_i < len(hit_data) and out_i < len(output_buffer):
-        if tlu_data[tlu_i]["ts_timestamp"] > hit_data[hit_i]["timestamp"] + np.abs(upper_lim):
-            # TLU timestamp is larger than DUT timestamp + upper limit. Move to next TJ hit
-            # Works, because timestamps are continuously increasing
-            hit_i += 1
-        elif tlu_data[tlu_i]["ts_timestamp"] < hit_data[hit_i]["timestamp"] - np.abs(lower_lim):
-            # TLU timestamp is smaller than DUT timestamp - lower limit. Move to next TLU word
-            # Works, because timestamps are continuously increasing
-            tlu_i += 1
-        else:
-            # There is a DUT hit close to the given TLU hit (acceptable range defined by upper and lower limit)
-            for hit_ii in range(hit_i, len(hit_data)):
-                # Iterate over DUT data, starting from first hit that is close to TLU hit
-                if tlu_data[tlu_i]["ts_timestamp"] < hit_data[hit_ii]["timestamp"] - np.uint64(np.abs(lower_lim)) and hit_data[hit_ii]["cnt"] == 0:
-                    # Reached DUT data that is too far off from TLU data
-                    break
-                if out_i >= len(output_buffer):
-                    return output_buffer[:out_i]
-                output_buffer[out_i]["tlu_timestamp"] = tlu_data[tlu_i]["ts_timestamp"]
-                output_buffer[out_i]["tlu_number"] = tlu_data[tlu_i]["tlu_number"]
-#                 output_buffer[out_i]["token_timestamp"] = hit_data[hit_ii]["timestamp"]
-                output_buffer[out_i]["row"] = hit_data[hit_ii]["row"]
-                output_buffer[out_i]["col"] = hit_data[hit_ii]["col"]
-                output_buffer[out_i]["te"] = hit_data[hit_ii]["te"]
-                output_buffer[out_i]["le"] = hit_data[hit_ii]["le"]
-                output_buffer[out_i]["flg"] = hit_data[hit_ii]["cnt"]
-                out_i += 1
-            tlu_i += 1
-    return output_buffer[:out_i]
-
-
-@numba.njit
-def create_events(hits, output_buffer):
-    """ Build events
-    """
-    hit_i, out_i = 0, 0
-    return output_buffer[:out_i]
-
-
-# @numba.njit
-# def convert(hit_data, ref, hit, row_offset, row_factor, col_offset, col_factor):
-#     out_i = 0
-#     ref_i = 0
-#     mono_i = 0
-#     while mono_i < len(hit_data) and ref_i < len(ref):
-#         mono_trig = np.uint16(hit_data[mono_i]["tlu_number"] & 0x7FFF)
-#         ref_trig = np.uint16(ref[ref_i]["trigger_number"] & 0x7FFF)
-#         if (mono_trig - ref_trig) & 0x4000 == 0x4000:  # means: difference is larger than 16384
-#             mono_i = mono_i + 1
-#         elif mono_trig == ref_trig:
-#             hit[out_i]["event_number"] = ref[ref_i]["event_number"]
-#             hit[out_i]["column"] = col_offset + col_factor * hit_data[mono_i]["col"]
-#             hit[out_i]["row"] = row_offset + row_factor * hit_data[mono_i]["row"]
-#             hit[out_i]["charge"] = (hit_data[mono_i]["te"] - hit_data[mono_i]["le"]) & 0x3F
-#             hit[out_i]["frame"] = 1
-#             out_i += 1
-#             mono_i += 1
-#         else:
-#             ref_i = ref_i + 1
-#     return hit[:out_i], mono_i, ref_i
-
-
+@numba.experimental.jitclass(class_spec)
 class EventBuilder(object):
-    def __init__(self, raw_data_file, max_hits=100):
-        self.max_hits = max_hits
-        self.get_tlu_configuration(raw_data_file)
+    def __init__(self):
+        self.reset()
 
-    def get_tlu_configuration(self, raw_data_file):
-        # Get TLU configuration from file meta data
-        with tb.open_file(raw_data_file) as in_file_h5:
-            try:
-                conf_s = in_file_h5.root.meta_data.get_attr("status")
-            except Exception:
-                conf_s = in_file_h5.root.meta_data.get_attr("status_before")
-        conf = yaml.safe_load(conf_s)
-        WAIT_CYCLES = conf['tlu']["TRIGGER_HANDSHAKE_ACCEPT_WAIT_CYCLES"]
-        self.tlu_offset = (WAIT_CYCLES + 1) * 16
+    def reset(self):
+        self.tlu_index = 0
+        self.trigger_number = -1
+        self.trigger_timestamp = -1
 
-    def build_events(self, hits, tlu_ts, tlu):
-        """ Build events from hit and tlu data.
+    def build_events(self, hits, ev_buffer, end_of_last_chunk):
+        # Use only DUT and TLU words
+        sel = np.logical_or(hits["col"] == 255, hits["col"] < 112)
+        data = hits[sel]
 
-        Merge the TLU word with a high resolution timestamp from an external module first.
-        Afterwards join hit data and TLU word by timestamp.
+        # Add last chunk in beginning of current one
+        data = np.append(end_of_last_chunk, data)
 
-        Parameters:
-        -----------
-        hits: np.recarray(["col", "row", "le", "te", "cnt", "timestamp", "scan_param_id"])
-            Hit array (DUT data only)
-        tlu: np.recarray(["cnt", "timestamp"])
-            Hit arrray (TLU data only)
-        tlu_ts: np.recarray(["timestamp"])
-            Hit array (TLU high-res timestamp data only)
+        # Go through TLU words
+        tlu_indices = np.where(data["col"][:-8] == 255)[0]  # Look only until -8th data word
+        out_i = 0
+        for tlu_word_i in tlu_indices:
+            # if tlu_word_i > (len(dat) - 8):
+            #     continue
 
-        Returns:
-        --------
-        events: np.recarray(["event_number", "frame", "column", "row", "charge"])
-            Event array
-        """
-        # Validate input data:
-        if not increase_only(hits["timestamp"]):
-            raise ValueError("Hit data timestamp is not continuously increasing!")
-        if not increase_only(tlu_ts["timestamp"]):
-            raise ValueError("TLU 640 MHz timestamp is not continuously increasing!")
-        if not increase_only(tlu["cnt"]):
-            raise ValueError("TLU trigger number is not continuously increasing!")
+            # Check for trigger timestamp overflow
+            if self.trigger_timestamp >= 0 and data[tlu_word_i]["timestamp"] < (self.trigger_timestamp & 0x7FFF0):
+                self.trigger_timestamp = (2 ** 15 << 4) + self.trigger_timestamp
+            # Get trigger timestamp
+            if self.trigger_timestamp < 0:
+                self.trigger_timestamp = data[tlu_word_i]["timestamp"]
+            else:
+                self.trigger_timestamp = (0x7FFFFFFFFFF80000 & self.trigger_timestamp) | data[tlu_word_i]["timestamp"]
 
-        # Check if TLU data is synchronized and do minor corrections if possible
-        if check_tlu_sync(tlu[0]["timestamp"], tlu_ts[0]["timestamp"], self.tlu_offset):
-            # In sync, go on
-            pass
-        elif check_tlu_sync(tlu[0]["timestamp"], tlu_ts[1]["timestamp"], self.tlu_offset):
-            tlu_ts = tlu_ts[1:]
-        elif check_tlu_sync(tlu[1]["timestamp"], tlu_ts[0]["timestamp"], self.tlu_offset):
-            tlu = tlu[1:]
-        else:
-            raise ValueError("TLU word and TLU timestamp are not synchronized!")
+            # For every TLU word look for (time-wise) close hits in vicinity
+            for word in data[tlu_word_i - 15 : tlu_word_i + 8]:
+                if (  # DO NOT CHANGE CONSTANTS HERE: optimized for 99.99% correct event reconstruction
+                    word["col"] < 112
+                    and ((self.trigger_timestamp & 0x7FFF0) - (word["timestamp"] & 0x7FFF0)) > -518
+                    and ((self.trigger_timestamp & 0x7FFF0) - (word["timestamp"] & 0x7FFF0)) < 773
+                ):
+                    # Check for trigger number overflow
+                    if self.trigger_number >= 0 and data[tlu_word_i]["cnt"] < (
+                        self.trigger_number & 0x000000000000FFFF
+                    ):
+                        self.trigger_number = np.int64(2 ** 16) + self.trigger_number
+                    # Get trigger number
+                    if self.trigger_number < 0:
+                        self.trigger_number = data[tlu_word_i]["cnt"]
+                    else:
+                        self.trigger_number = (0x7FFFFFFFFFFF0000 & self.trigger_number) | data[tlu_word_i]["cnt"]
 
-        # Merge TLU words and high resolution timestamp
-        out_buffer = np.zeros(len(tlu), dtype=[('tlu_number', '<u4'), ('tlu_timestamp', '<i8'), ('ts_timestamp', '<i8')])
-        aligned_tlu_data = align_tlu_timestamp(tlu, tlu_ts, out_buffer, self.tlu_offset)
+                    ev_buffer[out_i]["event_number"] = self.trigger_number
+                    ev_buffer[out_i]["column"] = word["col"] + 1
+                    ev_buffer[out_i]["row"] = word["row"] + 1
+                    ev_buffer[out_i]["charge"] = ((word["te"] - word["le"]) & 0x3F) + 1
+                    out_i += 1
+        end_of_chunk = data[-23:]  # Carry last 15 + 8 words to next chunk
+        return ev_buffer[:out_i], end_of_chunk
 
-        # Validate result
-        if not increase_only(aligned_tlu_data["ts_timestamp"]):
-            raise ValueError("TLU high-res timestamp is not continuously increasing!")
 
-        # Delete data words with too many hits at the same time
-        _, idx, cnt = np.unique(hits["timestamp"], return_inverse=True, return_counts=True)
-        mask = cnt <= self.max_hits
-        hits = hits[mask[idx]]
+if __name__ == "__main__":
+    with tb.open_file(
+        "/media/silab/seagate_4tb/2020_07_27_DESY_testbeam/Cz_xp_0e15_hv/run31/tjmonopix_interpreted.h5", "r"
+    ) as in_file:
+        hits = in_file.root.Dut[:]
 
-        # Join hit data with TLU number by high-res timestamp
-        out_buffer = np.zeros(2 * len(aligned_tlu_data) + 2 * len(hits), dtype=[('col', 'u1'), ('row', '<u2'), ('le', 'u1'), ('te', 'u1'), ('flg', '<u1'), ('tlu_number', '<u4'), ('tlu_timestamp', '<i8')])
-        aligned_hits = align_hit_data(aligned_tlu_data, hits, out_buffer)
-
-        event_type = np.dtype([("event_number", "<i8"), ("frame", "<u1"), ("column", "<u2"), ("row", "<u2"), ("charge", "<u2")])
-        event_buffer = np.zeros(2 * len(hits), dtype=event_type)
-
-        events = create_events(aligned_hits, event_buffer)
-
-        return events
+    events = build_events(hits)
