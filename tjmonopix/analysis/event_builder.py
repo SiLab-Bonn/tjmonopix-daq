@@ -9,7 +9,7 @@ logging.basicConfig(
     format="%(asctime)s - [%(name)-8s] - %(levelname)-7s %(message)s", level=logging.INFO,
 )
 
-logger = logger = logging.getLogger(__name__)
+logger = logger = logging.getLogger("Event builder")
 
 class_spec = [
     ("chunk_size", numba.uint32),
