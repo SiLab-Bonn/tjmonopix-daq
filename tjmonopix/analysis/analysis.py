@@ -5,7 +5,7 @@ import numba
 from tqdm import tqdm
 
 from tjmonopix.analysis import analysis_utils as au
-from tjmonopix.analysis import interpreter
+from tjmonopix.analysis import interpreter, event_builder
 from pixel_clusterizer.clusterizer import HitClusterizer
 
 logging.basicConfig(
@@ -22,7 +22,7 @@ class Analysis():
         self.build_events = build_events
 
         self.raw_data_file = raw_data_file
-        self.chunk_size = 100000
+        self.chunk_size = 200000
         self.cluster_hits = cluster_hits
         if self.cluster_hits:
             self._setup_clusterizer()
@@ -36,31 +36,8 @@ class Analysis():
     def _setup_clusterizer(self):
         ''' Define data structure and settings for hit clusterizer package '''
 
-        # # Define all field names and data types
-        # hit_fields = {'event_number': 'event_number',
-        #               'timestamp': 'frame',
-        #               'col': 'column',
-        #               'row': 'row',
-        #               'le': 'le',
-        #               'te': 'te',
-        #               'cnt': 'cnt',
-        #               'tot': 'charge',
-        #               'scan_param_id': 'scan_param_id'
-        #               }
-
-        # hit_description = [('event_number', '<i8'),
-        #                    ('timestamp', '<i8'),
-        #                    ('col', '<u1'),
-        #                    ('row', '<u2'),
-        #                    ('le', '<u1'),
-        #                    ('te', '<u1'),
-        #                    ('cnt', '<u4'),
-        #                    ('tot', '<u1'),
-        #                    ('scan_param_id', '<i4')]
-
         # Define all field names and data types
         hit_fields = {'event_number': 'event_number',
-                      'trigger_number': 'trigger_number',
                       'frame': 'frame',
                       'column': 'column',
                       'row': 'row',
@@ -68,7 +45,6 @@ class Analysis():
                       }
 
         hit_description = [('event_number', '<i8'),
-                           ('trigger_number', '<i8'),
                            ('frame', '<u1'),
                            ('column', '<u2'),
                            ('row', '<u2'),
@@ -219,21 +195,32 @@ class Analysis():
 
     def analyze_data(self):
         self.analyzed_data_file = self.raw_data_file[:-3] + '_interpreted.h5'
-        dut_dtype = [('col', 'u1'), ('row', '<u2'), ('le', 'u1'), ('te', 'u1'), ('cnt', '<u4'), ('timestamp', '<i8'), ('scan_param_id', '<i4')]
-        trigger_dtype = [
-            ('event_number', '<i8'),
-            ('trigger_number', '<i8'),
-            ('trigger_timestamp', '<i8'),
-            ('trigger_status', '<u4'),
+        hit_dtype = [
+            ('col', 'u1'),
+            ('row', '<u2'),
+            ('le', 'u1'),
+            ('te', 'u1'),
+            ('cnt', '<u4'),
+            ('timestamp', '<i8'),
+            ('scan_param_id', '<i4'),
         ]
-        hit_dtype = np.dtype([("event_number", "<i8"), ('trigger_number', '<i8'), ("frame", "<u1"), ("column", "<u2"), ("row", "<u2"), ("charge", "<u2")])
+        event_dtype = [
+            ("event_number", "<i8"),
+            ("frame", "u1"),
+            ("column", "u1"),
+            ("row", "u1"),
+            ("charge", "u1"),
+        ]
 
         if self.cluster_hits:
-            dut_dtype.append(('tot', 'u1'))
-            dut_dtype.append(('event_number', '<i8'))
+            hit_dtype.append(('charge', 'u1'))
+            hit_dtype.append(('event_number', '<i8'))
+        if self.build_events:
+            ev_builder = event_builder.EventBuilder()
+            end_of_last_chunk = np.zeros(23, dtype=hit_dtype)
+        
         with tb.open_file(self.raw_data_file) as in_file:
             n_words = in_file.root.raw_data.shape[0]
-            # n_words = 100000 + 100000
             meta_data = in_file.root.meta_data[:]
 
             if meta_data.shape[0] == 0:
@@ -243,7 +230,10 @@ class Analysis():
             self.n_params = np.amax(meta_data["scan_param_id"])
 
             with tb.open_file(self.analyzed_data_file, "w") as out_file:
-                hit_table, event_table = None, None
+                hit_table = None
+                if self.build_events:
+                    event_table = None
+                    n_events = 0
 
                 if self.cluster_hits:
                     cluster_table = out_file.create_table(
@@ -259,27 +249,23 @@ class Analysis():
 
                 start = 0
 
-                data_interpreter = interpreter.RawDataInterpreter(chunk_size=self.chunk_size)
+                data_interpreter = interpreter.RawDataInterpreter()
                 pbar = tqdm(total=n_words)
                 while start < n_words:
                     tmp_end = min(n_words, start + self.chunk_size)
                     raw_data = in_file.root.raw_data[start:tmp_end]
-                    hit_buffer = np.zeros(shape=self.chunk_size, dtype=dut_dtype)
-                    trigger_buffer = np.zeros(shape=self.chunk_size, dtype=trigger_dtype)
-                    event_buffer = np.zeros(shape=self.chunk_size, dtype=hit_dtype)
+                    hit_buffer = np.zeros(shape=self.chunk_size, dtype=hit_dtype)
 
-                    hit_dat, trigger_dat, event_dat = data_interpreter.interpret(
+                    hit_dat = data_interpreter.interpret(
                         raw_data,
                         meta_data,
-                        hit_buffer,
-                        trigger_buffer,
-                        event_buffer
+                        hit_buffer
                     )
 
-                    #if self.cluster_hits:
-                    #    sel = hit_dat["col"] < 112
-                    #    hit_dat[sel]["tot"] = ((hit_dat[sel]["te"] - hit_dat[sel]["le"]) & 0x3F) + 1  # Add one to get also hits where LE = TE
-                    #    hit_dat[sel]["event_number"] = hit_dat[sel]["timestamp"]
+                    if self.cluster_hits:
+                       sel = hit_dat["col"] < 112
+                       hit_dat[sel]["charge"] = ((hit_dat[sel]["te"] - hit_dat[sel]["le"]) & 0x3F) + 1  # Add one to get also hits where LE = TE
+                       hit_dat[sel]["event_number"] = hit_dat[sel]["timestamp"]
 
                     if hit_table is None:
                         hit_table = out_file.create_table(
@@ -293,27 +279,31 @@ class Analysis():
                                 complevel=5,
                                 fletcher32=False))
 
-                    if event_table is None:
-                        event_table = out_file.create_table(
-                            where=out_file.root,
-                            name="Hits",
-                            description=event_dat.dtype,
-                            expectedrows=self.chunk_size,
-                            title='event_data',
-                            filters=tb.Filters(
-                                complib='blosc',
-                                complevel=5,
-                                fletcher32=False))
-
                     hit_table.append(hit_dat)
                     hit_table.flush()
 
-                    event_table.append(event_dat)
-                    event_table.flush()
+                    if self.build_events:
+                        ev_buffer = np.zeros(shape=self.chunk_size, dtype=event_dtype)
+                        events, end_of_last_chunk = ev_builder.build_events(hit_dat, ev_buffer, end_of_last_chunk)
+                        n_events += len(events)
+                        if event_table is None:
+                            event_table = out_file.create_table(
+                                where=out_file.root,
+                                name="Hits",
+                                description=events.dtype,
+                                expectedrows=self.chunk_size,
+                                title='event_data',
+                                filters=tb.Filters(
+                                    complib='blosc',
+                                    complevel=5,
+                                    fletcher32=False))
+                        event_table.append(events)
+                        event_table.flush()
+                    
 
                     if self.cluster_hits:
-                        event_dat["charge"] += 1
-                        _, cluster = self.clz.cluster_hits(event_dat)
+                        # event_dat["charge"] += 1
+                        _, cluster = self.clz.cluster_hits(hit_dat[hit_dat["col"] < 112])
 #                         if self.analyze_tdc:
 #                             # Select only clusters where all hits have a valid TDC status
 #                             cluster_table.append(cluster[cluster['tdc_status'] == 1])
@@ -336,10 +326,13 @@ class Analysis():
                     pbar.update(tmp_end - start)
                     start = tmp_end
                 pbar.close()
+
                 # TODO: Copy all attributes properly to output_file, maybe own table
                 out_file.root.Dut.attrs.scan_id = in_file.root.meta_data.attrs.scan_id
                 self._create_additional_hit_data()
                 self.logger.info("{:d} errors occured during analysis".format(data_interpreter.get_error_count()))
+                if self.build_events:
+                    self.logger.info("{:d} events built".format(n_events))
 
 #                 self._create_additional_hit_data()
                 if self.cluster_hits:
