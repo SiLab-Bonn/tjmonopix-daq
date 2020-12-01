@@ -11,27 +11,17 @@ from tjmonopix.tjmonopix import TJMonoPix
 from fifo_readout import FifoReadout
 
 
+PROJECT_FOLDER = os.path.dirname(__file__)
+TESTBENCH_DEFAULT_FILE = os.path.join(PROJECT_FOLDER, 'testbench.yaml')
+
+
 class ScanBase(object):
     """
     Basic run meta class
     """
 
-    def __init__(self, dut=None, filename=None, send_addr="tcp://127.0.0.1:5500"):
-        # If DUT instance is not passed as argument, initialize it
-        if isinstance(dut, TJMonoPix):
-            self.dut = dut
-        elif dut:
-            self.dut = TJMonoPix(conf=dut)
-            # Initialize self.dut and power up
-            self.dut.init()
-            self.dut.write_conf()
-            self.dut.set_vreset_dacunits(35, 1)  # 1V. Set V_reset_p, this is the baseline of the front end input (one hot encoding)
-            self.dut.set_icasn_dacunits(0, 1)  # 4.375nA approx. 1.084V at -3V backbias, 600mV at 0V backbias
-            self.dut.set_ireset_dacunits(2, 1, 1)  # 270pA, HIGH LEAKAGE MODE, NORMAL SCALING, 0 = LOW LEAKAGE MODE, SCALING*0.01
-            self.dut.set_ithr_dacunits(5, 1)  # 680pA
-            self.dut.set_idb_dacunits(15, 1)  # 500nA
-            self.dut.set_ibias_dacunits(50, 1)  # 500nA. Current of the front end that provides amplification
-            self.dut.write_conf()
+    def __init__(self, bench_config=None, dut=None, filename=None):
+        bench = self._load_testbench_cfg(bench_config)
 
         if filename is None:
             self.working_dir = os.path.join(os.getcwd(), "output_data")
@@ -42,10 +32,6 @@ class ScanBase(object):
         if not os.path.exists(self.working_dir):
             os.makedirs(self.working_dir)
         self.output_filename = os.path.join(self.working_dir, self.run_name)
-
-        # Online Monitor
-        # self.socket = send_addr
-        self.send_addr = send_addr
 
         self.logger = logging.getLogger()
         flg = 0
@@ -59,6 +45,21 @@ class ScanBase(object):
             fh.setLevel(logging.INFO)
         self.logger.addHandler(fh)
         logging.info("Initializing {:s}".format(self.__class__.__name__))
+
+        # If DUT instance is not passed as argument, initialize it
+        if isinstance(dut, TJMonoPix):
+            self.dut = dut
+        elif "dut" in bench.keys():
+            chip_cfg = self._load_chip_cfg(bench["dut"])
+            self.dut = TJMonoPix()
+
+            # Initialize DUT and power up
+            self.dut.init(chip_cfg["flavor"])
+            self._configure_chip(chip_cfg)
+            self._configure_masks(chip_cfg)
+
+        # Online Monitor
+        self.send_addr = bench["dut"]["send_data"]
 
     def start(self, **kwargs):
 
@@ -202,6 +203,71 @@ class ScanBase(object):
             self.logger.error('%s Aborting run...', msg)
         else:
             self.logger.error("Aborting run...")
+
+    def _load_testbench_cfg(self, bench_config):
+        ''' Load the bench config into the scan
+
+            Parameters:
+            ----------
+            bench_config : str or dict
+                    Testbench configuration (configuration as dict or its filename as string)
+        '''
+        if bench_config is None:
+            bench_config = TESTBENCH_DEFAULT_FILE
+        with open(bench_config) as f:
+            bench = yaml.full_load(f)
+
+        return bench
+
+    def _load_chip_cfg(self, bench_dut_cfg):
+        ''' Load the chip config into the scan
+
+            Paramters:
+            ---------
+            bench_dut_cfg : dict
+                    Testbench configuration dict
+        '''
+        with open(bench_dut_cfg['chip_configuration']) as f:
+            chip = yaml.full_load(f)
+
+        return chip
+
+    def _configure_chip(self, chip_cfg):
+        if not self.dut:
+            raise RuntimeError("Initialize chip before configuration")
+        
+        # Configure DACs
+        self.dut.set_dac_settings(chip_cfg["dac"])
+        if chip_cfg["overwrite_ICASN"]:
+            self.dut["CONF_SR"]["SET_ICASN"].setall(False)
+
+        # Enable all pixels
+        self.dut["CONF_SR"]["MASKD"].setall(True)
+        self.dut["CONF_SR"]["MASKH"].setall(True)
+        self.dut["CONF_SR"]["MASKV"].setall(True)
+        self.dut.write_conf()
+
+    def _configure_masks(self, chip_cfg):
+        try:
+            if isinstance(chip_cfg["mask_pixels"], list):
+                for pixel_to_mask in chip_cfg["mask_pixels"]:
+                    self.dut.mask(*pixel_to_mask)
+            else:
+                raise ValueError("Illegal type for mask_pixels, list required")
+        except KeyError:
+            self.logger.warning("No mask information given, chip might be noisy")
+
+        try:
+            if isinstance(chip_cfg["mask_file"], str):
+                if chip_cfg["mask_file"] == "auto":
+                    self.dut.auto_mask_v2()
+                else:
+                    pass
+
+            else:
+                raise ValueError("Illegal type for mask_file, str required")
+        except KeyError:
+            self.logger.warning("No mask information given, chip might be noisy")
 
 
 def send_data(socket, data, scan_par_id, name='ReadoutData'):
