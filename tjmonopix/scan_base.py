@@ -108,6 +108,15 @@ class ScanBase(object):
         else:
             self.socket = None
 
+        mask = self.dut.get_mask()
+        self.h5_file.create_carray(
+            self.h5_file.root,
+            name='mask',
+            title='Masked pixels',
+            obj=mask[self.dut.fl_n * 112:(self.dut.fl_n + 1) * 112],
+            filters=tb.Filters(complib='blosc', complevel=5, fletcher32=False)
+        )
+
         # Execute scan
         self.fifo_readout = FifoReadout(self.dut)
         self.scan(**kwargs)

@@ -762,6 +762,19 @@ class TJMonoPix(Dut):
                     mask[i, j] = (mask[i, j] & 0x3)
         return mask
 
+    def get_mask(self):
+        maskV = str(self['CONF_SR']['MASKV'])[::-1]
+        maskH = str(self['CONF_SR']['MASKH'])[::-1]
+        maskD = str(self['CONF_SR']['MASKD'])[::-1]
+
+        mask = np.zeros([COL * 4, ROW], dtype=bool)
+        for col in range(COL * 4):
+            for row in range(ROW):
+                maskd_i = col - row if col - row >= 0 else ROW + col - row
+                if maskV[col] == '0' and maskH[row] == '0' and maskD[maskd_i] == '0':
+                    mask[col, row] = True
+        return mask
+
     def get_conf_sr(self, mode="mwr"):
         """ mode:'w' get values in FPGA write register (output to SI_CONF)
                  'r' get values in FPGA read register (input from SO_CONF)
