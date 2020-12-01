@@ -38,10 +38,13 @@ class Plotting(object):
         self.out_file = PdfPages(self.filename)
 
         with tb.open_file(analyzed_data_file, 'r') as in_file:
-            self.hits = in_file.root.Hits[:]
+            try:
+                self.hits = in_file.root.Hits[:]  # Use event data if available
+            except Exception:
+                self.hits = in_file.root.Dut[:]  # Otherwise use pure DUT data
             self.HistOcc = in_file.root.HistOcc[:]
             self.run_config = dict()
-            self.run_config['scan_id'] = in_file.root.Hits.attrs.scan_id  # TODO: Read all attributes from proper dictionary
+            self.run_config['scan_id'] = in_file.root.Dut.attrs.scan_id  # TODO: Read all attributes from proper dictionary
 
             if self.run_config['scan_id'] in ['threshold_scan', 'global_threshold_tuning', 'local_threshold_tuning']:
                 self.HistSCurve = in_file.root.HistSCurve[:]
@@ -129,7 +132,7 @@ class Plotting(object):
                 # plot_range = [v - self.run_config['VCAL_MED'] for v in range(self.run_config['VCAL_HIGH_start'],
                 #                                                              self.run_config['VCAL_HIGH_stop'] + 1,
                 #                                                              self.run_config['VCAL_HIGH_step'])]
-                plot_range = np.arange(0.5, 80.5, 1)
+                plot_range = np.arange(0.5, 80.5, 1)  # TODO: Get from scan
                 scan_parameter_name = '$\Delta$ DU'
                 electron_axis = True
             # elif self.run_config['scan_id'] == 'fast_threshold_scan':
