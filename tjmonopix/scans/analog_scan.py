@@ -95,7 +95,6 @@ class AnalogScan(ScanBase):
         # Stop readout
         self.dut.stop_all()
 
-    @classmethod
     def analyze(self, data_file=None):
         if data_file is None:
             data_file = self.output_filename + '.h5'
@@ -124,8 +123,6 @@ class AnalogScan(ScanBase):
 
 if __name__ == "__main__":
     scan = AnalogScan()
-    scan.scan()
+    scan.start()
     scan.analyze()
-
-#     ThresholdScan.analyze(data_file="/media/silab/Maxtor/tjmonopix-data/development/threshold_scan/thr_W04R08_PMOS_-6_-6_idb30_interpreted_test.h5")
-    # ThresholdScan.analyze("/home/silab/tjmonopix/data/Threshold_scans/threshold_test.h5", create_plots=True)
+    sscan.plot()

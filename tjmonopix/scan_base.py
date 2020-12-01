@@ -24,7 +24,10 @@ class ScanBase(object):
         bench = self._load_testbench_cfg(bench_config)
 
         if filename is None:
-            self.working_dir = os.path.join(os.getcwd(), "output_data")
+            if bench["general"]["output_directory"]:
+                self.working_dir = bench["general"]["output_directory"]
+            else:
+                self.working_dir = os.path.join(os.getcwd(), "output_data")
             self.run_name = time.strftime("%Y%m%d_%H%M%S_") + self.scan_id
         else:
             self.working_dir = os.path.dirname(os.path.realpath(filename))

@@ -109,7 +109,7 @@ class ThresholdScan(ScanBase):
                     # Start injection and read data
                     self.dut["inj"].start()
                     while not self.dut['inj'].is_ready:
-                        time.sleep(0.01)
+                        time.sleep(0.015)
                     pbar.update(1)
             scan_param_id = scan_param_id + 1
         pbar.close()
@@ -153,5 +153,6 @@ class ThresholdScan(ScanBase):
 
 if __name__ == "__main__":
     scan = ThresholdScan()
-    scan.scan()
+    scan.start()
     scan.analyze()
+    scan.plot()
