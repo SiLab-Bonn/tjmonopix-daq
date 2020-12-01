@@ -350,6 +350,21 @@ class TJMonoPix(Dut):
 
         return ret
 
+    def mask_all(self, mask):
+        self['CONF_SR']['MASKD'].setall(True)
+        self['CONF_SR']['MASKH'].setall(True)
+        self['CONF_SR']['MASKV'].setall(True)
+
+        for pixel in np.argwhere(mask):
+            mcol, mrow = pixel
+            mcol = self.fl_n * 112 + mcol
+            md = mcol - mrow if (mcol - mrow) >= 0 else 448 + mcol - mrow
+            self['CONF_SR']['MASKD'][md] = '0'
+            self['CONF_SR']['MASKV'][mcol] = '0'
+            self['CONF_SR']['MASKH'][mrow] = '0'
+        self.write_conf()
+
+
     def set_all_mask(self, mask=None):
         self.conf_flg = 1
         if mask is None:
@@ -965,7 +980,7 @@ class TJMonoPix(Dut):
         self['CONF_SR']['MASKH'].setall(True)
         self['CONF_SR']['MASKV'].setall(True)
         self.write_conf()
-
+        self.set_monoread()
         self.cleanup_fifo(10)
 
         masked_pix_n = 0
@@ -985,11 +1000,12 @@ class TJMonoPix(Dut):
             pbar.update(1)
             masked_pix_n += 1
         pbar.close()
+        self.stop_monoread()
 
-        mask = self.get_disabled_pixel()
+        mask = self.get_mask()
         total_masked = masked_pix_n
-        total_enabled = np.shape(np.argwhere(mask[(self.fl_n * 112):(self.fl_n + 1) * 112, :] != 0))[0]
-        total_disabled = np.shape(np.argwhere(mask[(self.fl_n * 112):(self.fl_n + 1) * 112, :] == 0))[0]
+        total_enabled = np.count_nonzero(mask[(self.fl_n * 112):(self.fl_n + 1) * 112, :] == 0)
+        total_disabled = np.count_nonzero(mask[(self.fl_n * 112):(self.fl_n + 1) * 112, :])
         logging.info("Number of enabled pixels: {}".format(str(total_enabled)))
         logging.info("Number of intentionally masked pixels: {}".format(str(total_masked)))
         logging.info("Number of disabled pixels (noisy plus unintentionally masked): {}".format(str(total_disabled)))

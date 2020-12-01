@@ -21,11 +21,11 @@ class ScanBase(object):
     """
 
     def __init__(self, bench_config=None, dut=None, filename=None):
-        bench = self._load_testbench_cfg(bench_config)
+        self.bench = self._load_testbench_cfg(bench_config)
 
         if filename is None:
-            if bench["general"]["output_directory"]:
-                self.working_dir = bench["general"]["output_directory"]
+            if self.bench["general"]["output_directory"]:
+                self.working_dir = self.bench["general"]["output_directory"]
             else:
                 self.working_dir = os.path.join(os.getcwd(), "output_data")
             self.run_name = time.strftime("%Y%m%d_%H%M%S_") + self.scan_id
@@ -49,11 +49,16 @@ class ScanBase(object):
         self.logger.addHandler(fh)
         logging.info("Initializing {:s}".format(self.__class__.__name__))
 
+        # Attach DUT to class
+        self.dut = dut
+
+    def start(self, **kwargs):
+
         # If DUT instance is not passed as argument, initialize it
-        if isinstance(dut, TJMonoPix):
-            self.dut = dut
-        elif "dut" in bench.keys():
-            chip_cfg = self._load_chip_cfg(bench["dut"])
+        if isinstance(self.dut, TJMonoPix):
+            pass
+        elif "dut" in self.bench.keys():
+            chip_cfg = self._load_chip_cfg(self.bench["dut"])
             self.dut = TJMonoPix()
 
             # Initialize DUT and power up
@@ -62,9 +67,7 @@ class ScanBase(object):
             self._configure_masks(chip_cfg)
 
         # Online Monitor
-        self.send_addr = bench["dut"]["send_data"]
-
-    def start(self, **kwargs):
+        self.send_addr = self.bench["dut"]["send_data"]
 
         # create and open data file
         self.h5_file = tb.open_file(self.output_filename + '.h5', mode="w", title="")
@@ -252,23 +255,25 @@ class ScanBase(object):
 
     def _configure_masks(self, chip_cfg):
         try:
+            if isinstance(chip_cfg["mask_file"], str):
+                if chip_cfg["mask_file"] == "auto":
+                    self.dut.auto_mask_v2()
+                else:
+                    with tb.open_file(chip_cfg["mask_file"], 'r') as mask_file:
+                        self.logger.info("Reading mask from {:s}".format(chip_cfg["mask_file"]))
+                        mask = mask_file.root.mask[:]
+                        self.dut.mask_all(mask)
+            else:
+                raise ValueError("Illegal type for mask_file, str required")
+        except KeyError:
+            self.logger.warning("No mask information given, chip might be noisy")
+
+        try:
             if isinstance(chip_cfg["mask_pixels"], list):
                 for pixel_to_mask in chip_cfg["mask_pixels"]:
                     self.dut.mask(*pixel_to_mask)
             else:
                 raise ValueError("Illegal type for mask_pixels, list required")
-        except KeyError:
-            self.logger.warning("No mask information given, chip might be noisy")
-
-        try:
-            if isinstance(chip_cfg["mask_file"], str):
-                if chip_cfg["mask_file"] == "auto":
-                    self.dut.auto_mask_v2()
-                else:
-                    pass
-
-            else:
-                raise ValueError("Illegal type for mask_file, str required")
         except KeyError:
             self.logger.warning("No mask information given, chip might be noisy")
 
