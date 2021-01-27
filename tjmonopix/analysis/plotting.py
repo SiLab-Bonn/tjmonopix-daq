@@ -38,10 +38,6 @@ class Plotting(object):
         self.out_file = PdfPages(self.filename)
 
         with tb.open_file(analyzed_data_file, 'r') as in_file:
-            try:
-                self.hits = in_file.root.Hits[:]  # Use event data if available
-            except Exception:
-                self.hits = in_file.root.Dut[:]  # Otherwise use pure DUT data
             self.HistOcc = in_file.root.HistOcc[:]
             self.run_config = dict()
             self.run_config['scan_id'] = in_file.root.Dut.attrs.scan_id  # TODO: Read all attributes from proper dictionary
