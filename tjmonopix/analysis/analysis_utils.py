@@ -22,6 +22,10 @@ def zcurve(x, A, mu, sigma):
 def line(x, m, b):
     return m * x + b
 
+def gauss(x, *p):
+    amplitude, mu, sigma = p
+    return amplitude * np.exp(- (x - mu)**2.0 / (2.0 * sigma**2.0))
+
 
 @numba.njit
 def correlate_scan_ids(hits, meta_data):
@@ -340,35 +344,65 @@ def fit_scurves_multithread(scurves, scan_param_range, n_injections=None, invert
 
 
 def fit_line(y_data, y_err, x_data):
-        """
-            Fit line to x and y data.
-            Returns:
-                (slope, offset, chi2)
-        """
-        y_data = np.array(y_data, dtype=np.float)
+    """
+        Fit line to x and y data.
+        Returns:
+            (slope, offset, chi2)
+    """
+    y_data = np.array(y_data, dtype=np.float)
 
-        # Select valid data
-        x = x_data[~np.isnan(y_data)]
-        y = y_data[~np.isnan(y_data)]
-        y_err = y_err[~np.isnan(y_data)]
+    # Select valid data
+    x = x_data[~np.isnan(y_data)]
+    y = y_data[~np.isnan(y_data)]
+    y_err = y_err[~np.isnan(y_data)]
 
-        # Return if not enough data points
-        if len(y) < 3:
-            return (0., 0., 0.)
+    # Return if not enough data points
+    if len(y) < 3:
+        return (0., 0., 0.)
 
-        # Calculate start values with difference quotient and mean y-intercept
-        p0 = [(y[-1] - y[0]) / (x[-1] - x[0]),
-              np.mean(y - (y[-1] - y[0]) / (x[-1] - x[0]) * x)]
+    # Calculate start values with difference quotient and mean y-intercept
+    p0 = [(y[-1] - y[0]) / (x[-1] - x[0]),
+            np.mean(y - (y[-1] - y[0]) / (x[-1] - x[0]) * x)]
 
-        try:
-            popt = curve_fit(f=line, xdata=x, ydata=y, p0=p0, sigma=y_err,
-                             absolute_sigma=True if np.any(y_err) else False)[0]
-            chi2 = np.sum((y - line(x, *popt))**2)
-        except RuntimeError:
-            return (0., 0., 0.)
+    try:
+        popt = curve_fit(f=line, xdata=x, ydata=y, p0=p0, sigma=y_err,
+                            absolute_sigma=True if np.any(y_err) else False)[0]
+        chi2 = np.sum((y - line(x, *popt))**2)
+    except RuntimeError:
+        return (0., 0., 0.)
 
-        return (popt[0], popt[1], chi2 / y.shape[0] - 2 - 1)
+    return (popt[0], popt[1], chi2 / y.shape[0] - 2 - 1)
 
+
+def fit_gauss(y_data, y_err, x_data):
+    """
+        Fit gauss function to x and y data.
+        Returns:
+            (amp, mu, sigma, chi2)
+    """
+    y_data = np.array(y_data, dtype=np.float)
+    y_err = np.array(y_err, dtype=np.float)
+
+    # Select valid data
+    x = x_data[~np.isnan(y_data)]
+    y = y_data[~np.isnan(y_data)]
+    y_err = y_err[~np.isnan(y_data)]
+
+    # Return if not enough data points
+    if len(y) < 4:
+        return (0., 0., 0., 0.)
+    
+    # Calculate start values
+    p0 = [np.amax(y), x[np.argmax(y)], 1.]
+
+    try:
+        popt = curve_fit(f=gauss, xdata=x, ydata=y, p0=p0, sigma=y_err,
+                            absolute_sigma=True if np.any(y_err) else False)[0]
+        chi2 = np.sum((y - gauss(x, *popt))**2)
+    except RuntimeError:
+        return (0., 0., 0., 0.)
+    
+    return (popt[0], popt[1], popt[2], chi2 / y.shape[0] - 3 - 1)
 
 def get_mean_from_histogram(counts, bin_positions, axis=0):
     ''' Compute average of an array that represents a histogram along the specified axis.
@@ -410,8 +444,6 @@ def get_std_from_histogram(counts, bin_positions, axis=0):
     weights = (bin_positions - np.expand_dims(mean, axis=axis)) ** 2
     rms_2 = get_mean_from_histogram(counts, bin_positions=weights, axis=axis)
     return np.sqrt(rms_2)
-
-
 
 
 # def param_hist(hits, n_params):
