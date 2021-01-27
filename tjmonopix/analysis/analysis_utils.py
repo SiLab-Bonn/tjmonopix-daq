@@ -446,6 +446,26 @@ def get_std_from_histogram(counts, bin_positions, axis=0):
     return np.sqrt(rms_2)
 
 
+@numba.njit
+def build_events_from_timestamp(hits, ev_buffer, event_n, last_timestamp): 
+    offset = 100
+    idx = 0
+
+    while idx < len(hits):
+        timestamp = hits[idx]['timestamp']
+        if timestamp > (last_timestamp + offset) :
+            event_n += 1 
+
+        ev_buffer[idx]["event_number"] = event_n
+        ev_buffer[idx]["column"] = hits[idx]["col"] + 1
+        ev_buffer[idx]["row"] = hits[idx]["row"] + 1
+        ev_buffer[idx]["charge"] = ((hits[idx]["te"] - hits[idx]["le"]) & 0x3F) + 1
+        last_timestamp = timestamp
+        idx += 1
+
+    return ev_buffer, event_n, last_timestamp 
+
+
 # def param_hist(hits, n_params):
 #     hist_params = np.empty(shape=(112, 224, n_params))
 #     for hit in hits:
