@@ -14,12 +14,15 @@ loglevel = logging.INFO
 
 
 class Analysis():
-    def __init__(self, raw_data_file=None, cluster_hits=False, build_events=False):
+    def __init__(self, raw_data_file=None, cluster_hits=False, build_events=False, build_events_simple=False):
 
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.setLevel(loglevel)
 
         self.build_events = build_events
+        self.build_events_simple = build_events_simple
+        if self.build_events and self.build_events_simple:
+            raise RuntimeError("Please decide for one type of event building only")
 
         self.raw_data_file = raw_data_file
         self.chunk_size = 200000
@@ -218,6 +221,8 @@ class Analysis():
         if self.build_events:
             ev_builder = event_builder.EventBuilder()
             end_of_last_chunk = np.zeros(23, dtype=hit_dtype)
+        if self.build_events_simple:
+            last_event_number, last_timestamp = 0, 0
         
         with tb.open_file(self.raw_data_file) as in_file:
             n_words = in_file.root.raw_data.shape[0]
@@ -262,11 +267,6 @@ class Analysis():
                         hit_buffer
                     )
 
-                    if self.cluster_hits:
-                       sel = hit_dat["col"] < 112
-                       hit_dat[sel]["charge"] = ((hit_dat[sel]["te"] - hit_dat[sel]["le"]) & 0x3F) + 1  # Add one to get also hits where LE = TE
-                       hit_dat[sel]["event_number"] = hit_dat[sel]["timestamp"]
-
                     if hit_table is None:
                         hit_table = out_file.create_table(
                             where=out_file.root,
@@ -299,11 +299,33 @@ class Analysis():
                                     fletcher32=False))
                         event_table.append(events)
                         event_table.flush()
-                    
+
+                    if self.build_events_simple:
+                        ev_buffer = np.zeros(shape=self.chunk_size, dtype=event_dtype)
+                        events, last_event_number, last_timestamp = au.build_events_from_timestamp(
+                            hits[hits["col"] < 112],
+                            ev_buffer,
+                            last_event_number,
+                            last_timestamp
+                        )
+                        if event_table is None:
+                            event_table = out_file.create_table(
+                                where=out_file.root,
+                                name="Hits",
+                                description=events.dtype,
+                                expectedrows=self.chunk_size,
+                                title='event_data',
+                                filters=tb.Filters(
+                                    complib='blosc',
+                                    complevel=5,
+                                    fletcher32=False))
+                        event_table.append(events)
+                        event_table.flush()
+
 
                     if self.cluster_hits:
                         # event_dat["charge"] += 1
-                        _, cluster = self.clz.cluster_hits(hit_dat[hit_dat["col"] < 112])
+                        _, cluster = self.clz.cluster_hits(events)
 #                         if self.analyze_tdc:
 #                             # Select only clusters where all hits have a valid TDC status
 #                             cluster_table.append(cluster[cluster['tdc_status'] == 1])
