@@ -463,7 +463,7 @@ def build_events_from_timestamp(hits, ev_buffer, event_n, last_timestamp):
         last_timestamp = timestamp
         idx += 1
 
-    return ev_buffer, event_n, last_timestamp 
+    return ev_buffer[:idx], event_n, last_timestamp 
 
 
 # def param_hist(hits, n_params):

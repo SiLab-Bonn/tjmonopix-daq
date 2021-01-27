@@ -239,6 +239,8 @@ class Analysis():
                 if self.build_events:
                     event_table = None
                     n_events = 0
+                if self.build_events_simple:
+                    event_table = None
 
                 if self.cluster_hits:
                     cluster_table = out_file.create_table(
@@ -303,7 +305,7 @@ class Analysis():
                     if self.build_events_simple:
                         ev_buffer = np.zeros(shape=self.chunk_size, dtype=event_dtype)
                         events, last_event_number, last_timestamp = au.build_events_from_timestamp(
-                            hits[hits["col"] < 112],
+                            hit_dat[hit_dat["col"] < 112],
                             ev_buffer,
                             last_event_number,
                             last_timestamp

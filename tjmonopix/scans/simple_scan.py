@@ -89,7 +89,7 @@ class SimpleScan(ScanBase):
         if data_file is None:
             data_file = self.output_filename + '.h5'
 
-        with analysis.Analysis(raw_data_file=data_file, cluster_hits=cluster_hits, build_events=build_events) as a:
+        with analysis.Analysis(raw_data_file=data_file, cluster_hits=cluster_hits, build_events=build_events, build_events_simple=build_events_simple) as a:
             a.analyze_data()
             self.analyzed_data_file = a.analyzed_data_file
         return self.analyzed_data_file
