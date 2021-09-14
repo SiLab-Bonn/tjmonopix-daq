@@ -115,6 +115,7 @@ ENV/
 !/firmware/ise/*.xise
 /firmware/vivado/*
 !/firmware/vivado/*.xpr
+!/firmware/vivado/*.tcl
 /firmware/src/SiTCP/
 
 # Output data

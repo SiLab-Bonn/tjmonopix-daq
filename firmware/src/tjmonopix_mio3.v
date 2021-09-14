@@ -37,6 +37,7 @@
 `include "spi/blk_mem_gen_8_to_1_2k.v"
 
 `include "gpio/gpio.v"
+`include "gpio/gpio_core.v"
 
 `include "tlu/tlu_controller.v"
 `include "tlu/tlu_controller_core.v"

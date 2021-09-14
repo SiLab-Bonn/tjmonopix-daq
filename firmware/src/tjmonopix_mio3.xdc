@@ -295,3 +295,7 @@ set_property PACKAGE_PIN F12 [get_ports INJECTION_IN]
 set_property IOSTANDARD LVCMOS33 [get_ports INJECTION_IN]
 set_property DRIVE 16 [get_ports INJECTION_OUT]
 set_property SLEW FAST [get_ports INJECTION_OUT]
+
+set_property CONFIG_MODE SPIx4 [current_design]
+set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
+
